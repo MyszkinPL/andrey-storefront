@@ -5,7 +5,14 @@ const appUrl = process.env.APP_URL
 const botToken = process.env.BOT_TOKEN
 
 await run("npx", ["prisma", "generate"])
-await run("npx", ["prisma", "db", "push", "--accept-data-loss"])
+await run("npx", [
+  "prisma",
+  "db",
+  "push",
+  "--accept-data-loss",
+  "--url",
+  process.env.DATABASE_URL,
+])
 
 if (appUrl && botToken) {
   const webhookUrl = `${appUrl.replace(/\/$/, "")}/api/telegram/webhook`
