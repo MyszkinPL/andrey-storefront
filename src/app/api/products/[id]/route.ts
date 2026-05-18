@@ -1,0 +1,96 @@
+import { NextResponse } from "next/server"
+import { z } from "zod"
+
+import { requireAdmin } from "@/lib/auth"
+import { prisma } from "@/lib/prisma"
+
+const schema = z.object({
+  title: z.string().min(2),
+  category: z.string().optional(),
+  description: z.string().min(8),
+  priceRub: z.number().int().nonnegative(),
+  deliveryType: z.enum(["MANUAL", "AUTO_KEY"]),
+  keyPoolText: z.string().optional(),
+  isActive: z.boolean(),
+})
+
+function parseKeys(input?: string) {
+  return (input || "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+}
+
+export async function GET(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const { id } = await params
+  const product = await prisma.product.findUnique({
+    where: { id },
+    include: {
+      _count: {
+        select: {
+          keys: {
+            where: { issuedAt: null },
+          },
+        },
+      },
+    },
+  })
+
+  if (!product) return NextResponse.json({ error: "Not found" }, { status: 404 })
+
+  return NextResponse.json({
+    product: {
+      id: product.id,
+      slug: product.slug,
+      title: product.title,
+      category: product.category,
+      description: product.description,
+      priceRub: product.priceRub,
+      deliveryType: product.deliveryType,
+      isActive: product.isActive,
+      availableKeyCount: product._count.keys,
+    },
+  })
+}
+
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    await requireAdmin()
+    const { id } = await params
+    const payload = schema.parse(await request.json())
+    const keys = parseKeys(payload.keyPoolText)
+
+    await prisma.$transaction(async (tx) => {
+      await tx.product.update({
+        where: { id },
+        data: {
+          title: payload.title,
+          category: payload.category,
+          description: payload.description,
+          priceRub: payload.priceRub,
+          deliveryType: payload.deliveryType,
+          isActive: payload.isActive,
+        },
+      })
+
+      if (payload.deliveryType === "AUTO_KEY" && keys.length > 0) {
+        await tx.productKey.createMany({
+          data: keys.map((value) => ({ productId: id, value })),
+        })
+      }
+    })
+
+    return NextResponse.json({ ok: true })
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Update failed" },
+      { status: 400 },
+    )
+  }
+}

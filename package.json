@@ -3,15 +3,29 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 3001",
     "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
+    "start": "node scripts/start.mjs",
+    "start:plain": "next start -p 3001",
+    "lint": "eslint",
+    "prisma:generate": "prisma generate"
   },
   "dependencies": {
+    "@prisma/adapter-pg": "^7.8.0",
+    "@prisma/client": "^7.8.0",
+    "@tanstack/react-query": "^5.90.10",
+    "@telegram-apps/sdk": "^3.11.8",
+    "@telegram-apps/sdk-react": "^3.3.9",
+    "clsx": "^2.1.1",
+    "date-fns": "^4.2.1",
+    "grammy": "^1.43.0",
+    "lucide-react": "^0.552.0",
     "next": "16.2.6",
+    "pg": "^8.16.3",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "tailwind-merge": "^3.4.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -21,6 +35,7 @@
     "babel-plugin-react-compiler": "1.0.0",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
+    "prisma": "^7.8.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

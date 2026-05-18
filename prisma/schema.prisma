@@ -1,0 +1,114 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  CLOSED
+}
+
+enum DeliveryType {
+  MANUAL
+  AUTO_KEY
+}
+
+model User {
+  id         String          @id @default(cuid())
+  telegramId BigInt          @unique
+  username   String?
+  firstName  String
+  lastName   String?
+  photoUrl   String?
+  role       Role            @default(USER)
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+  tickets    Ticket[]        @relation("TicketAuthor")
+  assigned   Ticket[]        @relation("TicketAssignee")
+  messages   TicketMessage[]
+}
+
+model Product {
+  id           String       @id @default(cuid())
+  slug         String       @unique
+  title        String
+  category     String?
+  description  String
+  priceRub     Int
+  deliveryType DeliveryType @default(MANUAL)
+  isActive     Boolean      @default(true)
+  sortOrder    Int          @default(0)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  tickets      Ticket[]
+  keys         ProductKey[]
+}
+
+model ProductKey {
+  id              String    @id @default(cuid())
+  productId       String
+  value           String
+  createdAt       DateTime  @default(now())
+  issuedAt        DateTime?
+  issuedToTicketId String?  @unique
+  product         Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  issuedToTicket   Ticket?   @relation(fields: [issuedToTicketId], references: [id])
+}
+
+model Ticket {
+  id               String          @id @default(cuid())
+  number           Int             @unique @default(autoincrement())
+  subject          String
+  status           TicketStatus    @default(OPEN)
+  createdById      String
+  assignedToId     String?
+  productId        String?
+  isPaid           Boolean         @default(false)
+  paymentConfirmedAt DateTime?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  closedAt         DateTime?
+  createdBy        User            @relation("TicketAuthor", fields: [createdById], references: [id])
+  assignedTo       User?           @relation("TicketAssignee", fields: [assignedToId], references: [id])
+  product          Product?        @relation(fields: [productId], references: [id])
+  messages         TicketMessage[]
+  deliveredKey     ProductKey?
+}
+
+model TicketMessage {
+  id        String   @id @default(cuid())
+  ticketId  String
+  senderId  String
+  body      String
+  createdAt DateTime @default(now())
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  sender    User     @relation(fields: [senderId], references: [id])
+}
+
+model PaymentMethod {
+  id        String   @id @default(cuid())
+  title     String
+  details   String
+  isActive  Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ShopSettings {
+  id              Int      @id @default(1)
+  shopName        String   @default("Andrey Store")
+  welcomeText     String   @default("Каталог подписок, лицензий и ключей с поддержкой через Telegram.")
+  supportIntro    String   @default("Выбери товар, создай тикет и получи реквизиты. Для key-based товаров после подтверждения оплаты возможна автовыдача.")
+  supportUsername String?
+  updatedAt       DateTime @updatedAt
+}
