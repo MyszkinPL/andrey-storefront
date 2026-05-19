@@ -35,7 +35,10 @@ export function AdminTicketsScreen() {
                   <p className="truncate text-sm font-semibold text-[var(--color-text)]">
                     #{ticket.number} · {ticket.subject}
                   </p>
-                  <p className="mt-1 text-xs text-[var(--color-muted)]">{ticket.productTitle || "Без товара"}</p>
+                  <p className="mt-1 text-xs text-[var(--color-muted)]">
+                    {ticket.productTitle || "Без товара"}
+                    {ticket.paymentMethodTitle ? ` · ${ticket.paymentMethodTitle}` : ""}
+                  </p>
                 </div>
                 <span className="rounded-full bg-[var(--color-bg)] px-2.5 py-1 text-[11px] text-[var(--color-muted)]">
                   {renderStatus(ticket.status)}

@@ -18,8 +18,17 @@ export async function GET() {
       firstName: user.firstName,
       lastName: user.lastName,
       username: user.username,
+      photoUrl: user.photoUrl,
       role: user.role,
     },
-    settings,
+    settings:
+      user.role === "ADMIN"
+        ? settings
+        : {
+            shopName: settings.shopName,
+            welcomeText: settings.welcomeText,
+            supportIntro: settings.supportIntro,
+            supportUsername: settings.supportUsername,
+          },
   })
 }

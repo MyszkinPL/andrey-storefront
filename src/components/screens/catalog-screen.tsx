@@ -1,12 +1,13 @@
 "use client"
 
-import { useMemo, useState } from "react"
-import Link from "next/link"
 import Image from "next/image"
+import Link from "next/link"
+import { useMemo, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
-import { ChevronDown, PackageSearch } from "lucide-react"
+import { PackageSearch, Search } from "lucide-react"
 
 import { Screen, ScreenEmpty, ScreenHeader } from "@/components/screen"
+import { Avatar } from "@/components/ui"
 import { getMe, getProducts } from "@/lib/api"
 import { cn } from "@/lib/cn"
 
@@ -24,14 +25,14 @@ export function CatalogScreen() {
     return ["Все", ...Array.from(set)]
   }, [productsData?.products])
 
-  const products = useMemo(() => {
-    const list = (productsData?.products ?? []).filter((item) => item.isActive)
+  const filtered = useMemo(() => {
     const query = search.trim().toLowerCase()
-    return list.filter((item) => {
+    return (productsData?.products ?? []).filter((item) => {
+      if (!item.isActive) return false
       const categoryOk = !category || category === "Все" || item.category === category
       const searchOk =
         !query ||
-        `${item.title} ${item.category || ""} ${item.description}`.toLowerCase().includes(query)
+        `${item.title} ${item.category || ""} ${item.description} ${item.specs.map((spec) => `${spec.label} ${spec.value}`).join(" ")}`.toLowerCase().includes(query)
       return categoryOk && searchOk
     })
   }, [category, productsData?.products, search])
@@ -40,22 +41,31 @@ export function CatalogScreen() {
     <Screen>
       <ScreenHeader
         title="snx.sell"
-        subtitle={meData?.settings.welcomeText || "Цифровые товары через Telegram"}
+        subtitle={meData?.settings.welcomeText || "Подписки, ключи и lifetime-доступы"}
         trailing={
-          <div className="flex items-center gap-2 rounded-full bg-[var(--color-surface)] px-2 py-1.5 text-xs font-medium text-[var(--color-text)]">
-            <Image src="/logo.svg" alt="snx.sell" width={20} height={20} className="size-5 object-contain" />
-            <ChevronDown size={14} />
+          <div className="flex items-center gap-2 rounded-full bg-[var(--color-surface)] px-2 py-1.5">
+            <Image src="/logo.svg" alt="snx.sell" width={18} height={18} className="size-[18px]" />
+            {meData?.user.photoUrl ? (
+              <Avatar size={24} src={meData.user.photoUrl} alt={meData.user.firstName} />
+            ) : (
+              <div className="flex size-6 items-center justify-center rounded-full bg-[var(--color-bg)] text-[10px] font-semibold text-[var(--color-text)]">
+                {(meData?.user.firstName || "S").slice(0, 1).toUpperCase()}
+              </div>
+            )}
           </div>
         }
       />
 
-      <div className="px-4 pb-2">
-        <input
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder="Поиск"
-          className="w-full rounded-2xl border border-white/5 bg-[var(--color-surface)] px-4 py-3 text-[var(--color-text)] outline-none placeholder:text-[var(--color-muted)] focus:border-[var(--color-accent)]/40 transition-colors"
-        />
+      <div className="px-4 pb-3">
+        <label className="flex items-center gap-3 rounded-2xl bg-[var(--color-surface)] px-4 py-3">
+          <Search size={16} className="text-[var(--color-muted)]" />
+          <input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Поиск по товарам и характеристикам"
+            className="w-full bg-transparent text-sm text-[var(--color-text)] outline-none placeholder:text-[var(--color-muted)]"
+          />
+        </label>
       </div>
 
       <div className="flex gap-2 overflow-x-auto px-4 pb-3" style={{ scrollbarWidth: "none" }}>
@@ -78,41 +88,68 @@ export function CatalogScreen() {
         })}
       </div>
 
-      {products.length === 0 ? (
+      {filtered.length === 0 ? (
         <ScreenEmpty
           icon={<PackageSearch size={32} className="text-[var(--color-muted)]" />}
-          title="Ничего не найдено"
-          subtitle="Попробуй другой запрос или категорию."
+          title="Пусто"
+          subtitle="Попробуй другую категорию или запрос."
         />
       ) : (
-        <div className="grid grid-cols-2 gap-3 px-4 pb-4 sm:[grid-template-columns:repeat(auto-fill,minmax(180px,1fr))]">
-          {products.map((product, index) => (
+        <div className="grid grid-cols-2 gap-3 px-4 pb-4 sm:[grid-template-columns:repeat(auto-fill,minmax(196px,1fr))]">
+          {filtered.map((product, index) => (
             <Link
               key={product.id}
               href={`/product/${product.id}`}
-              className="enter-card flex flex-col overflow-hidden rounded-2xl transition-transform duration-150 active:scale-[0.985]"
-              style={{
-                background: "var(--color-surface)",
-                ["--stagger" as string]: `${Math.min(index, 8) * 30}ms`,
-              }}
+              className="enter-card overflow-hidden rounded-[24px] bg-[var(--color-surface)]"
+              style={{ ["--stagger" as string]: `${Math.min(index, 8) * 28}ms` }}
             >
-              <div
-                className="aspect-square w-full"
-                style={{
-                  background:
-                    "linear-gradient(160deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%)",
-                }}
-              />
-              <div className="flex flex-1 flex-col gap-1 p-3">
-                <p className="line-clamp-2 text-sm font-medium leading-tight text-[var(--color-text)]">
-                  {product.title}
-                </p>
-                <p className="text-xs text-[var(--color-muted)]">
-                  {product.category || (product.deliveryType === "AUTO_KEY" ? "Автовыдача" : "Ручная выдача")}
-                </p>
-                <p className="mt-auto text-base font-semibold text-[var(--color-text)]">
-                  {product.priceRub.toLocaleString("ru-RU")} ₽
-                </p>
+              <div className="relative aspect-square overflow-hidden bg-[var(--color-bg)]">
+                {product.imageDataUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={product.imageDataUrl} alt="" className="size-full object-cover" />
+                ) : (
+                  <div className="flex size-full items-end bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.16),_rgba(255,255,255,0.02)_58%)] p-3">
+                    <div className="rounded-full bg-black/20 px-2.5 py-1 text-[11px] font-medium text-white/90 backdrop-blur">
+                      {product.deliveryType === "AUTO_KEY" ? "Автовыдача" : "Ручная"}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex flex-col gap-2 p-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="line-clamp-2 text-sm font-semibold leading-tight text-[var(--color-text)]">
+                      {product.title}
+                    </p>
+                    <p className="mt-1 text-[11px] text-[var(--color-muted)]">
+                      {product.category || "digital"}
+                    </p>
+                  </div>
+                  <span className="shrink-0 rounded-full bg-[var(--color-bg)] px-2 py-1 text-[10px] text-[var(--color-muted)]">
+                    {product.specs.length}
+                  </span>
+                </div>
+
+                <div className="flex flex-wrap gap-1.5">
+                  {product.specs.slice(0, 2).map((spec) => (
+                    <span
+                      key={`${product.id}-${spec.label}`}
+                      className="rounded-full bg-[var(--color-bg)] px-2.5 py-1 text-[10px] text-[var(--color-muted)]"
+                    >
+                      {spec.label}: {spec.value}
+                    </span>
+                  ))}
+                </div>
+
+                <div className="mt-auto flex items-end justify-between gap-2">
+                  <p className="text-base font-semibold text-[var(--color-text)]">
+                    {product.priceRub.toLocaleString("ru-RU")} ₽
+                  </p>
+                  <span className="text-[11px] text-[var(--color-accent)]">
+                    {product.deliveryType === "AUTO_KEY" ? `${product.availableKeyCount ?? 0} keys` : "ticket"}
+                  </span>
+                </div>
               </div>
             </Link>
           ))}

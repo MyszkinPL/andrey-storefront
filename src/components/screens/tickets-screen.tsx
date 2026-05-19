@@ -65,6 +65,7 @@ export function TicketsScreen() {
                   </p>
                   <p className="mt-1 text-xs text-[var(--color-muted)]">
                     {ticket.productTitle || "Общий запрос"}
+                    {ticket.paymentMethodTitle ? ` · ${ticket.paymentMethodTitle}` : ""}
                   </p>
                 </div>
                 <div className="shrink-0 rounded-full bg-[var(--color-bg)] px-2.5 py-1 text-[11px] text-[var(--color-muted)]">

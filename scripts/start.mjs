@@ -111,6 +111,7 @@ async function ensureBootstrapData() {
         welcomeText: "Лицензии, ключи и lifetime-доступы через Telegram.",
         supportIntro:
           "Выбери товар, открой тикет и получи реквизиты. После подтверждения оплаты продавец выдаст доступ или ключ.",
+        cryptoPayFiat: "RUB",
       },
       create: {
         id: 1,
@@ -118,25 +119,73 @@ async function ensureBootstrapData() {
         welcomeText: "Лицензии, ключи и lifetime-доступы через Telegram.",
         supportIntro:
           "Выбери товар, открой тикет и получи реквизиты. После подтверждения оплаты продавец выдаст доступ или ключ.",
+        cryptoPayFiat: "RUB",
       },
     })
+
+    const existingMethods = await prisma.paymentMethod.count()
+    if (existingMethods === 0) {
+      await prisma.paymentMethod.createMany({
+        data: [
+          {
+            title: "Ручная оплата",
+            type: "MANUAL",
+            details: "Добавь реквизиты в админке.",
+            isActive: true,
+            sortOrder: 0,
+          },
+          {
+            title: "Crypto Pay",
+            type: "CRYPTO_PAY",
+            details: "Включи API token в админке, чтобы создавать инвойсы автоматически.",
+            cryptoAcceptedAssets: "USDT,TON",
+            isActive: false,
+            sortOrder: 1,
+          },
+        ],
+      })
+    }
+
+    const specs = [
+      ["Support versions", "1.8.9 - 1.21.4"],
+      ["Support clients", "Fabric, Lunar, Feather, Labymod4, Forge, BLC"],
+      ["Combat modules", "KillAura, Velocity, Criticals"],
+      ["Movement modules", "Speed, Flight, Scaffold, Strafe"],
+      ["Visual modules", "ESP, Tracers, Nametags, Chams"],
+      ["Cloud sync", "Built-in config system"],
+      ["Bypass", "Intave, Vulcan, Grim, Matrix"],
+      ["Updates", "Lifetime included"],
+    ]
 
     const existing = await prisma.product.findFirst({
       where: { title: "DRIP LITE LIFETIME" },
     })
 
     if (existing) {
-      await prisma.product.update({
-        where: { id: existing.id },
-        data: {
-          category: "майнкрафт",
-          description,
-          priceRub: 4990,
-          deliveryType: "MANUAL",
-          isActive: true,
-          sortOrder: 0,
-        },
-      })
+      await prisma.$transaction([
+        prisma.product.update({
+          where: { id: existing.id },
+          data: {
+            category: "майнкрафт",
+            description,
+            priceRub: 4990,
+            deliveryType: "MANUAL",
+            isActive: true,
+            sortOrder: 0,
+          },
+        }),
+        prisma.productSpec.deleteMany({
+          where: { productId: existing.id },
+        }),
+        prisma.productSpec.createMany({
+          data: specs.map(([label, value], index) => ({
+            productId: existing.id,
+            label,
+            value,
+            sortOrder: index,
+          })),
+        }),
+      ])
     } else {
       await prisma.product.create({
         data: {
@@ -148,6 +197,15 @@ async function ensureBootstrapData() {
           deliveryType: "MANUAL",
           isActive: true,
           sortOrder: 0,
+          specs: {
+            createMany: {
+              data: specs.map(([label, value], index) => ({
+                label,
+                value,
+                sortOrder: index,
+              })),
+            },
+          },
         },
       })
     }

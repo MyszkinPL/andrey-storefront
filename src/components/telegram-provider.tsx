@@ -27,6 +27,7 @@ const TelegramContext = createContext<TelegramContextValue>({
 
 export function TelegramProvider({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false)
+  const [appearance, setAppearance] = useState<"dark" | "light">("dark")
 
   useEffect(() => {
     const cleanup = init()
@@ -35,6 +36,10 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
     try {
       if (themeParams.mount.isAvailable()) {
         themeParams.mount()
+      }
+
+      if (themeParams.bindCssVars.isAvailable()) {
+        themeParams.bindCssVars((key) => `--tg-${key.replace(/[A-Z]/g, (match) => `-${match.toLowerCase()}`)}`)
       }
 
       if (miniApp.mount.isAvailable()) {
@@ -74,6 +79,12 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
           swipeBehavior.disableVertical()
         }
       }
+
+      if (themeParams.isDark()) {
+        setAppearance("dark")
+      } else {
+        setAppearance("light")
+      }
     } finally {
       setReady(true)
     }
@@ -93,7 +104,7 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <TelegramContext.Provider value={value}>
-      <AppRoot appearance="dark" platform="base">
+      <AppRoot appearance={appearance} platform="base">
         {children}
       </AppRoot>
     </TelegramContext.Provider>

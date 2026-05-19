@@ -1,6 +1,6 @@
 "use client"
 
-import type { TicketStatus } from "@prisma/client"
+import type { PaymentMethodType, TicketStatus } from "@prisma/client"
 
 export class ApiError extends Error {
   status: number
@@ -9,6 +9,34 @@ export class ApiError extends Error {
     super(message)
     this.status = status
   }
+}
+
+export type ProductSpecInput = {
+  label: string
+  value: string
+}
+
+export type PaymentMethodInput = {
+  id?: string
+  title: string
+  type: PaymentMethodType
+  details: string
+  iconDataUrl?: string
+  cryptoAcceptedAssets?: string
+  isActive: boolean
+}
+
+export type ShopSettingsPayload = {
+  shopName: string
+  welcomeText: string
+  supportIntro: string
+  supportUsername?: string
+  cryptoPayEnabled: boolean
+  cryptoPayToken?: string
+  cryptoPayUseTestnet: boolean
+  cryptoPayFiat: string
+  cryptoPayDefaultAssets?: string
+  paymentMethods: PaymentMethodInput[]
 }
 
 async function api<T>(input: RequestInfo, init?: RequestInit): Promise<T> {
@@ -44,6 +72,7 @@ export function getMe() {
       firstName: string
       lastName: string | null
       username: string | null
+      photoUrl: string | null
       role: "USER" | "ADMIN"
     }
     settings: {
@@ -51,6 +80,11 @@ export function getMe() {
       welcomeText: string
       supportIntro: string
       supportUsername: string | null
+      cryptoPayEnabled?: boolean
+      cryptoPayToken?: string | null
+      cryptoPayUseTestnet?: boolean
+      cryptoPayFiat?: string
+      cryptoPayDefaultAssets?: string | null
     }
   }>("/api/me")
 }
@@ -63,10 +97,12 @@ export function getProducts() {
       title: string
       category: string | null
       description: string
+      imageDataUrl: string | null
       priceRub: number
       deliveryType: "MANUAL" | "AUTO_KEY"
       isActive: boolean
       availableKeyCount?: number
+      specs: ProductSpecInput[]
     }>
   }>("/api/products")
 }
@@ -79,10 +115,12 @@ export function getProduct(id: string) {
       title: string
       category: string | null
       description: string
+      imageDataUrl: string | null
       priceRub: number
       deliveryType: "MANUAL" | "AUTO_KEY"
       isActive: boolean
       availableKeyCount?: number
+      specs: ProductSpecInput[]
     }
   }>(`/api/products/${id}`)
 }
@@ -91,6 +129,7 @@ export function createTicket(payload: {
   subject: string
   message: string
   productId?: string
+  paymentMethodId?: string
 }) {
   return api<{ ticketId: string }>("/api/tickets", {
     method: "POST",
@@ -108,6 +147,7 @@ export function getTickets() {
       updatedAt: string
       isPaid: boolean
       productTitle: string | null
+      paymentMethodTitle: string | null
       lastMessage: string | null
     }>
   }>("/api/tickets")
@@ -125,6 +165,15 @@ export function getTicket(id: string) {
       productTitle: string | null
       deliveredKey: string | null
       isAdmin: boolean
+      paymentMethodTitle: string | null
+      paymentMethodType: PaymentMethodType | null
+      paymentMethodDetails: string | null
+      paymentMethodIconDataUrl: string | null
+      cryptoInvoiceUrl: string | null
+      cryptoInvoiceStatus: string | null
+      cryptoInvoiceAsset: string | null
+      cryptoInvoiceAmount: string | null
+      cryptoInvoiceExpiresAt: string | null
       messages: Array<{
         id: string
         body: string
@@ -158,12 +207,22 @@ export function confirmTicketPayment(id: string) {
   })
 }
 
+export function refreshCryptoInvoice(id: string) {
+  return api<{ ok: true }>(`/api/tickets/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ refreshCryptoInvoice: true }),
+  })
+}
+
 export function getPaymentMethods() {
   return api<{
     paymentMethods: Array<{
       id: string
       title: string
+      type: PaymentMethodType
       details: string
+      iconDataUrl: string | null
+      cryptoAcceptedAssets: string | null
       isActive: boolean
     }>
   }>("/api/payment-methods")
@@ -173,10 +232,12 @@ export function saveAdminProduct(payload: {
   title: string
   category?: string
   description: string
+  imageDataUrl?: string
   priceRub: number
   deliveryType: "MANUAL" | "AUTO_KEY"
   isActive: boolean
   keyPoolText?: string
+  specs: ProductSpecInput[]
 }) {
   return api<{ ok: true }>("/api/products", {
     method: "POST",
@@ -190,10 +251,12 @@ export function updateAdminProduct(
     title: string
     category?: string
     description: string
+    imageDataUrl?: string
     priceRub: number
     deliveryType: "MANUAL" | "AUTO_KEY"
     isActive: boolean
     keyPoolText?: string
+    specs: ProductSpecInput[]
   },
 ) {
   return api<{ ok: true }>(`/api/products/${id}`, {
@@ -202,18 +265,7 @@ export function updateAdminProduct(
   })
 }
 
-export function saveSettings(payload: {
-  shopName: string
-  welcomeText: string
-  supportIntro: string
-  supportUsername?: string
-  paymentMethods: Array<{
-    id?: string
-    title: string
-    details: string
-    isActive: boolean
-  }>
-}) {
+export function saveSettings(payload: ShopSettingsPayload) {
   return api<{ ok: true }>("/api/admin/settings", {
     method: "POST",
     body: JSON.stringify(payload),

@@ -9,11 +9,19 @@ const schema = z.object({
   welcomeText: z.string().min(4),
   supportIntro: z.string().min(4),
   supportUsername: z.string().optional(),
+  cryptoPayEnabled: z.boolean(),
+  cryptoPayToken: z.string().optional(),
+  cryptoPayUseTestnet: z.boolean(),
+  cryptoPayFiat: z.string().min(3).max(6),
+  cryptoPayDefaultAssets: z.string().optional(),
   paymentMethods: z.array(
     z.object({
       id: z.string().optional(),
       title: z.string().min(2),
-      details: z.string().min(4),
+      type: z.enum(["MANUAL", "CRYPTO_PAY"]),
+      details: z.string(),
+      iconDataUrl: z.string().optional(),
+      cryptoAcceptedAssets: z.string().optional(),
       isActive: z.boolean(),
     }),
   ),
@@ -23,35 +31,85 @@ export async function POST(request: Request) {
   try {
     await requireAdmin()
     const payload = schema.parse(await request.json())
+    const paymentMethods = payload.paymentMethods.map((method) => ({
+      ...method,
+      details: method.details.trim(),
+      iconDataUrl: method.iconDataUrl?.trim() || undefined,
+      cryptoAcceptedAssets: method.cryptoAcceptedAssets?.trim() || undefined,
+    }))
 
-    await prisma.shopSettings.upsert({
-      where: { id: 1 },
-      create: {
-        id: 1,
-        shopName: payload.shopName,
-        welcomeText: payload.welcomeText,
-        supportIntro: payload.supportIntro,
-        supportUsername: payload.supportUsername,
-      },
-      update: {
-        shopName: payload.shopName,
-        welcomeText: payload.welcomeText,
-        supportIntro: payload.supportIntro,
-        supportUsername: payload.supportUsername,
-      },
+    await prisma.$transaction(async (tx) => {
+      await tx.shopSettings.upsert({
+        where: { id: 1 },
+        create: {
+          id: 1,
+          shopName: payload.shopName,
+          welcomeText: payload.welcomeText,
+          supportIntro: payload.supportIntro,
+          supportUsername: payload.supportUsername,
+          cryptoPayEnabled: payload.cryptoPayEnabled,
+          cryptoPayToken: payload.cryptoPayToken,
+          cryptoPayUseTestnet: payload.cryptoPayUseTestnet,
+          cryptoPayFiat: payload.cryptoPayFiat.toUpperCase(),
+          cryptoPayDefaultAssets: payload.cryptoPayDefaultAssets,
+        },
+        update: {
+          shopName: payload.shopName,
+          welcomeText: payload.welcomeText,
+          supportIntro: payload.supportIntro,
+          supportUsername: payload.supportUsername,
+          cryptoPayEnabled: payload.cryptoPayEnabled,
+          cryptoPayToken: payload.cryptoPayToken,
+          cryptoPayUseTestnet: payload.cryptoPayUseTestnet,
+          cryptoPayFiat: payload.cryptoPayFiat.toUpperCase(),
+          cryptoPayDefaultAssets: payload.cryptoPayDefaultAssets,
+        },
+      })
+
+      const existing = await tx.paymentMethod.findMany({
+        select: { id: true },
+      })
+
+      const nextIds = new Set(paymentMethods.map((method) => method.id).filter(Boolean))
+      const removeIds = existing
+        .map((method) => method.id)
+        .filter((id) => !nextIds.has(id))
+
+      for (const [index, method] of paymentMethods.entries()) {
+        if (method.id) {
+          await tx.paymentMethod.update({
+            where: { id: method.id },
+            data: {
+              title: method.title,
+              type: method.type,
+              details: method.details,
+              iconDataUrl: method.iconDataUrl,
+              cryptoAcceptedAssets: method.cryptoAcceptedAssets,
+              isActive: method.isActive,
+              sortOrder: index,
+            },
+          })
+        } else {
+          await tx.paymentMethod.create({
+            data: {
+              title: method.title,
+              type: method.type,
+              details: method.details,
+              iconDataUrl: method.iconDataUrl,
+              cryptoAcceptedAssets: method.cryptoAcceptedAssets,
+              isActive: method.isActive,
+              sortOrder: index,
+            },
+          })
+        }
+      }
+
+      if (removeIds.length > 0) {
+        await tx.paymentMethod.deleteMany({
+          where: { id: { in: removeIds } },
+        })
+      }
     })
-
-    await prisma.$transaction([
-      prisma.paymentMethod.deleteMany(),
-      prisma.paymentMethod.createMany({
-        data: payload.paymentMethods.map((method, index) => ({
-          title: method.title,
-          details: method.details,
-          isActive: method.isActive,
-          sortOrder: index,
-        })),
-      }),
-    ])
 
     return NextResponse.json({ ok: true })
   } catch (error) {
