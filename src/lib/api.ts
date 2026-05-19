@@ -85,6 +85,7 @@ export function getMe() {
       cryptoPayUseTestnet?: boolean
       cryptoPayFiat?: string
       cryptoPayDefaultAssets?: string | null
+      appUrl?: string
     }
   }>("/api/me")
 }

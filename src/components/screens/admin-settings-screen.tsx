@@ -117,6 +117,9 @@ export function AdminSettingsScreen() {
     () => paymentMethods.filter((method) => method.isActive).length,
     [paymentMethods],
   )
+  const cryptoWebhookUrl = meData?.settings.appUrl
+    ? `${meData.settings.appUrl}/api/crypto-pay/webhook`
+    : ""
 
   function openCreateModal(preset?: PaymentMethodForm) {
     setEditorIndex(null)
@@ -254,6 +257,34 @@ export function AdminSettingsScreen() {
                 />
                 <span className="text-sm text-[var(--color-text)]">Использовать testnet</span>
               </label>
+              <div className="ui-card-soft p-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-muted)]">
+                      Webhook URL
+                    </p>
+                    <p className="mt-1 text-xs leading-5 text-[var(--color-muted)]">
+                      Вставь этот адрес в настройках Crypto Bot, чтобы оплата подтверждалась сразу без ручного обновления.
+                    </p>
+                  </div>
+                  {cryptoWebhookUrl ? (
+                    <button
+                      onClick={() => {
+                        void navigator.clipboard.writeText(cryptoWebhookUrl)
+                      }}
+                      className="rounded-full bg-[var(--color-bg)] px-3 py-1.5 text-xs text-[var(--color-text)]"
+                    >
+                      копировать
+                    </button>
+                  ) : null}
+                </div>
+                <input
+                  readOnly
+                  value={cryptoWebhookUrl}
+                  placeholder="Открой миниапп в домене деплоя"
+                  className="ui-input mt-3 text-xs"
+                />
+              </div>
             </div>
           </section>
         </div>

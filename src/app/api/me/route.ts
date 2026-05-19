@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server"
 
 import { getCurrentUser } from "@/lib/auth"
+import { getServerEnv } from "@/lib/env"
 import { prisma } from "@/lib/prisma"
 
 export async function GET() {
   const user = await getCurrentUser()
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  const env = getServerEnv()
 
   const settings =
     (await prisma.shopSettings.findUnique({ where: { id: 1 } })) ||
@@ -23,7 +25,10 @@ export async function GET() {
     },
     settings:
       user.role === "ADMIN"
-        ? settings
+        ? {
+            ...settings,
+            appUrl: env.APP_URL,
+          }
         : {
             shopName: settings.shopName,
             welcomeText: settings.welcomeText,

@@ -1,3 +1,5 @@
+import { createHash, createHmac, timingSafeEqual } from "node:crypto"
+
 import { prisma } from "@/lib/prisma"
 
 type CreateCryptoInvoiceInput = {
@@ -13,6 +15,24 @@ type CryptoInvoice = {
   asset: string | null
   amount: string | null
   expiresAt: Date | null
+}
+
+export type CryptoPayInvoicePayload = {
+  invoice_id: number | string
+  status?: string
+  bot_invoice_url?: string
+  mini_app_invoice_url?: string
+  paid_asset?: string
+  paid_amount?: string
+  amount?: string
+  expiration_date?: string
+}
+
+export type CryptoPayWebhookUpdate = {
+  update_id: number
+  update_type: string
+  request_date: string
+  payload: CryptoPayInvoicePayload
 }
 
 function getBaseUrl(useTestnet: boolean) {
@@ -121,4 +141,31 @@ export async function getCryptoInvoice(invoiceId: string) {
     amount: invoice.paid_amount || invoice.amount || null,
     expiresAt: invoice.expiration_date ? new Date(invoice.expiration_date) : null,
   }
+}
+
+export function mapCryptoInvoicePayload(invoice: CryptoPayInvoicePayload) {
+  return {
+    invoiceId: String(invoice.invoice_id),
+    url: invoice.mini_app_invoice_url || invoice.bot_invoice_url || null,
+    status: invoice.status || null,
+    asset: invoice.paid_asset || null,
+    amount: invoice.paid_amount || invoice.amount || null,
+    expiresAt: invoice.expiration_date ? new Date(invoice.expiration_date) : null,
+  }
+}
+
+export function verifyCryptoPaySignature(
+  token: string,
+  rawBody: string,
+  signatureHeader: string | null,
+) {
+  if (!signatureHeader) return false
+
+  const secret = createHash("sha256").update(token).digest()
+  const digest = createHmac("sha256", secret).update(rawBody).digest("hex")
+  const signature = signatureHeader.trim().toLowerCase()
+
+  if (digest.length !== signature.length) return false
+
+  return timingSafeEqual(Buffer.from(digest), Buffer.from(signature))
 }
