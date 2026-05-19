@@ -23,7 +23,7 @@ import {
   updateTicketStatus,
 } from "@/lib/api"
 import { Screen, ScreenEmpty, ScreenHeader } from "@/components/screen"
-import { useBackButton, useHaptic, useMainButton } from "@/hooks/use-telegram"
+import { useBackButton, useHaptic } from "@/hooks/use-telegram"
 import { cn } from "@/lib/cn"
 
 const HIDDEN_SYSTEM_PREFIXES = [
@@ -75,6 +75,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
   })
 
   const isClosed = data?.ticket.status === "CLOSED"
+  const isAwaitingPayment = !data?.ticket?.isPaid
   const canSend = message.trim().length > 0 && !isClosed && !sendMutation.isPending
   const visibleMessages = useMemo(
     () =>
@@ -98,17 +99,11 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
   }, [visibleMessages])
 
   useBackButton(() => router.back())
-  useMainButton({
-    text: sendMutation.isPending ? "Отправка..." : "Отправить",
-    onClick: () => canSend && sendMutation.mutate(),
-    visible: true,
-    enabled: canSend,
-    progress: sendMutation.isPending,
-  })
 
   if (!data?.ticket) return null
 
   const ticket = data.ticket
+  const shouldLockBuyerChat = !ticket.isAdmin && isAwaitingPayment
   const statusLabel = renderStatus(ticket.status)
   const createdAtLabel = format(new Date(ticket.createdAt), "dd MMMM · HH:mm", {
     locale: ru,
@@ -127,7 +122,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
       />
 
       <div className="grid gap-4 px-4 pb-4 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <div className="grid gap-4">
+        <div className="order-2 grid gap-4 xl:order-1">
           <section className="ui-card overflow-hidden">
             <div className="border-b border-[var(--color-border)] px-4 py-3 sm:px-5">
               <div className="flex flex-wrap items-center gap-2">
@@ -141,7 +136,24 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
             </div>
 
             <div className="grid gap-3 p-3 sm:p-4">
-              {ticket.messages.length === 0 ? (
+              {shouldLockBuyerChat ? (
+                <div className="ui-card-soft p-5">
+                  <p className="text-sm font-semibold text-[var(--color-text)]">
+                    Сначала оплата, потом чат
+                  </p>
+                  <p className="mt-2 text-sm leading-6 text-[var(--color-muted)]">
+                    Пока заказ не оплачен, переписка закрыта. Оплати invoice или реквизиты справа — после подтверждения откроется нормальный чат с продавцом и выдачей товара.
+                  </p>
+                  <div className="mt-4 rounded-[18px] bg-[var(--color-bg)] p-4">
+                    <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--color-muted)]">
+                      Запрос на покупку
+                    </p>
+                    <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-[var(--color-text)]">
+                      {ticket.messages[0]?.body || ticket.subject}
+                    </p>
+                  </div>
+                </div>
+              ) : ticket.messages.length === 0 ? (
                 <ScreenEmpty
                   title="Сообщений пока нет"
                   subtitle="Напиши первым, чтобы открыть диалог."
@@ -223,6 +235,22 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
             </div>
           </section>
 
+          {!shouldLockBuyerChat ? (
+            <section className="ui-card px-4 py-3 sm:px-5">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-[var(--color-text)]">Чат по заказу</p>
+                  <p className="mt-1 text-xs text-[var(--color-muted)]">
+                    Переписка открыта после этапа оплаты.
+                  </p>
+                </div>
+                <StatusBadge kind={ticket.isPaid ? "paid" : "waiting"}>
+                  {ticket.isPaid ? "Оплачено" : "Ждёт оплату"}
+                </StatusBadge>
+              </div>
+            </section>
+          ) : null}
+
           {ticket.deliveredKey ? (
             <section className="ui-card p-4 sm:p-5">
               <p className="text-sm font-semibold text-[var(--color-text)]">Выданный ключ</p>
@@ -232,18 +260,36 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
             </section>
           ) : null}
 
-          <section className="ui-card p-3 sm:p-4">
-            <textarea
-              value={message}
-              onChange={(event) => setMessage(event.target.value)}
-              placeholder={isClosed ? "Тикет закрыт" : "Напиши сообщение"}
-              disabled={isClosed}
-              className="min-h-28 w-full resize-none rounded-[20px] bg-[var(--color-bg)] px-4 py-3 text-sm leading-6 text-[var(--color-text)] outline-none placeholder:text-[var(--color-muted)]"
-            />
-          </section>
+          {!shouldLockBuyerChat ? (
+            <section className="ui-card p-3 sm:p-4">
+              <div className="rounded-[20px] bg-[var(--color-bg)] p-3">
+                <textarea
+                  value={message}
+                  onChange={(event) => setMessage(event.target.value)}
+                  placeholder={isClosed ? "Тикет закрыт" : "Напиши сообщение"}
+                  disabled={isClosed}
+                  className="min-h-24 w-full resize-none bg-transparent px-1 py-1 text-sm leading-6 text-[var(--color-text)] outline-none placeholder:text-[var(--color-muted)]"
+                />
+                <div className="mt-3 flex items-center justify-end">
+                  <button
+                    onClick={() => canSend && sendMutation.mutate()}
+                    disabled={!canSend}
+                    className={cn(
+                      "rounded-[16px] px-4 py-2.5 text-sm font-semibold transition-colors",
+                      canSend
+                        ? "bg-[var(--color-accent)] text-[var(--color-accent-text)]"
+                        : "bg-[var(--color-surface)] text-[var(--color-muted)]",
+                    )}
+                  >
+                    {sendMutation.isPending ? "Отправка..." : "Отправить"}
+                  </button>
+                </div>
+              </div>
+            </section>
+          ) : null}
         </div>
 
-        <aside className="grid content-start gap-4 xl:sticky xl:top-4">
+        <aside className="order-1 grid content-start gap-4 xl:order-2 xl:sticky xl:top-4">
           <section className="ui-card p-4">
             <p className="text-sm font-semibold text-[var(--color-text)]">Статус заказа</p>
             <div className="mt-4 grid gap-3">

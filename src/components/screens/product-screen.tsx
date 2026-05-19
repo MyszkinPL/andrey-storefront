@@ -128,29 +128,13 @@ export function ProductScreen({ productId }: { productId: string }) {
             </button>
           </div>
 
-          <div className="grid gap-5 p-4 sm:p-5">
-            <div className="flex flex-col gap-3">
-              <div className="flex flex-wrap items-end justify-between gap-3">
+            <div className="grid gap-5 p-4 sm:p-5">
+              <div className="flex flex-col gap-3">
                 <p className="text-[30px] font-semibold leading-none text-[var(--color-text)]">
                   {product.priceRub.toLocaleString("ru-RU")} ₽
                 </p>
-                <div className="flex flex-wrap gap-2">
-                  <span className="ui-pill bg-[var(--color-bg)] text-[var(--color-text)]">
-                    {category}
-                  </span>
-                  <span className="ui-pill bg-[var(--color-bg)] text-[var(--color-text)]">
-                    {deliveryLabel}
-                  </span>
-                  {product.deliveryType === "AUTO_KEY" ? (
-                    <span className="ui-pill bg-[var(--color-bg)] text-[var(--color-text)]">
-                      <KeyRound size={12} />
-                      {product.availableKeyCount ?? 0} keys
-                    </span>
-                  ) : null}
-                </div>
+                <p className="text-sm leading-6 text-[var(--color-muted)]">{deliveryHint}</p>
               </div>
-              <p className="text-sm leading-6 text-[var(--color-muted)]">{deliveryHint}</p>
-            </div>
 
             <div className="grid gap-3">
               <SectionTitle title="Описание" />
