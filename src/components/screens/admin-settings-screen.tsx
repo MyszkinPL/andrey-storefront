@@ -13,29 +13,23 @@ import { cn } from "@/lib/cn"
 type PaymentMethodForm = {
   id?: string
   title: string
-  type: "MANUAL" | "CRYPTO_PAY"
   details: string
   iconDataUrl?: string
-  cryptoAcceptedAssets?: string
   isActive: boolean
 }
 
 const emptyMethod: PaymentMethodForm = {
   title: "",
-  type: "MANUAL",
   details: "",
   iconDataUrl: "",
-  cryptoAcceptedAssets: "",
   isActive: true,
 }
 
 const templateMethod: PaymentMethodForm = {
   title: "СБП / Т-Банк",
-  type: "MANUAL",
   details:
     "Оплата по номеру телефона: +7...\nПолучатель: ...\nПосле оплаты отправь чек в заказ.",
   iconDataUrl: "",
-  cryptoAcceptedAssets: "",
   isActive: true,
 }
 
@@ -83,10 +77,8 @@ export function AdminSettingsScreen() {
         paymentData.paymentMethods.map((method) => ({
           id: method.id,
           title: method.title,
-          type: method.type,
           details: method.details,
           iconDataUrl: method.iconDataUrl || "",
-          cryptoAcceptedAssets: method.cryptoAcceptedAssets || "",
           isActive: method.isActive,
         })),
       )
@@ -105,7 +97,10 @@ export function AdminSettingsScreen() {
         cryptoPayUseTestnet,
         cryptoPayFiat,
         cryptoPayDefaultAssets,
-        paymentMethods,
+        paymentMethods: paymentMethods.map((method) => ({
+          ...method,
+          type: "MANUAL" as const,
+        })),
       }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["me"] })
@@ -145,7 +140,6 @@ export function AdminSettingsScreen() {
       ...editorDraft,
       title: editorDraft.title.trim(),
       details: editorDraft.details.trim(),
-      cryptoAcceptedAssets: editorDraft.cryptoAcceptedAssets?.trim() || "",
     }
 
     if (editorIndex === null) {
@@ -178,7 +172,7 @@ export function AdminSettingsScreen() {
 
   return (
     <Screen>
-      <ScreenHeader title="Настройки" subtitle="Витрина, реквизиты и Crypto Pay" />
+      <ScreenHeader title="Настройки" subtitle="Магазин, ручная оплата и автооплата" />
 
       <ScreenBody className="gap-4 lg:grid-cols-[minmax(0,0.92fr)_minmax(380px,1.08fr)] xl:grid-cols-[minmax(0,0.92fr)_minmax(440px,1.08fr)]">
         <div className="grid gap-4">
@@ -215,7 +209,12 @@ export function AdminSettingsScreen() {
           <section className="ui-card p-4">
             <div className="flex items-center gap-2">
               <CreditCard size={16} className="text-[var(--color-muted)]" />
-              <p className="text-sm font-semibold text-[var(--color-text)]">Crypto Pay</p>
+              <div>
+                <p className="text-sm font-semibold text-[var(--color-text)]">Автооплата · Crypto Bot</p>
+                <p className="mt-1 text-xs text-[var(--color-muted)]">
+                  Отдельный автоматический способ. Не смешивается с ручными реквизитами.
+                </p>
+              </div>
             </div>
 
             <div className="mt-3 grid gap-3">
@@ -226,25 +225,25 @@ export function AdminSettingsScreen() {
                   type="checkbox"
                   className="size-4 accent-[var(--color-accent)]"
                 />
-                <span className="text-sm text-[var(--color-text)]">Включить Crypto Pay</span>
+                <span className="text-sm text-[var(--color-text)]">Включить автооплату через Crypto Bot</span>
               </label>
               <input
                 value={cryptoPayToken}
                 onChange={(e) => setCryptoPayToken(e.target.value)}
-                placeholder="API token"
+                placeholder="API token Crypto Bot"
                 className="ui-input"
               />
               <div className="grid gap-3 sm:grid-cols-2">
                 <input
                   value={cryptoPayFiat}
                   onChange={(e) => setCryptoPayFiat(e.target.value.toUpperCase())}
-                  placeholder="RUB"
+                  placeholder="Валюта витрины, например RUB"
                   className="ui-input"
                 />
                 <input
                   value={cryptoPayDefaultAssets}
                   onChange={(e) => setCryptoPayDefaultAssets(e.target.value.toUpperCase())}
-                  placeholder="USDT,TON,BTC"
+                  placeholder="Монеты, например USDT,TON,BTC"
                   className="ui-input"
                 />
               </div>
@@ -257,6 +256,37 @@ export function AdminSettingsScreen() {
                 />
                 <span className="text-sm text-[var(--color-text)]">Использовать testnet</span>
               </label>
+              <div className="ui-card-soft p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-medium text-[var(--color-text)]">Как это увидит покупатель</p>
+                    <p className="mt-1 text-xs leading-5 text-[var(--color-muted)]">
+                      Один отдельный способ оплаты: Crypto Bot. После выбора создаётся invoice и статус заказа обновляется автоматически.
+                    </p>
+                  </div>
+                  <span className={cn("ui-pill", cryptoPayEnabled && cryptoPayToken ? "bg-[var(--color-accent)]/14 text-[var(--color-accent)]" : "bg-[var(--color-bg)] text-[var(--color-muted)]")}>
+                    {cryptoPayEnabled && cryptoPayToken ? "активно" : "выключено"}
+                  </span>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <span className="ui-pill bg-[var(--color-bg)] text-[var(--color-text)]">
+                    {cryptoPayFiat || "RUB"}
+                  </span>
+                  {(cryptoPayDefaultAssets || "").split(",").map((asset) => asset.trim()).filter(Boolean).length > 0 ? (
+                    (cryptoPayDefaultAssets || "")
+                      .split(",")
+                      .map((asset) => asset.trim())
+                      .filter(Boolean)
+                      .map((asset) => (
+                        <span key={asset} className="ui-pill bg-[var(--color-bg)] text-[var(--color-text)]">
+                          {asset}
+                        </span>
+                      ))
+                  ) : (
+                    <span className="ui-pill bg-[var(--color-bg)] text-[var(--color-muted)]">любая доступная монета</span>
+                  )}
+                </div>
+              </div>
               <div className="ui-card-soft p-3">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -264,7 +294,7 @@ export function AdminSettingsScreen() {
                       Webhook URL
                     </p>
                     <p className="mt-1 text-xs leading-5 text-[var(--color-muted)]">
-                      Вставь этот адрес в настройках Crypto Bot, чтобы оплата подтверждалась сразу без ручного обновления.
+                      Вставь этот адрес в настройках Crypto Bot, чтобы заказы подтверждались автоматически.
                     </p>
                   </div>
                   {cryptoWebhookUrl ? (
@@ -292,7 +322,7 @@ export function AdminSettingsScreen() {
         <section className="ui-card p-4 lg:sticky lg:top-4 lg:self-start">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-sm font-semibold text-[var(--color-text)]">Способы оплаты</p>
+              <p className="text-sm font-semibold text-[var(--color-text)]">Ручные способы оплаты</p>
               <p className="mt-1 text-xs text-[var(--color-muted)]">
                 {paymentMethods.length} всего · {activeCount} активных
               </p>
@@ -325,13 +355,11 @@ export function AdminSettingsScreen() {
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="truncate text-sm font-medium text-[var(--color-text)]">{method.title}</p>
-                    <span className="ui-pill">{method.type === "MANUAL" ? "Ручная" : "Crypto Pay"}</span>
+                    <span className="ui-pill">Ручная</span>
                     {!method.isActive ? <span className="ui-pill">Скрыт</span> : null}
                   </div>
                   <p className="mt-1 line-clamp-2 text-xs leading-5 text-[var(--color-muted)]">
-                    {method.type === "CRYPTO_PAY"
-                      ? method.cryptoAcceptedAssets || method.details || "Crypto Pay"
-                      : method.details || "Без описания"}
+                    {method.details || "Без описания"}
                   </p>
                 </div>
                 <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[var(--color-bg)] text-[var(--color-muted)]">
@@ -403,7 +431,7 @@ function MethodEditorModal({
               {canDelete ? "Редактирование способа" : "Новый способ оплаты"}
             </p>
             <p className="mt-1 text-xs text-[var(--color-muted)]">
-              Настрой отображение, тип и реквизиты отдельно от общего экрана.
+              Настрой название, иконку и реквизиты для ручной оплаты.
             </p>
           </div>
           <button
@@ -439,21 +467,7 @@ function MethodEditorModal({
 
           <div className="grid gap-3">
             <div className="flex flex-wrap items-center gap-2">
-              {(["MANUAL", "CRYPTO_PAY"] as const).map((type) => (
-                <button
-                  key={type}
-                  onClick={() => onChange((prev) => (prev ? { ...prev, type } : prev))}
-                  className={cn(
-                    "rounded-full px-3 py-1.5 text-xs",
-                    draft.type === type
-                      ? "bg-[var(--color-accent)] text-[var(--color-accent-text)]"
-                      : "bg-[var(--color-bg)] text-[var(--color-muted)]",
-                  )}
-                >
-                  {type === "MANUAL" ? "Ручная" : "Crypto Pay"}
-                </button>
-              ))}
-
+              <span className="ui-pill bg-[var(--color-bg)] text-[var(--color-text)]">Ручная оплата</span>
               <label className="ml-auto flex items-center gap-2 rounded-full bg-[var(--color-bg)] px-3 py-1.5 text-xs text-[var(--color-text)]">
                 <input
                   checked={draft.isActive}
@@ -476,31 +490,12 @@ function MethodEditorModal({
               className="ui-input"
             />
 
-            {draft.type === "CRYPTO_PAY" ? (
-              <input
-                value={draft.cryptoAcceptedAssets || ""}
-                onChange={(event) =>
-                  onChange((prev) =>
-                    prev
-                      ? { ...prev, cryptoAcceptedAssets: event.target.value.toUpperCase() }
-                      : prev,
-                  )
-                }
-                placeholder="USDT,TON,BTC"
-                className="ui-input"
-              />
-            ) : null}
-
             <textarea
               value={draft.details}
               onChange={(event) =>
                 onChange((prev) => (prev ? { ...prev, details: event.target.value } : prev))
               }
-              placeholder={
-                draft.type === "MANUAL"
-                  ? "Реквизиты и инструкция для покупателя"
-                  : "Текст под Crypto Pay"
-              }
+              placeholder="Реквизиты и инструкция для покупателя"
               className="ui-input min-h-32"
             />
           </div>
@@ -509,9 +504,7 @@ function MethodEditorModal({
         <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2 text-xs text-[var(--color-muted)]">
             <ShieldCheck size={14} />
-            {draft.type === "MANUAL"
-              ? "Покупатель увидит название, иконку и реквизиты."
-              : "Покупатель увидит Crypto Pay и сможет открыть invoice."}
+            Покупатель увидит название, иконку и реквизиты.
           </div>
 
           <div className="flex flex-wrap gap-2">

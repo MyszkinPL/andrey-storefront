@@ -4,7 +4,7 @@ import { useMemo, useState } from "react"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { Check, ChevronRight, Expand, KeyRound, X } from "lucide-react"
+import { Check, Expand, KeyRound, X } from "lucide-react"
 
 import { createTicket, getPaymentMethods, getProduct } from "@/lib/api"
 import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
@@ -16,7 +16,7 @@ export function ProductScreen({ productId }: { productId: string }) {
   const queryClient = useQueryClient()
   const haptic = useHaptic()
   const [isImageOpen, setIsImageOpen] = useState(false)
-  const [paymentMethodId, setPaymentMethodId] = useState("")
+  const [selectedPaymentKey, setSelectedPaymentKey] = useState("")
   const { data } = useQuery({
     queryKey: ["product", productId],
     queryFn: () => getProduct(productId),
@@ -30,15 +30,45 @@ export function ProductScreen({ productId }: { productId: string }) {
     () => (paymentData?.paymentMethods ?? []).filter((item) => item.isActive),
     [paymentData?.paymentMethods],
   )
-
-  const selectedMethodId = paymentMethodId || methods[0]?.id || ""
+  const paymentOptions = useMemo(
+    () => [
+      ...methods.map((method) => ({
+        key: `manual:${method.id}`,
+        type: "MANUAL" as const,
+        id: method.id,
+        title: method.title,
+        subtitle: method.details,
+        iconDataUrl: method.iconDataUrl,
+      })),
+      ...(paymentData?.cryptoPay.enabled
+        ? [
+            {
+              key: "crypto:auto",
+              type: "CRYPTO_PAY" as const,
+              id: undefined,
+              title: paymentData?.cryptoPay.title || "Crypto Bot",
+              subtitle:
+                paymentData?.cryptoPay.acceptedAssets
+                  ? `Автооплата · ${paymentData.cryptoPay.acceptedAssets}`
+                  : "Автооплата через invoice",
+              iconDataUrl: null,
+            },
+          ]
+        : []),
+    ],
+    [methods, paymentData],
+  )
+  const selectedPayment = paymentOptions.find(
+    (option) => option.key === (selectedPaymentKey || paymentOptions[0]?.key),
+  )
 
   const ticketMutation = useMutation({
     mutationFn: () =>
       createTicket({
         productId,
-        paymentMethodId: selectedMethodId || undefined,
+        paymentMethodId: selectedPayment?.type === "MANUAL" ? selectedPayment.id : undefined,
         subject: `Покупка: ${data?.product.title || "товар"}`,
+        paymentMethodType: selectedPayment?.type,
         message:
           data?.product.deliveryType === "AUTO_KEY"
             ? `Хочу купить ${data?.product.title}. После оплаты нужен автоматический ключ.`
@@ -56,7 +86,7 @@ export function ProductScreen({ productId }: { productId: string }) {
     text: ticketMutation.isPending ? "Создаём..." : "Оформить заказ",
     onClick: () => ticketMutation.mutate(),
     visible: true,
-    enabled: !ticketMutation.isPending && Boolean(data?.product) && Boolean(selectedMethodId),
+    enabled: !ticketMutation.isPending && Boolean(data?.product) && Boolean(selectedPayment),
     progress: ticketMutation.isPending,
   })
 
@@ -184,19 +214,19 @@ export function ProductScreen({ productId }: { productId: string }) {
               subtitle="Выбери удобный способ"
               trailing={
                 <span className="text-[11px] text-[var(--color-muted)]">
-                  {methods.length} {methods.length === 1 ? "способ" : "способа"}
+                  {paymentOptions.length} {paymentOptions.length === 1 ? "способ" : "способа"}
                 </span>
               }
             />
 
             <div className="mt-3 grid gap-2">
-              {methods.map((method) => {
-                const isActive = selectedMethodId === method.id
+              {paymentOptions.map((option) => {
+                const isActive = selectedPayment?.key === option.key
 
                 return (
                   <button
-                    key={method.id}
-                    onClick={() => setPaymentMethodId(method.id)}
+                    key={option.key}
+                    onClick={() => setSelectedPaymentKey(option.key)}
                     className={cn(
                       "ui-card-soft relative overflow-hidden px-3 py-3 text-left transition-all duration-150 active:scale-[0.99] sm:px-4",
                       isActive && "border-[var(--color-accent)] shadow-[0_0_0_1px_color-mix(in_srgb,var(--color-accent)_18%,transparent)]",
@@ -210,21 +240,19 @@ export function ProductScreen({ productId }: { productId: string }) {
                       )}
                     />
                     <div className="relative flex items-center gap-3">
-                      <PaymentMethodIcon iconDataUrl={method.iconDataUrl} title={method.title} />
+                      <PaymentMethodIcon iconDataUrl={option.iconDataUrl} title={option.title} />
 
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
                           <p className="truncate text-sm font-semibold text-[var(--color-text)]">
-                            {method.title}
+                            {option.title}
                           </p>
                           <span className="ui-pill bg-[var(--color-bg)] text-[var(--color-text)]">
-                            {method.type === "CRYPTO_PAY" ? "Crypto Pay" : "Ручная"}
+                            {option.type === "CRYPTO_PAY" ? "Автооплата" : "Ручная"}
                           </span>
                         </div>
                         <p className="mt-1 line-clamp-2 text-xs leading-5 text-[var(--color-muted)]">
-                          {method.type === "CRYPTO_PAY"
-                            ? method.cryptoAcceptedAssets || method.details || "Invoice и автообновление статуса"
-                            : method.details}
+                          {option.subtitle}
                         </p>
                       </div>
 
@@ -242,18 +270,6 @@ export function ProductScreen({ productId }: { productId: string }) {
                   </button>
                 )
               })}
-            </div>
-
-            <div className="mt-3 flex items-center justify-between rounded-[20px] border border-[var(--color-border)] bg-[var(--color-bg)] px-4 py-3">
-              <div>
-                <p className="text-sm font-medium text-[var(--color-text)]">Оформление заказа</p>
-                <p className="mt-1 text-xs text-[var(--color-muted)]">
-                  После выбора способа откроется экран заказа с оплатой и выдачей.
-                </p>
-              </div>
-              <div className="flex size-9 items-center justify-center rounded-full bg-[var(--color-surface)] text-[var(--color-text)]">
-                <ChevronRight size={16} />
-              </div>
             </div>
           </section>
         </div>

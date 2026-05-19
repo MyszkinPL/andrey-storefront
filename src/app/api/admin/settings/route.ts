@@ -18,10 +18,9 @@ const schema = z.object({
     z.object({
       id: z.string().optional(),
       title: z.string().min(2),
-      type: z.enum(["MANUAL", "CRYPTO_PAY"]),
+      type: z.literal("MANUAL"),
       details: z.string(),
       iconDataUrl: z.string().optional(),
-      cryptoAcceptedAssets: z.string().optional(),
       isActive: z.boolean(),
     }),
   ),
@@ -35,7 +34,6 @@ export async function POST(request: Request) {
       ...method,
       details: method.details.trim(),
       iconDataUrl: method.iconDataUrl?.trim() || undefined,
-      cryptoAcceptedAssets: method.cryptoAcceptedAssets?.trim() || undefined,
     }))
 
     await prisma.$transaction(async (tx) => {
@@ -84,7 +82,7 @@ export async function POST(request: Request) {
               type: method.type,
               details: method.details,
               iconDataUrl: method.iconDataUrl,
-              cryptoAcceptedAssets: method.cryptoAcceptedAssets,
+              cryptoAcceptedAssets: null,
               isActive: method.isActive,
               sortOrder: index,
             },
@@ -96,7 +94,7 @@ export async function POST(request: Request) {
               type: method.type,
               details: method.details,
               iconDataUrl: method.iconDataUrl,
-              cryptoAcceptedAssets: method.cryptoAcceptedAssets,
+              cryptoAcceptedAssets: null,
               isActive: method.isActive,
               sortOrder: index,
             },

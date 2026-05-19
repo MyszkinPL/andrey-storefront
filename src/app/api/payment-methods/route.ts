@@ -5,9 +5,24 @@ import { prisma } from "@/lib/prisma"
 
 export async function GET() {
   const user = await getCurrentUser()
-  const paymentMethods = await prisma.paymentMethod.findMany({
-    where: user?.role === "ADMIN" ? {} : { isActive: true },
-    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+  const [paymentMethods, settings] = await Promise.all([
+    prisma.paymentMethod.findMany({
+      where: {
+        type: "MANUAL",
+        ...(user?.role === "ADMIN" ? {} : { isActive: true }),
+      },
+      orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+    }),
+    prisma.shopSettings.findUnique({ where: { id: 1 } }),
+  ])
+
+  return NextResponse.json({
+    paymentMethods,
+    cryptoPay: {
+      enabled: Boolean(settings?.cryptoPayEnabled && settings?.cryptoPayToken),
+      title: "Crypto Bot",
+      details: "Автоматическая оплата через invoice",
+      acceptedAssets: settings?.cryptoPayDefaultAssets || null,
+    },
   })
-  return NextResponse.json({ paymentMethods })
 }

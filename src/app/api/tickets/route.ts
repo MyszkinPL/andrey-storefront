@@ -11,6 +11,7 @@ const schema = z.object({
   message: z.string().min(2),
   productId: z.string().optional(),
   paymentMethodId: z.string().optional(),
+  paymentMethodType: z.nativeEnum(PaymentMethodType).optional(),
 })
 
 export async function GET() {
@@ -52,7 +53,7 @@ export async function POST(request: Request) {
     const user = await requireUser()
     const payload = schema.parse(await request.json())
 
-    const [product, paymentMethod] = await Promise.all([
+    const [product, paymentMethod, settings] = await Promise.all([
       payload.productId
         ? prisma.product.findUnique({
             where: { id: payload.productId },
@@ -62,6 +63,9 @@ export async function POST(request: Request) {
         ? prisma.paymentMethod.findFirst({
             where: { id: payload.paymentMethodId, isActive: true },
           })
+        : Promise.resolve(null),
+      payload.paymentMethodType === PaymentMethodType.CRYPTO_PAY
+        ? prisma.shopSettings.findUnique({ where: { id: 1 } })
         : Promise.resolve(null),
     ])
 
@@ -73,15 +77,32 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Payment method not found" }, { status: 404 })
     }
 
+    if (
+      payload.paymentMethodType === PaymentMethodType.CRYPTO_PAY &&
+      (!settings?.cryptoPayEnabled || !settings.cryptoPayToken)
+    ) {
+      return NextResponse.json({ error: "Crypto Pay disabled" }, { status: 400 })
+    }
+
+    const isCryptoPay = payload.paymentMethodType === PaymentMethodType.CRYPTO_PAY
+    const selectedPaymentType = isCryptoPay
+      ? PaymentMethodType.CRYPTO_PAY
+      : paymentMethod?.type
+    const selectedPaymentTitle = isCryptoPay ? "Crypto Bot" : paymentMethod?.title
+    const selectedPaymentDetails = isCryptoPay
+      ? "Автоматическая оплата через invoice"
+      : paymentMethod?.details
+    const selectedPaymentIcon = isCryptoPay ? null : paymentMethod?.iconDataUrl
+
     const ticket = await prisma.ticket.create({
       data: {
         subject: payload.subject,
         productId: payload.productId,
         paymentMethodId: paymentMethod?.id,
-        paymentMethodType: paymentMethod?.type,
-        paymentMethodTitle: paymentMethod?.title,
-        paymentMethodDetails: paymentMethod?.details,
-        paymentMethodIconDataUrl: paymentMethod?.iconDataUrl,
+        paymentMethodType: selectedPaymentType,
+        paymentMethodTitle: selectedPaymentTitle,
+        paymentMethodDetails: selectedPaymentDetails,
+        paymentMethodIconDataUrl: selectedPaymentIcon,
         createdById: user.id,
         messages: {
           create: {
@@ -92,12 +113,12 @@ export async function POST(request: Request) {
       },
     })
 
-    if (paymentMethod?.type === PaymentMethodType.CRYPTO_PAY && product) {
+    if (selectedPaymentType === PaymentMethodType.CRYPTO_PAY && product) {
       try {
         const invoice = await createCryptoInvoice({
           amountRub: product.priceRub,
           description: `${product.title} · ticket #${ticket.number}`,
-          acceptedAssets: paymentMethod.cryptoAcceptedAssets,
+          acceptedAssets: settings?.cryptoPayDefaultAssets,
         })
 
         if (invoice) {

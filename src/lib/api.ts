@@ -30,10 +30,9 @@ export type TicketMessageAttachment = {
 export type PaymentMethodInput = {
   id?: string
   title: string
-  type: PaymentMethodType
+  type: Extract<PaymentMethodType, "MANUAL">
   details: string
   iconDataUrl?: string
-  cryptoAcceptedAssets?: string
   isActive: boolean
 }
 
@@ -143,6 +142,7 @@ export function createTicket(payload: {
   message: string
   productId?: string
   paymentMethodId?: string
+  paymentMethodType?: PaymentMethodType
 }) {
   return api<{ ticketId: string }>("/api/tickets", {
     method: "POST",
@@ -263,6 +263,12 @@ export function getPaymentMethods() {
       cryptoAcceptedAssets: string | null
       isActive: boolean
     }>
+    cryptoPay: {
+      enabled: boolean
+      title: string
+      details: string
+      acceptedAssets: string | null
+    }
   }>("/api/payment-methods")
 }
 

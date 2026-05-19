@@ -15,6 +15,7 @@ export function ProfileScreen() {
   })
 
   const methods = (paymentData?.paymentMethods ?? []).filter((method) => method.isActive)
+  const hasCryptoPay = Boolean(paymentData?.cryptoPay.enabled)
 
   return (
     <Screen>
@@ -57,7 +58,7 @@ export function ProfileScreen() {
           ) : null}
         </section>
 
-        {methods.length === 0 ? (
+        {methods.length === 0 && !hasCryptoPay ? (
           <ScreenEmpty
             icon={<CreditCard size={30} className="text-[var(--color-muted)]" />}
             title="Реквизитов пока нет"
@@ -73,15 +74,26 @@ export function ProfileScreen() {
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-[var(--color-text)]">{method.title}</p>
                     <p className="mt-1 whitespace-pre-wrap text-xs leading-5 text-[var(--color-muted)]">
-                      {method.type === "CRYPTO_PAY"
-                        ? method.cryptoAcceptedAssets
-                          ? `Crypto Pay · ${method.cryptoAcceptedAssets}`
-                          : "Crypto Pay"
-                        : method.details}
+                      {method.details}
                     </p>
                   </div>
                 </div>
               ))}
+              {hasCryptoPay ? (
+                <div className="ui-card-soft flex items-center gap-3 p-3">
+                  <PaymentMethodIcon iconDataUrl={null} title="CR" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-[var(--color-text)]">
+                      {paymentData?.cryptoPay.title || "Crypto Bot"}
+                    </p>
+                    <p className="mt-1 whitespace-pre-wrap text-xs leading-5 text-[var(--color-muted)]">
+                      {paymentData?.cryptoPay.acceptedAssets
+                        ? `Автооплата · ${paymentData.cryptoPay.acceptedAssets}`
+                        : "Автооплата через invoice"}
+                    </p>
+                  </div>
+                </div>
+              ) : null}
             </div>
           </section>
         )}
