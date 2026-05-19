@@ -109,6 +109,8 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
   const isBuyerView = mode === "buyer"
   const adminToolsVisible = ticket.isAdmin && mode === "admin"
   const shouldLockBuyerChat = !isSupportFlow && isBuyerView && isAwaitingPayment && !isClosed
+  const showRawPaymentDetails =
+    ticket.paymentMethodType !== "CRYPTO_PAY" || mode === "admin"
   const statusLabel = renderStatus(ticket.status)
   const createdAtLabel = format(new Date(ticket.createdAt), "dd MMMM · HH:mm", {
     locale: ru,
@@ -122,7 +124,6 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
     .filter(Boolean)
     .join(" · ")
   const orderSteps = getOrderSteps(ticket)
-  const invoiceStep = orderSteps[1]
 
   if (shouldLockBuyerChat) {
     return (
@@ -145,64 +146,33 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                 <div className="rounded-[20px] bg-[var(--color-bg)] p-4 sm:p-5">
                   <p className="text-base font-semibold text-[var(--color-text)]">Сначала оплата</p>
                   <p className="mt-2 text-sm leading-6 text-[var(--color-muted)]">
-                    Оплати заказ выбранным способом. После подтверждения оплаты откроется чат с продавцом и начнётся выдача товара.
+                    Оплати заказ выбранным способом. После подтверждения оплаты начнётся выдача товара, а чат с продавцом откроется только если понадобится.
                   </p>
-
-                  <div className="mt-4 grid gap-3">
-                    {orderSteps.map((step, index) => (
-                      <div key={step.title} className="flex gap-3">
-                        <div className="flex w-6 flex-col items-center">
-                          <div
-                            className={cn(
-                              "flex size-6 items-center justify-center rounded-full text-[11px] font-semibold",
-                              step.state === "done" &&
-                                "bg-[var(--color-accent)] text-[var(--color-accent-text)]",
-                              step.state === "current" &&
-                                "border border-[var(--color-accent)] bg-[var(--color-surface)] text-[var(--color-text)]",
-                              step.state === "upcoming" &&
-                                "bg-[var(--color-surface)] text-[var(--color-muted)]",
-                            )}
-                          >
-                            {index + 1}
-                          </div>
-                          {index < orderSteps.length - 1 ? (
-                            <div
-                              className={cn(
-                                "mt-1 h-full min-h-6 w-px",
-                                step.state === "done"
-                                  ? "bg-[var(--color-accent)]/40"
-                                  : "bg-[var(--color-border)]",
-                              )}
-                            />
-                          ) : null}
-                        </div>
-                        <div className="min-w-0 pb-3">
-                          <p
-                            className={cn(
-                              "text-sm font-medium",
-                              step.state === "upcoming"
-                                ? "text-[var(--color-muted)]"
-                                : "text-[var(--color-text)]",
-                            )}
-                          >
-                            {step.title}
-                          </p>
-                          <p className="mt-1 text-xs leading-5 text-[var(--color-muted)]">
-                            {step.subtitle}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
                 </div>
 
-                <div className="rounded-[20px] bg-[var(--color-bg)] p-4 sm:p-5">
-                  <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--color-muted)]">
-                    Запрос на покупку
-                  </p>
-                  <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-[var(--color-text)]">
-                    {ticket.messages[0]?.body || ticket.subject}
-                  </p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-[20px] bg-[var(--color-bg)] p-4">
+                    <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--color-muted)]">
+                      Сейчас
+                    </p>
+                    <p className="mt-2 text-sm font-medium text-[var(--color-text)]">
+                      Ожидается оплата
+                    </p>
+                    <p className="mt-1 text-xs leading-5 text-[var(--color-muted)]">
+                      Инвойс уже готов. После оплаты статус обновится автоматически.
+                    </p>
+                  </div>
+                  <div className="rounded-[20px] bg-[var(--color-bg)] p-4">
+                    <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--color-muted)]">
+                      После оплаты
+                    </p>
+                    <p className="mt-2 text-sm font-medium text-[var(--color-text)]">
+                      Выдача товара
+                    </p>
+                    <p className="mt-1 text-xs leading-5 text-[var(--color-muted)]">
+                      Если товар автоматический — ключ выдастся сам. Если ручной — продавец продолжит обработку.
+                    </p>
+                  </div>
                 </div>
               </div>
 
@@ -235,25 +205,13 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                       ) : null}
                     </div>
 
-                    {ticket.paymentMethodDetails ? (
+                    {ticket.paymentMethodDetails && showRawPaymentDetails ? (
                       <div className="mt-4 rounded-[18px] bg-[var(--color-surface)] p-4">
                         <p className="whitespace-pre-wrap text-sm leading-6 text-[var(--color-text)]">
                           {ticket.paymentMethodDetails}
                         </p>
                       </div>
                     ) : null}
-
-                    <div className="mt-4 rounded-[18px] bg-[var(--color-surface)] p-4">
-                      <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--color-muted)]">
-                        Текущий этап
-                      </p>
-                      <p className="mt-2 text-sm font-medium text-[var(--color-text)]">
-                        {invoiceStep.title}
-                      </p>
-                      <p className="mt-1 text-xs leading-5 text-[var(--color-muted)]">
-                        {invoiceStep.subtitle}
-                      </p>
-                    </div>
 
                     {ticket.paymentMethodType === "CRYPTO_PAY" && ticket.cryptoInvoiceUrl ? (
                       <div className="mt-4 grid gap-3">
@@ -287,7 +245,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                           Invoice
                         </p>
                         <p className="mt-2 text-sm text-[var(--color-text)]">
-                          Инвойс ещё не создан или не обновился. Нажми обновление справа сверху.
+                          Оплата ещё не подготовлена. Обнови экран чуть позже или свяжись с продавцом, если invoice не появится.
                         </p>
                       </div>
                     ) : null}
@@ -563,7 +521,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                 ) : null}
               </div>
 
-              {ticket.paymentMethodDetails ? (
+              {ticket.paymentMethodDetails && showRawPaymentDetails ? (
                 <div className="mt-4 rounded-[18px] bg-[var(--color-bg)] p-4">
                   <p className="whitespace-pre-wrap text-sm leading-6 text-[var(--color-text)]">
                     {ticket.paymentMethodDetails}
@@ -603,7 +561,9 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                     Invoice
                   </p>
                   <p className="mt-2 text-sm text-[var(--color-text)]">
-                    Инвойс ещё не создан или не обновился. Можно обновить кнопкой справа сверху.
+                    {mode === "admin"
+                      ? "Инвойс ещё не создан или не обновился. Проверь настройки Crypto Pay или обнови статус кнопкой справа сверху."
+                      : "Invoice ещё не появился. Обнови экран чуть позже или дождись, пока продавец подготовит оплату."}
                   </p>
                 </div>
               ) : null}

@@ -1,8 +1,8 @@
-import { Role, TicketStatus } from "@prisma/client"
+import { PaymentMethodType, Role, TicketStatus } from "@prisma/client"
 import { NextResponse } from "next/server"
 import { z } from "zod"
 
-import { getCryptoInvoice } from "@/lib/crypto-pay"
+import { createCryptoInvoice, getCryptoInvoice } from "@/lib/crypto-pay"
 import { requireUser } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { confirmTicketPaymentFlow } from "@/lib/ticket-payment"
@@ -18,14 +18,67 @@ async function syncCryptoInvoice(ticketId: string) {
     where: { id: ticketId },
     select: {
       id: true,
+      number: true,
+      isPaid: true,
+      productId: true,
+      paymentMethodType: true,
+      paymentMethodTitle: true,
+      cryptoInvoiceId: true,
+      product: {
+        select: {
+          title: true,
+          priceRub: true,
+        },
+      },
+      paymentMethod: {
+        select: {
+          cryptoAcceptedAssets: true,
+        },
+      },
+    },
+  })
+
+  if (!ticket) return
+
+  if (
+    !ticket.isPaid &&
+    ticket.paymentMethodType === PaymentMethodType.CRYPTO_PAY &&
+    !ticket.cryptoInvoiceId &&
+    ticket.product
+  ) {
+    const createdInvoice = await createCryptoInvoice({
+      amountRub: ticket.product.priceRub,
+      description: `${ticket.product.title} · order #${ticket.number}`,
+      acceptedAssets: ticket.paymentMethod?.cryptoAcceptedAssets,
+    }).catch(() => null)
+
+    if (createdInvoice) {
+      await prisma.ticket.update({
+        where: { id: ticketId },
+        data: {
+          cryptoInvoiceId: createdInvoice.invoiceId,
+          cryptoInvoiceUrl: createdInvoice.url,
+          cryptoInvoiceStatus: createdInvoice.status,
+          cryptoInvoiceAsset: createdInvoice.asset,
+          cryptoInvoiceAmount: createdInvoice.amount,
+          cryptoInvoiceExpiresAt: createdInvoice.expiresAt,
+        },
+      })
+    }
+  }
+
+  const refreshedTicket = await prisma.ticket.findUnique({
+    where: { id: ticketId },
+    select: {
+      id: true,
       isPaid: true,
       cryptoInvoiceId: true,
     },
   })
 
-  if (!ticket?.cryptoInvoiceId) return
+  if (!refreshedTicket?.cryptoInvoiceId) return
 
-  const invoice = await getCryptoInvoice(ticket.cryptoInvoiceId)
+  const invoice = await getCryptoInvoice(refreshedTicket.cryptoInvoiceId)
   if (!invoice) return
 
   await prisma.ticket.update({
@@ -39,7 +92,7 @@ async function syncCryptoInvoice(ticketId: string) {
     },
   })
 
-  if (invoice.status === "paid" && !ticket.isPaid) {
+  if (invoice.status === "paid" && !refreshedTicket.isPaid) {
     const admin = await prisma.user.findFirst({
       where: { role: Role.ADMIN },
       select: { id: true },
