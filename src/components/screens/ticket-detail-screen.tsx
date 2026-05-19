@@ -129,8 +129,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
   const adminToolsVisible = ticket.isAdmin && mode === "admin"
   const shouldLockBuyerChat =
     !isSupportFlow && isBuyerView && isAwaitingPayment && !isClosed
-  const showRawPaymentDetails =
-    ticket.paymentMethodType !== "CRYPTO_PAY" || mode === "admin"
+  const showRawPaymentDetails = ticket.paymentMethodType === "MANUAL"
   const statusLabel = renderStatus(ticket.status)
   const createdAtLabel = format(new Date(ticket.createdAt), "dd MMMM · HH:mm", {
     locale: ru,
@@ -140,13 +139,6 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
     : ticket.isPaid
       ? "Оплачено"
       : "Ожидает оплату"
-  const invoiceMeta = [
-    ticket.cryptoInvoiceStatus,
-    ticket.cryptoInvoiceAmount,
-    ticket.cryptoInvoiceAsset,
-  ]
-    .filter(Boolean)
-    .join(" · ")
   const orderSteps = getOrderSteps(ticket)
   const headerActions = adminToolsVisible ? (
     <div className="flex flex-wrap justify-end gap-2">
@@ -302,19 +294,21 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                     ) : null}
                   </div>
 
-                  {ticket.paymentMethodType === "CRYPTO_PAY" && ticket.cryptoInvoiceUrl ? (
-                    <div className="mt-4 grid gap-3">
-                      <div className="rounded-[18px] bg-[var(--color-surface)] p-4">
-                        <div className="flex items-center justify-between gap-3">
-                          <div>
-                            <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--color-muted)]">
+                {ticket.paymentMethodType === "CRYPTO_PAY" && ticket.cryptoInvoiceUrl ? (
+                  <div className="mt-4 grid gap-3">
+                    <div className="rounded-[18px] bg-[var(--color-surface)] p-4">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--color-muted)]">
                               Сумма
-                            </p>
-                            <p className="mt-1 text-lg font-semibold text-[var(--color-text)]">
-                              {ticket.cryptoInvoiceAmount || "—"}
-                            </p>
-                          </div>
-                          <div className="text-right">
+                          </p>
+                          <p className="mt-1 text-lg font-semibold text-[var(--color-text)]">
+                              {ticket.cryptoInvoiceAmount
+                                ? `${ticket.cryptoInvoiceAmount} ${ticket.cryptoInvoiceFiat || "RUB"}`
+                                : "—"}
+                          </p>
+                        </div>
+                        <div className="text-right">
                             <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--color-muted)]">
                               Статус
                             </p>
@@ -327,7 +321,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                         </div>
                         {ticket.cryptoInvoiceAsset ? (
                           <p className="mt-3 text-xs text-[var(--color-muted)]">
-                            {ticket.cryptoInvoiceAsset}
+                            Доступные монеты: {ticket.cryptoInvoiceAsset}
                           </p>
                         ) : null}
                       </div>
@@ -777,19 +771,21 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                         {ticket.cryptoInvoiceAmount || ticket.cryptoInvoiceAsset ? (
                           <div className="text-right">
                             <p className="text-[10px] uppercase tracking-[0.16em] text-[var(--color-muted)]">
-                              Invoice
+                              Сумма
                             </p>
                             <p className="mt-1 text-sm font-medium text-[var(--color-text)]">
-                              {[ticket.cryptoInvoiceAmount, ticket.cryptoInvoiceAsset]
-                                .filter(Boolean)
-                                .join(" · ") || "—"}
+                              {ticket.cryptoInvoiceAmount
+                                ? `${ticket.cryptoInvoiceAmount} ${ticket.cryptoInvoiceFiat || "RUB"}`
+                                : "—"}
                             </p>
                           </div>
                         ) : null}
                       </div>
 
-                      {invoiceMeta ? (
-                        <p className="mt-3 text-xs text-[var(--color-muted)]">{invoiceMeta}</p>
+                      {ticket.cryptoInvoiceAsset ? (
+                        <p className="mt-3 text-xs text-[var(--color-muted)]">
+                          Доступные монеты: {ticket.cryptoInvoiceAsset}
+                        </p>
                       ) : null}
 
                       {ticket.cryptoInvoiceExpiresAt ? (
@@ -817,10 +813,10 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                     <div className="flex items-center justify-between gap-3">
                       <div>
                         <p className="text-sm font-medium text-[var(--color-text)]">
-                          Invoice ещё не готов
+                          Invoice ещё не создан
                         </p>
                         <p className="mt-1 text-xs text-[var(--color-muted)]">
-                          Обнови статус чуть позже.
+                          Попробуй обновить через пару секунд.
                         </p>
                       </div>
                       <button

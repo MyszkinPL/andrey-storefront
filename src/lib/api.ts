@@ -199,6 +199,7 @@ export function getTicket(id: string) {
       paymentMethodType: PaymentMethodType | null
       paymentMethodDetails: string | null
       paymentMethodIconDataUrl: string | null
+      cryptoInvoiceFiat: string | null
       cryptoInvoiceUrl: string | null
       cryptoInvoiceStatus: string | null
       cryptoInvoiceAsset: string | null

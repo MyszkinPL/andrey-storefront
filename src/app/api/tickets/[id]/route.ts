@@ -130,6 +130,7 @@ export async function GET(
 ) {
   const user = await requireUser()
   const { id } = await params
+  const settings = await prisma.shopSettings.findUnique({ where: { id: 1 } })
 
   await syncCryptoInvoice(id).catch(() => {})
 
@@ -187,6 +188,7 @@ export async function GET(
       paymentMethodType: ticket.paymentMethodType || null,
       paymentMethodDetails: ticket.paymentMethodDetails || null,
       paymentMethodIconDataUrl: ticket.paymentMethodIconDataUrl || null,
+      cryptoInvoiceFiat: settings?.cryptoPayFiat || "RUB",
       cryptoInvoiceUrl: ticket.cryptoInvoiceUrl || null,
       cryptoInvoiceStatus: ticket.cryptoInvoiceStatus || null,
       cryptoInvoiceAsset: ticket.cryptoInvoiceAsset || null,
