@@ -1,27 +1,17 @@
 @import "tailwindcss";
 
 :root {
-  --tg-bg-color: #17212b;
-  --tg-text-color: #ffffff;
-  --tg-hint-color: #708499;
-  --tg-link-color: #6ab3f3;
-  --tg-button-color: #5288c1;
-  --tg-button-text-color: #ffffff;
-  --tg-secondary-bg-color: #232e3c;
-  --tg-header-bg-color: #17212b;
-  --tg-accent-text-color: #6ab3f3;
-  --tg-section-bg-color: #17212b;
-  --tg-section-header-text-color: #6ab3f3;
-  --tg-subtitle-text-color: #708499;
-  --tg-destructive-text-color: #ec3942;
-
-  --color-bg: var(--tg-bg-color);
-  --color-surface: var(--tg-secondary-bg-color);
-  --color-text: var(--tg-text-color);
-  --color-muted: var(--tg-hint-color);
-  --color-accent: var(--tg-button-color);
-  --color-accent-text: var(--tg-button-text-color);
-  --color-destructive: var(--tg-destructive-text-color);
+  --color-bg: var(--tg-theme-bg-color, #17212b);
+  --color-surface: var(--tg-theme-secondary-bg-color, #232e3c);
+  --color-surface-2: var(--tg-theme-section-bg-color, var(--tg-theme-secondary-bg-color, #232e3c));
+  --color-text: var(--tg-theme-text-color, #ffffff);
+  --color-muted: var(--tg-theme-hint-color, #708499);
+  --color-accent: var(--tg-theme-button-color, #5288c1);
+  --color-accent-text: var(--tg-theme-button-text-color, #ffffff);
+  --color-link: var(--tg-theme-link-color, #6ab3f3);
+  --color-destructive: var(--tg-theme-destructive-text-color, #ec3942);
+  --color-border: color-mix(in srgb, var(--color-text) 8%, transparent);
+  --color-overlay: color-mix(in srgb, var(--color-bg) 84%, transparent);
 
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
@@ -82,6 +72,10 @@ html {
 
 html::-webkit-scrollbar {
   display: none;
+}
+
+body {
+  margin: 0;
 }
 
 body,

@@ -39,7 +39,7 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (themeParams.bindCssVars.isAvailable()) {
-        themeParams.bindCssVars((key) => `--tg-${key.replace(/[A-Z]/g, (match) => `-${match.toLowerCase()}`)}`)
+        themeParams.bindCssVars()
       }
 
       if (miniApp.mount.isAvailable()) {
