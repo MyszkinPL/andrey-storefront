@@ -16,10 +16,10 @@ export function TicketsScreen() {
   const { data: ticketsData } = useQuery({ queryKey: ["tickets"], queryFn: getTickets })
   const { data: meData } = useQuery({ queryKey: ["me"], queryFn: getMe })
 
-  const quickOrder = useMutation({
+  const quickSupport = useMutation({
     mutationFn: () =>
       createTicket({
-        subject: "Новый заказ",
+        subject: "Обращение в поддержку",
         message: "Нужна консультация по товарам, оплате и выдаче.",
       }),
     onSuccess: async ({ ticketId }) => {
@@ -34,13 +34,13 @@ export function TicketsScreen() {
     <Screen>
       <ScreenHeader
         title="Заказы"
-        subtitle={meData?.settings.supportIntro || "Покупки, оплата и выдача"}
+        subtitle={meData?.settings.supportIntro || "Покупки, оплата, выдача и поддержка"}
         trailing={
           <button
-            onClick={() => quickOrder.mutate()}
+            onClick={() => quickSupport.mutate()}
             className="rounded-full bg-[var(--color-accent)] px-3 py-1.5 text-xs font-semibold text-[var(--color-accent-text)]"
           >
-            Новый заказ
+            Поддержка
           </button>
         }
       />
@@ -53,7 +53,10 @@ export function TicketsScreen() {
         />
       ) : (
         <ScreenBody>
-          {tickets.map((ticket, index) => (
+          {tickets.map((ticket, index) => {
+            const isSupport = !ticket.productTitle && !ticket.paymentMethodTitle
+
+            return (
             <Link
               key={ticket.id}
               href={`/tickets/${ticket.id}`}
@@ -80,6 +83,7 @@ export function TicketsScreen() {
                     <span className="ui-pill">
                       #{ticket.number}
                     </span>
+                    {isSupport ? <span className="ui-pill">Поддержка</span> : null}
                     <span className="ui-pill">
                       {renderStatus(ticket.status)}
                     </span>
@@ -100,7 +104,8 @@ export function TicketsScreen() {
                 </div>
               </div>
             </Link>
-          ))}
+            )
+          })}
         </ScreenBody>
       )}
     </Screen>

@@ -24,7 +24,10 @@ export function AdminTicketsScreen() {
         <ScreenEmpty title="Активных заказов нет" subtitle="Новые покупки появятся здесь." icon={<Clock3 size={28} className="text-[var(--color-muted)]" />} />
       ) : (
         <ScreenBody>
-          {tickets.map((ticket, index) => (
+          {tickets.map((ticket, index) => {
+            const isSupport = !ticket.productTitle && !ticket.paymentMethodTitle
+
+            return (
             <Link
               key={ticket.id}
               href={`/tickets/${ticket.id}`}
@@ -43,6 +46,7 @@ export function AdminTicketsScreen() {
                       </p>
                       <p className="mt-1 text-xs text-[var(--color-muted)]">
                         #{ticket.number}
+                        {isSupport ? " · Поддержка" : ""}
                         {ticket.paymentMethodTitle ? ` · ${ticket.paymentMethodTitle}` : ""}
                       </p>
                     </div>
@@ -54,7 +58,8 @@ export function AdminTicketsScreen() {
                 </div>
               </div>
             </Link>
-          ))}
+            )
+          })}
         </ScreenBody>
       )}
     </Screen>
