@@ -3,168 +3,120 @@
 import { useMemo, useState } from "react"
 import Link from "next/link"
 import { useQuery } from "@tanstack/react-query"
-import { ArrowRight, KeyRound, PackageOpen, Search, ShieldCheck } from "lucide-react"
+import { ChevronDown, PackageSearch } from "lucide-react"
 
+import { Screen, ScreenEmpty, ScreenHeader } from "@/components/screen"
 import { getMe, getProducts } from "@/lib/api"
 import { cn } from "@/lib/cn"
-import { Screen, ScreenHeader } from "@/components/screen"
 
 export function CatalogScreen() {
   const { data: productsData } = useQuery({ queryKey: ["products"], queryFn: getProducts })
   const { data: meData } = useQuery({ queryKey: ["me"], queryFn: getMe })
+  const [category, setCategory] = useState("")
   const [search, setSearch] = useState("")
 
+  const categories = useMemo(() => {
+    const set = new Set<string>()
+    for (const item of productsData?.products ?? []) {
+      if (item.category) set.add(item.category)
+    }
+    return ["Все", ...Array.from(set)]
+  }, [productsData?.products])
+
   const products = useMemo(() => {
-    const list = productsData?.products ?? []
+    const list = (productsData?.products ?? []).filter((item) => item.isActive)
     const query = search.trim().toLowerCase()
-    if (!query) return list.filter((item) => item.isActive)
-    return list.filter(
-      (item) =>
-        item.isActive &&
-        `${item.title} ${item.category || ""} ${item.description}`.toLowerCase().includes(query),
-    )
-  }, [productsData?.products, search])
+    return list.filter((item) => {
+      const categoryOk = !category || category === "Все" || item.category === category
+      const searchOk =
+        !query ||
+        `${item.title} ${item.category || ""} ${item.description}`.toLowerCase().includes(query)
+      return categoryOk && searchOk
+    })
+  }, [category, productsData?.products, search])
 
   return (
     <Screen>
       <ScreenHeader
-        title={meData?.settings.shopName || "snx.sell"}
-        subtitle={meData?.settings.welcomeText || "Цифровые товары, лицензии и подписки."}
+        title="snx.sell"
+        subtitle={meData?.settings.welcomeText || "Цифровые товары через Telegram"}
+        trailing={
+          <div className="flex items-center gap-1 rounded-full bg-[var(--color-surface)] px-3 py-1.5 text-xs font-medium text-[var(--color-text)]">
+            market
+            <ChevronDown size={14} />
+          </div>
+        }
       />
 
-      <div className="grid gap-3 md:grid-cols-[minmax(0,1.15fr)_320px]">
-        <section className="rounded-[1.75rem] border border-white/6 bg-[var(--color-panel)] p-5 shadow-[0_12px_36px_rgba(0,0,0,0.22)]">
-          <div className="flex flex-wrap items-center gap-2 text-[11px] font-medium uppercase tracking-[0.14em] text-[var(--color-muted)]">
-            <span className="rounded-full border border-white/8 px-3 py-1">digital market</span>
-            <span className="rounded-full border border-white/8 px-3 py-1">telegram first</span>
-          </div>
-          <h2 className="mt-4 max-w-xl text-[2rem] font-semibold tracking-[-0.05em] text-white md:text-[2.4rem]">
-            Аккуратный маркет для ключей, лицензий и подписок.
-          </h2>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--color-muted)]">
-            Без длинных простыней текста. Выбираешь товар, открываешь тикет, оплачиваешь и получаешь доступ.
-          </p>
-
-          <div className="mt-5 grid gap-2 sm:grid-cols-3">
-            <FeaturePill icon={ShieldCheck} label="Надёжная выдача" />
-            <FeaturePill icon={KeyRound} label="Автовыдача ключей" />
-            <FeaturePill icon={PackageOpen} label="Поддержка в Telegram" />
-          </div>
-        </section>
-
-        <section className="rounded-[1.75rem] border border-white/6 bg-[var(--color-panel-strong)] p-5">
-          <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-[var(--color-muted)]">
-            Быстрый поиск
-          </p>
-          <p className="mt-3 text-lg font-semibold text-white">Найди нужный софт</p>
-          <div className="relative mt-4">
-            <Search
-              size={18}
-              className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-muted)]"
-            />
-            <input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Поиск по программам и подпискам"
-              className="h-14 w-full rounded-2xl border border-white/7 bg-transparent pl-12 pr-4 text-sm text-white outline-none transition-colors placeholder:text-[var(--color-muted)] focus:border-[var(--color-accent)]/55"
-            />
-          </div>
-          <p className="mt-3 text-sm text-[var(--color-muted)]">
-            Одинаково удобно в Telegram, на телефоне и на десктопе.
-          </p>
-        </section>
+      <div className="px-4 pb-2">
+        <input
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Поиск"
+          className="w-full rounded-2xl border border-white/5 bg-[var(--color-surface)] px-4 py-3 text-[var(--color-text)] outline-none placeholder:text-[var(--color-muted)] focus:border-[var(--color-accent)]/40 transition-colors"
+        />
       </div>
 
-      <section className="mt-4">
-        <div className="mb-3 flex items-center justify-between px-1">
-          <div>
-            <p className="text-lg font-semibold text-white">Каталог</p>
-            <p className="text-sm text-[var(--color-muted)]">
-              {products.length > 0 ? `${products.length} позиций в продаже` : "Пока без активных позиций"}
-            </p>
-          </div>
-        </div>
+      <div className="flex gap-2 overflow-x-auto px-4 pb-3" style={{ scrollbarWidth: "none" }}>
+        {categories.map((item) => {
+          const active = (category || "Все") === item
+          return (
+            <button
+              key={item}
+              onClick={() => setCategory(item === "Все" ? "" : item)}
+              className={cn(
+                "shrink-0 rounded-full px-4 py-2 text-sm font-medium transition-[background-color,color,transform] duration-150 active:scale-[0.96]",
+                active
+                  ? "bg-[var(--color-accent)] text-[var(--color-accent-text)]"
+                  : "bg-[var(--color-surface)] text-[var(--color-muted)]",
+              )}
+            >
+              {item}
+            </button>
+          )
+        })}
+      </div>
 
-        {products.length === 0 ? (
-          <div className="rounded-[1.75rem] border border-dashed border-white/8 bg-[var(--color-panel)] px-6 py-14 text-center">
-            <p className="text-2xl font-semibold tracking-[-0.04em] text-white">Каталог скоро наполнится</p>
-            <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[var(--color-muted)]">
-              Как только в админке добавят товары, здесь появятся карточки с ценой, выдачей и быстрым переходом в покупку.
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {products.map((product, index) => (
-              <Link
-                key={product.id}
-                href={`/product/${product.id}`}
-                className="enter-card group overflow-hidden rounded-[1.75rem] border border-white/6 bg-[var(--color-panel)] p-5 transition-transform duration-200 hover:-translate-y-0.5"
-                style={{ ["--stagger" as string]: `${Math.min(index, 8) * 32}ms` }}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-[var(--color-muted)]">
-                      {product.category || "subscription"}
-                    </p>
-                    <h3 className="mt-2 line-clamp-2 text-xl font-semibold tracking-[-0.04em] text-white">
-                      {product.title}
-                    </h3>
-                  </div>
-                  <span
-                    className={cn(
-                      "shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium",
-                      product.deliveryType === "AUTO_KEY"
-                        ? "bg-[var(--color-accent)]/16 text-[var(--tg-accent-text-color)]"
-                        : "bg-white/6 text-[var(--color-muted)]",
-                    )}
-                  >
-                    {product.deliveryType === "AUTO_KEY" ? "Авто" : "Вручную"}
-                  </span>
-                </div>
-
-                <p className="mt-3 line-clamp-3 text-sm leading-6 text-[var(--color-muted)]">
-                  {product.description}
+      {products.length === 0 ? (
+        <ScreenEmpty
+          icon={<PackageSearch size={32} className="text-[var(--color-muted)]" />}
+          title="Ничего не найдено"
+          subtitle="Попробуй другой запрос или категорию."
+        />
+      ) : (
+        <div className="grid grid-cols-2 gap-3 px-4 pb-4 sm:[grid-template-columns:repeat(auto-fill,minmax(180px,1fr))]">
+          {products.map((product, index) => (
+            <Link
+              key={product.id}
+              href={`/product/${product.id}`}
+              className="enter-card flex flex-col overflow-hidden rounded-2xl transition-transform duration-150 active:scale-[0.985]"
+              style={{
+                background: "var(--color-surface)",
+                ["--stagger" as string]: `${Math.min(index, 8) * 30}ms`,
+              }}
+            >
+              <div
+                className="aspect-square w-full"
+                style={{
+                  background:
+                    "linear-gradient(160deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%)",
+                }}
+              />
+              <div className="flex flex-1 flex-col gap-1 p-3">
+                <p className="line-clamp-2 text-sm font-medium leading-tight text-[var(--color-text)]">
+                  {product.title}
                 </p>
-
-                <div className="mt-5 flex items-end justify-between gap-3">
-                  <div>
-                    <p className="text-2xl font-semibold tracking-[-0.04em] text-white">
-                      {product.priceRub.toLocaleString("ru-RU")} ₽
-                    </p>
-                    {product.deliveryType === "AUTO_KEY" ? (
-                      <p className="mt-1 text-xs text-[var(--color-muted)]">
-                        Ключей доступно: {product.availableKeyCount ?? 0}
-                      </p>
-                    ) : (
-                      <p className="mt-1 text-xs text-[var(--color-muted)]">Выдача после подтверждения</p>
-                    )}
-                  </div>
-                  <div className="flex size-11 items-center justify-center rounded-full bg-[var(--color-soft)] text-white transition-transform duration-200 group-hover:translate-x-0.5">
-                    <ArrowRight size={18} />
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        )}
-      </section>
+                <p className="text-xs text-[var(--color-muted)]">
+                  {product.category || (product.deliveryType === "AUTO_KEY" ? "Автовыдача" : "Ручная выдача")}
+                </p>
+                <p className="mt-auto text-base font-semibold text-[var(--color-text)]">
+                  {product.priceRub.toLocaleString("ru-RU")} ₽
+                </p>
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
     </Screen>
-  )
-}
-
-function FeaturePill({
-  icon: Icon,
-  label,
-}: {
-  icon: typeof ShieldCheck
-  label: string
-}) {
-  return (
-    <div className="flex items-center gap-3 rounded-2xl border border-white/6 bg-white/3 px-4 py-3">
-      <div className="flex size-10 items-center justify-center rounded-xl bg-[var(--color-soft)] text-white">
-        <Icon size={18} />
-      </div>
-      <span className="text-sm font-medium text-white">{label}</span>
-    </div>
   )
 }

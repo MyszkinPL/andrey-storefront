@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation"
 
 import { useHaptic } from "@/hooks/use-telegram"
 import { useMode } from "@/components/mode-provider"
+import { cn } from "@/lib/cn"
 
 const BUYER_TABS = [
   { href: "/catalog", label: "Каталог", icon: Store },
@@ -32,15 +33,19 @@ export function BottomTabs() {
 
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-40"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-white/5"
       style={{ paddingBottom: "env(safe-area-inset-bottom, 0)" }}
     >
-      <div className="mx-auto w-full max-w-[1120px] px-4 pb-3 md:px-6">
-        <div className="flex items-stretch justify-around rounded-[1.6rem] border border-white/6 bg-[var(--color-panel)] px-2 py-2 shadow-[0_18px_48px_rgba(0,0,0,0.35)]">
+      <div
+        className="mx-auto flex max-w-6xl items-stretch justify-around px-2 py-1"
+        style={{ background: "var(--color-surface)" }}
+      >
         {tabs.map((tab) => {
+          const isHomeRoot = tab.href === "/catalog" || tab.href === "/admin"
           const active =
-            pathname === tab.href ||
-            (tab.href !== "/admin" && pathname.startsWith(`${tab.href}/`))
+            isHomeRoot
+              ? pathname === tab.href
+              : pathname === tab.href || pathname.startsWith(tab.href)
           const Icon = tab.icon
           return (
             <Link
@@ -49,19 +54,18 @@ export function BottomTabs() {
               onClick={() => {
                 haptic.select()
               }}
-              className={[
-                "flex min-w-[76px] flex-1 flex-col items-center justify-center gap-1 rounded-2xl px-3 py-2.5 transition-all",
+              className={cn(
+                "flex min-w-[72px] flex-col items-center justify-center gap-1 rounded-xl px-3 py-2 transition-colors",
                 active
-                  ? "bg-[var(--color-soft)] text-white"
-                  : "text-[var(--color-muted)] hover:text-white",
-              ].join(" ")}
+                  ? "text-[var(--color-accent)]"
+                  : "text-[var(--color-muted)]",
+              )}
             >
-              <Icon size={20} strokeWidth={active ? 2.4 : 2} />
+              <Icon size={22} strokeWidth={active ? 2.4 : 2} />
               <span className="text-[11px] font-medium">{tab.label}</span>
             </Link>
           )
         })}
-        </div>
       </div>
     </nav>
   )

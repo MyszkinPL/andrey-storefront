@@ -2,7 +2,6 @@
 
 import Link from "next/link"
 import { useQuery } from "@tanstack/react-query"
-import { Cell, Section, Subheadline, Title } from "@telegram-apps/telegram-ui"
 
 import { getMe, getPaymentMethods, getProducts, getTickets } from "@/lib/api"
 import { Screen, ScreenHeader } from "@/components/screen"
@@ -25,14 +24,8 @@ export function AdminOverviewScreen() {
   }
 
   const stats = [
-    {
-      label: "Активные товары",
-      value: productsData?.products.filter((item) => item.isActive).length || 0,
-    },
-    {
-      label: "Открытые тикеты",
-      value: ticketsData?.tickets.filter((item) => item.status !== "CLOSED").length || 0,
-    },
+    { label: "Активные товары", value: productsData?.products.filter((item) => item.isActive).length || 0 },
+    { label: "Открытые тикеты", value: ticketsData?.tickets.filter((item) => item.status !== "CLOSED").length || 0 },
     {
       label: "Ключи в наличии",
       value:
@@ -41,42 +34,36 @@ export function AdminOverviewScreen() {
           0,
         ) || 0,
     },
-    {
-      label: "Реквизиты",
-      value: paymentData?.paymentMethods.length || 0,
-    },
+    { label: "Реквизиты", value: paymentData?.paymentMethods.length || 0 },
   ]
 
   const links = [
-    { href: "/admin/products", title: "Управление товарами", subtitle: "Подписки, цены, автовыдача ключей" },
-    { href: "/admin/tickets", title: "Обработка тикетов", subtitle: "Кто создал, оплата, выдача, статусы" },
-    { href: "/admin/settings", title: "Настройки магазина", subtitle: "Реквизиты, welcome-текст, контакты" },
+    { href: "/admin/products", title: "Товары", subtitle: "Каталог и ключи" },
+    { href: "/admin/tickets", title: "Тикеты", subtitle: "Покупки и оплата" },
+    { href: "/admin/settings", title: "Настройки", subtitle: "Тексты и реквизиты" },
   ]
 
   return (
     <Screen>
-      <ScreenHeader title="Админка" subtitle="Полноценное управление магазином с ПК и мобильных" />
+      <ScreenHeader title="Админка" subtitle="snx.sell control panel" />
 
-      <Section header="Сводка">
+      <div className="grid gap-3 px-4 pb-4 md:grid-cols-2">
         {stats.map((item) => (
-          <Cell key={item.label} after={<Title level="2">{item.value}</Title>}>
-            {item.label}
-          </Cell>
+          <div key={item.label} className="rounded-2xl bg-[var(--color-surface)] p-4">
+            <p className="text-xs text-[var(--color-muted)]">{item.label}</p>
+            <p className="mt-2 text-2xl font-semibold text-[var(--color-text)]">{item.value}</p>
+          </div>
         ))}
-      </Section>
+      </div>
 
-      <Section header="Управление">
+      <div className="grid gap-3 px-4 pb-4">
         {links.map((item) => (
-          <Link key={item.href} href={item.href}>
-            <Cell multiline subtitle={item.subtitle}>
-              <div className="min-w-0">
-                <Title level="3">{item.title}</Title>
-                <Subheadline level="2">{item.subtitle}</Subheadline>
-              </div>
-            </Cell>
+          <Link key={item.href} href={item.href} className="rounded-2xl bg-[var(--color-surface)] p-4">
+            <p className="text-sm font-semibold text-[var(--color-text)]">{item.title}</p>
+            <p className="mt-1 text-xs text-[var(--color-muted)]">{item.subtitle}</p>
           </Link>
         ))}
-      </Section>
+      </div>
     </Screen>
   )
 }

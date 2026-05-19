@@ -2,10 +2,9 @@
 
 import { useRouter } from "next/navigation"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { Cell, Section, Spinner, Subheadline, Text, Title } from "@telegram-apps/telegram-ui"
+import { KeyRound, ShieldCheck, Sparkles } from "lucide-react"
 
 import { createTicket, getProduct } from "@/lib/api"
-import { Button } from "@/components/ui"
 import { Screen, ScreenHeader } from "@/components/screen"
 import { useBackButton, useHaptic, useMainButton } from "@/hooks/use-telegram"
 
@@ -37,64 +36,73 @@ export function ProductScreen({ productId }: { productId: string }) {
 
   useBackButton(() => router.back())
   useMainButton({
-    text: ticketMutation.isPending ? "Создаём..." : "Создать тикет на покупку",
+    text: ticketMutation.isPending ? "Создаём..." : "Открыть тикет",
     onClick: () => ticketMutation.mutate(),
     visible: true,
     enabled: !ticketMutation.isPending && Boolean(data?.product),
     progress: ticketMutation.isPending,
   })
 
-  if (!data) {
-    return (
-      <Screen noTabBar>
-        <div className="flex min-h-dvh items-center justify-center">
-          <Spinner size="m" />
-        </div>
-      </Screen>
-    )
-  }
+  if (!data?.product) return null
 
-  const autoKey = data.product.deliveryType === "AUTO_KEY"
+  const product = data.product
+  const autoKey = product.deliveryType === "AUTO_KEY"
 
   return (
     <Screen noTabBar className="pb-6">
-      <ScreenHeader
-        title={data.product.title}
-        subtitle={data.product.category || "Software subscription"}
-      />
+      <ScreenHeader title={product.title} subtitle={product.category || "digital product"} />
 
-      <Section>
-        <Title level="1">{data.product.priceRub.toLocaleString("ru-RU")} ₽</Title>
-        <Text className="mt-2 block">{data.product.description}</Text>
-        <Subheadline level="2" className="mt-2 block">
-          {autoKey
-            ? "После подтверждения оплаты система выдаст ключ прямо в тикет."
-            : "После оплаты админ отправит инструкции и доступ."}
-        </Subheadline>
-        {autoKey ? (
-          <Subheadline level="2" className="mt-2 block">
-            Свободных ключей: {data.product.availableKeyCount ?? 0}
-          </Subheadline>
-        ) : null}
-      </Section>
+      <div className="grid gap-3 px-4 pb-4">
+        <section className="rounded-2xl bg-[var(--color-surface)] p-4">
+          <div className="aspect-square rounded-2xl bg-[var(--color-bg)]" />
+          <p className="mt-4 text-2xl font-semibold text-[var(--color-text)]">
+            {product.priceRub.toLocaleString("ru-RU")} ₽
+          </p>
+          <p className="mt-2 text-sm leading-6 text-[var(--color-muted)]">{product.description}</p>
+        </section>
 
-      <Section header="Как проходит покупка">
-        <Cell multiline>1. Создаёшь тикет по этому товару.</Cell>
-        <Cell multiline>2. Получаешь реквизиты для оплаты.</Cell>
-        <Cell multiline>3. Отправляешь подтверждение оплаты.</Cell>
-        <Cell multiline>
-          4.{" "}
-          {autoKey
-            ? "После подтверждения оплаты автоматически выдаётся следующий свободный ключ."
-            : "Админ вручную подтверждает и выдаёт доступ или инструкцию."}
-        </Cell>
-      </Section>
-
-      <Section>
-        <Button onClick={() => ticketMutation.mutate()} disabled={ticketMutation.isPending} stretched>
-          {ticketMutation.isPending ? "Создание..." : "Открыть тикет"}
-        </Button>
-      </Section>
+        <section className="grid gap-3 sm:grid-cols-3">
+          <FeatureCard
+            icon={ShieldCheck}
+            title="Покупка через тикет"
+            subtitle="Оплата и вся переписка внутри магазина"
+          />
+          <FeatureCard
+            icon={autoKey ? KeyRound : Sparkles}
+            title={autoKey ? "Автовыдача ключа" : "Ручная выдача"}
+            subtitle={
+              autoKey
+                ? `Доступно ключей: ${product.availableKeyCount ?? 0}`
+                : "Продавец подтверждает и отправляет доступ вручную"
+            }
+          />
+          <FeatureCard
+            icon={Sparkles}
+            title="Поддержка"
+            subtitle="Если что-то не так — пишешь в этот же тикет"
+          />
+        </section>
+      </div>
     </Screen>
+  )
+}
+
+function FeatureCard({
+  icon: Icon,
+  title,
+  subtitle,
+}: {
+  icon: typeof ShieldCheck
+  title: string
+  subtitle: string
+}) {
+  return (
+    <div className="rounded-2xl bg-[var(--color-surface)] p-4">
+      <div className="flex size-10 items-center justify-center rounded-full bg-[var(--color-bg)] text-[var(--color-muted)]">
+        <Icon size={18} />
+      </div>
+      <p className="mt-3 text-sm font-semibold text-[var(--color-text)]">{title}</p>
+      <p className="mt-1 text-xs leading-5 text-[var(--color-muted)]">{subtitle}</p>
+    </div>
   )
 }

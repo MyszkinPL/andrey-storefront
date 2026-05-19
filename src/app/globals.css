@@ -22,21 +22,41 @@
   --color-accent: var(--tg-button-color);
   --color-accent-text: var(--tg-button-text-color);
   --color-destructive: var(--tg-destructive-text-color);
-  --color-border: color-mix(in srgb, white 9%, transparent);
-  --color-panel: color-mix(in srgb, var(--tg-secondary-bg-color) 92%, black 8%);
-  --color-panel-strong: color-mix(in srgb, var(--tg-secondary-bg-color) 86%, black 14%);
-  --color-soft: color-mix(in srgb, var(--tg-bg-color) 72%, var(--tg-secondary-bg-color) 28%);
-  --shell-shadow: 0 24px 80px rgba(0, 0, 0, 0.38);
+
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@keyframes enter-card {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.enter-card {
+  animation: enter-card 320ms var(--ease-out) both;
+  animation-delay: var(--stagger, 0ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .enter-card {
+    animation: none;
+  }
 }
 
 @theme inline {
   --color-background: var(--color-bg);
   --color-foreground: var(--color-text);
   --color-card: var(--color-surface);
+  --color-muted: var(--color-muted);
   --color-primary: var(--color-accent);
   --color-primary-foreground: var(--color-accent-text);
-  --color-muted: var(--color-muted);
   --color-destructive: var(--color-destructive);
 }
 
@@ -54,18 +74,6 @@ body {
     "Helvetica Neue",
     Arial,
     sans-serif;
-}
-
-body {
-  min-height: 100dvh;
-  background:
-    radial-gradient(circle at top, color-mix(in srgb, var(--color-accent) 22%, transparent) 0, transparent 34%),
-    linear-gradient(180deg, color-mix(in srgb, var(--color-bg) 92%, black 8%) 0%, var(--color-bg) 100%);
-}
-
-a {
-  color: inherit;
-  text-decoration: none;
 }
 
 html {
@@ -90,48 +98,4 @@ textarea,
 [contenteditable="true"] {
   -webkit-user-select: text;
   user-select: text;
-}
-
-.app-shell {
-  width: 100%;
-  max-width: 1120px;
-  min-height: 100dvh;
-  margin: 0 auto;
-}
-
-@media (min-width: 768px) {
-  body {
-    padding: 20px;
-  }
-
-  .app-shell {
-    min-height: calc(100dvh - 40px);
-    border: 1px solid var(--color-border);
-    border-radius: 28px;
-    overflow: clip;
-    background: color-mix(in srgb, var(--color-bg) 94%, black 6%);
-    box-shadow: var(--shell-shadow);
-  }
-}
-
-.enter-card {
-  animation: enter-card 280ms var(--ease-out) both;
-  animation-delay: var(--stagger, 0ms);
-}
-
-@keyframes enter-card {
-  from {
-    opacity: 0;
-    transform: translateY(8px) scale(0.985);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .enter-card {
-    animation: none;
-  }
 }

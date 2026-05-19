@@ -4,11 +4,10 @@ import Link from "next/link"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { formatDistanceToNow } from "date-fns"
 import { ru } from "date-fns/locale"
-import { Cell, Placeholder, Section, Subheadline, Title } from "@telegram-apps/telegram-ui"
+import { MessageSquarePlus, Ticket } from "lucide-react"
 
 import { createTicket, getMe, getTickets } from "@/lib/api"
-import { Badge, Button } from "@/components/ui"
-import { Screen, ScreenHeader } from "@/components/screen"
+import { Screen, ScreenEmpty, ScreenHeader } from "@/components/screen"
 
 export function TicketsScreen() {
   const queryClient = useQueryClient()
@@ -19,7 +18,7 @@ export function TicketsScreen() {
     mutationFn: () =>
       createTicket({
         subject: "Нужна помощь",
-        message: "Нужна консультация по подпискам, ключам и оплате.",
+        message: "Нужна консультация по товарам, оплате и выдаче.",
       }),
     onSuccess: async ({ ticketId }) => {
       await queryClient.invalidateQueries({ queryKey: ["tickets"] })
@@ -33,49 +32,68 @@ export function TicketsScreen() {
     <Screen>
       <ScreenHeader
         title="Тикеты"
-        subtitle={meData?.settings.supportIntro}
+        subtitle={meData?.settings.supportIntro || "Связь с продавцом и покупки"}
         trailing={
-          <Button onClick={() => quickTicket.mutate()} variant="secondary">
+          <button
+            onClick={() => quickTicket.mutate()}
+            className="rounded-full bg-[var(--color-accent)] px-3 py-1.5 text-xs font-semibold text-[var(--color-accent-text)]"
+          >
             Новый
-          </Button>
+          </button>
         }
       />
 
-      <Section>
-        {tickets.length === 0 ? (
-          <Placeholder
-            header="Пока нет тикетов"
-            description="Открой карточку товара или создай общий тикет, если нужна консультация."
-          />
-        ) : null}
-
-        {tickets.map((ticket) => (
-          <Link key={ticket.id} href={`/tickets/${ticket.id}`}>
-            <Cell
-              multiline
-              subtitle={ticket.productTitle || "Общий запрос"}
-              description={ticket.lastMessage || "Без сообщений"}
-              after={
-                <div className="flex flex-col items-end gap-1">
-                  <Badge>{renderStatus(ticket.status)}</Badge>
-                  {ticket.isPaid ? <Badge className="text-[var(--color-accent)]">Оплачено</Badge> : null}
-                </div>
-              }
+      {tickets.length === 0 ? (
+        <ScreenEmpty
+          icon={<MessageSquarePlus size={32} className="text-[var(--color-muted)]" />}
+          title="Тикетов пока нет"
+          subtitle="Открой товар и создай покупку или общий запрос."
+        />
+      ) : (
+        <div className="grid gap-3 px-4 pb-4">
+          {tickets.map((ticket, index) => (
+            <Link
+              key={ticket.id}
+              href={`/tickets/${ticket.id}`}
+              className="enter-card rounded-2xl bg-[var(--color-surface)] p-4"
+              style={{ ["--stagger" as string]: `${Math.min(index, 8) * 28}ms` }}
             >
-              <div className="min-w-0">
-                <Title level="3">#{ticket.number} · {ticket.subject}</Title>
-                <Subheadline level="2">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-[var(--color-text)]">
+                    #{ticket.number} · {ticket.subject}
+                  </p>
+                  <p className="mt-1 text-xs text-[var(--color-muted)]">
+                    {ticket.productTitle || "Общий запрос"}
+                  </p>
+                </div>
+                <div className="shrink-0 rounded-full bg-[var(--color-bg)] px-2.5 py-1 text-[11px] text-[var(--color-muted)]">
+                  {renderStatus(ticket.status)}
+                </div>
+              </div>
+              <p className="mt-3 line-clamp-2 text-sm leading-6 text-[var(--color-muted)]">
+                {ticket.lastMessage || "Без сообщений"}
+              </p>
+              <div className="mt-3 flex items-center justify-between text-xs text-[var(--color-muted)]">
+                <span>
                   Обновлён{" "}
                   {formatDistanceToNow(new Date(ticket.updatedAt), {
                     addSuffix: true,
                     locale: ru,
                   })}
-                </Subheadline>
+                </span>
+                {ticket.isPaid ? (
+                  <span className="rounded-full bg-[var(--color-accent)]/12 px-2 py-1 text-[var(--color-accent)]">
+                    Оплачено
+                  </span>
+                ) : (
+                  <Ticket size={14} />
+                )}
               </div>
-            </Cell>
-          </Link>
-        ))}
-      </Section>
+            </Link>
+          ))}
+        </div>
+      )}
     </Screen>
   )
 }

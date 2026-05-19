@@ -2,10 +2,8 @@
 
 import { useEffect, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { Checkbox, Placeholder, Section } from "@telegram-apps/telegram-ui"
 
 import { getMe, getPaymentMethods, saveSettings } from "@/lib/api"
-import { Button, Input, Textarea } from "@/components/ui"
 import { Screen, ScreenHeader } from "@/components/screen"
 
 type PaymentMethodForm = {
@@ -63,91 +61,69 @@ export function AdminSettingsScreen() {
 
   return (
     <Screen>
-      <ScreenHeader title="Настройки" subtitle="Тексты, контакты и реквизиты оплаты" />
+      <ScreenHeader title="Настройки" subtitle="Тексты и реквизиты" />
 
-      <Section header="Магазин">
-        <Input value={shopName} onChange={(event) => setShopName(event.target.value)} placeholder="Название" />
-        <Textarea
-          value={welcomeText}
-          onChange={(event) => setWelcomeText(event.target.value)}
-          placeholder="Текст на главной"
-        />
-        <Textarea
-          value={supportIntro}
-          onChange={(event) => setSupportIntro(event.target.value)}
-          placeholder="Текст на экране тикетов"
-        />
-        <Input
-          value={supportUsername}
-          onChange={(event) => setSupportUsername(event.target.value)}
-          placeholder="Telegram username support"
-        />
-      </Section>
-
-      <Section header="Реквизиты" footer="Можно держать несколько способов оплаты и временно выключать любой из них.">
-        {paymentMethods.length === 0 ? (
-          <Placeholder
-            header="Реквизитов пока нет"
-            description="Добавь хотя бы один способ оплаты ниже."
-          />
-        ) : null}
-
-        {paymentMethods.map((method, index) => (
-          <div key={method.id || index} className="pb-4">
-            <Input
-              value={method.title}
-              onChange={(event) =>
-                setPaymentMethods((prev) =>
-                  prev.map((item, itemIndex) =>
-                    itemIndex === index ? { ...item, title: event.target.value } : item,
-                  ),
-                )
-              }
-              placeholder="Название способа оплаты"
-            />
-            <Textarea
-              value={method.details}
-              onChange={(event) =>
-                setPaymentMethods((prev) =>
-                  prev.map((item, itemIndex) =>
-                    itemIndex === index ? { ...item, details: event.target.value } : item,
-                  ),
-                )
-              }
-              placeholder="Реквизиты"
-              className="mt-3"
-            />
-            <label className="mt-3 flex items-center gap-3">
-              <Checkbox
-                checked={method.isActive}
-                onChange={(event) =>
-                  setPaymentMethods((prev) =>
-                    prev.map((item, itemIndex) =>
-                      itemIndex === index ? { ...item, isActive: event.target.checked } : item,
-                    ),
-                  )
-                }
-              />
-              <span>Способ оплаты активен</span>
-            </label>
+      <div className="grid gap-3 px-4 pb-4 xl:grid-cols-2">
+        <div className="rounded-2xl bg-[var(--color-surface)] p-4">
+          <p className="text-sm font-semibold text-[var(--color-text)]">Магазин</p>
+          <div className="mt-3 grid gap-3">
+            <input value={shopName} onChange={(e) => setShopName(e.target.value)} placeholder="Название" className="w-full rounded-2xl bg-[var(--color-bg)] px-4 py-3 text-sm text-[var(--color-text)] outline-none" />
+            <textarea value={welcomeText} onChange={(e) => setWelcomeText(e.target.value)} placeholder="Текст на главной" className="min-h-24 w-full rounded-2xl bg-[var(--color-bg)] px-4 py-3 text-sm text-[var(--color-text)] outline-none" />
+            <textarea value={supportIntro} onChange={(e) => setSupportIntro(e.target.value)} placeholder="Текст на экране тикетов" className="min-h-24 w-full rounded-2xl bg-[var(--color-bg)] px-4 py-3 text-sm text-[var(--color-text)] outline-none" />
+            <input value={supportUsername} onChange={(e) => setSupportUsername(e.target.value)} placeholder="Username поддержки" className="w-full rounded-2xl bg-[var(--color-bg)] px-4 py-3 text-sm text-[var(--color-text)] outline-none" />
           </div>
-        ))}
+        </div>
 
-        <Button
-          variant="secondary"
-          onClick={() =>
-            setPaymentMethods((prev) => [...prev, { title: "", details: "", isActive: true }])
-          }
+        <div className="rounded-2xl bg-[var(--color-surface)] p-4">
+          <p className="text-sm font-semibold text-[var(--color-text)]">Реквизиты</p>
+          <div className="mt-3 grid gap-3">
+            {paymentMethods.map((method, index) => (
+              <div key={method.id || index} className="rounded-2xl bg-[var(--color-bg)] p-3">
+                <input
+                  value={method.title}
+                  onChange={(event) =>
+                    setPaymentMethods((prev) =>
+                      prev.map((item, itemIndex) =>
+                        itemIndex === index ? { ...item, title: event.target.value } : item,
+                      ),
+                    )
+                  }
+                  placeholder="Название"
+                  className="w-full rounded-xl bg-transparent px-2 py-2 text-sm text-[var(--color-text)] outline-none"
+                />
+                <textarea
+                  value={method.details}
+                  onChange={(event) =>
+                    setPaymentMethods((prev) =>
+                      prev.map((item, itemIndex) =>
+                        itemIndex === index ? { ...item, details: event.target.value } : item,
+                      ),
+                    )
+                  }
+                  placeholder="Реквизиты"
+                  className="mt-2 min-h-24 w-full rounded-xl bg-transparent px-2 py-2 text-sm text-[var(--color-text)] outline-none"
+                />
+              </div>
+            ))}
+            <button
+              onClick={() => setPaymentMethods((prev) => [...prev, { title: "", details: "", isActive: true }])}
+              className="rounded-2xl bg-[var(--color-bg)] px-4 py-3 text-sm font-medium text-[var(--color-text)]"
+            >
+              Добавить реквизит
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="px-4 pb-4">
+        <button
+          onClick={() => mutation.mutate()}
+          disabled={mutation.isPending}
+          className="w-full rounded-2xl bg-[var(--color-accent)] px-4 py-3 text-sm font-semibold text-[var(--color-accent-text)]"
         >
-          Добавить реквизит
-        </Button>
-      </Section>
-
-      <Section>
-        <Button onClick={() => mutation.mutate()} disabled={mutation.isPending} stretched>
           {mutation.isPending ? "Сохранение..." : "Сохранить настройки"}
-        </Button>
-      </Section>
+        </button>
+      </div>
     </Screen>
   )
 }

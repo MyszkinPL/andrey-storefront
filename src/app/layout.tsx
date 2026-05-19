@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next"
 import Script from "next/script"
 
-import { AppShell } from "@/components/app-shell"
 import { AuthGate } from "@/components/auth-gate"
 import { BottomTabs } from "@/components/bottom-tabs"
 import { ModeProvider } from "@/components/mode-provider"
@@ -38,11 +37,9 @@ export default function RootLayout({
         <Providers>
           <AuthGate>
             <ModeProvider>
-              <AppShell>
-                <ModeSwitcher />
-                {children}
-                <BottomTabs />
-              </AppShell>
+              <ModeSwitcher />
+              {children}
+              <BottomTabs />
             </ModeProvider>
           </AuthGate>
         </Providers>

@@ -2,11 +2,9 @@
 
 import Link from "next/link"
 import { useQuery } from "@tanstack/react-query"
-import { Cell, Placeholder, Section, Subheadline, Title } from "@telegram-apps/telegram-ui"
 
 import { getTickets } from "@/lib/api"
-import { Badge } from "@/components/ui"
-import { Screen, ScreenHeader } from "@/components/screen"
+import { Screen, ScreenEmpty, ScreenHeader } from "@/components/screen"
 
 export function AdminTicketsScreen() {
   const { data } = useQuery({
@@ -15,41 +13,41 @@ export function AdminTicketsScreen() {
     refetchInterval: 10_000,
   })
 
+  const tickets = data?.tickets ?? []
+
   return (
     <Screen>
-      <ScreenHeader title="Тикеты" subtitle="Оплаты, статусы, ручная обработка и автовыдача" />
+      <ScreenHeader title="Тикеты" subtitle="Оплата, статусы и выдача" />
 
-      <Section header="Очередь">
-        {(data?.tickets || []).length === 0 ? (
-          <Placeholder
-            header="Активных тикетов нет"
-            description="Когда кто-то создаст новый запрос на покупку или поддержку, он появится здесь."
-          />
-        ) : null}
-
-        {(data?.tickets || []).map((ticket) => (
-          <Link key={ticket.id} href={`/tickets/${ticket.id}`}>
-            <Cell
-              multiline
-              subtitle={ticket.productTitle || "Без товара"}
-              description={ticket.lastMessage || "Без сообщений"}
-              after={
-                <div className="flex flex-col items-end gap-1">
-                  <Badge>{renderStatus(ticket.status)}</Badge>
-                  {ticket.isPaid ? <Badge className="text-[var(--color-accent)]">Оплачено</Badge> : null}
-                </div>
-              }
+      {tickets.length === 0 ? (
+        <ScreenEmpty title="Активных тикетов нет" subtitle="Новые покупки появятся здесь." icon={<span />} />
+      ) : (
+        <div className="grid gap-3 px-4 pb-4">
+          {tickets.map((ticket, index) => (
+            <Link
+              key={ticket.id}
+              href={`/tickets/${ticket.id}`}
+              className="enter-card rounded-2xl bg-[var(--color-surface)] p-4"
+              style={{ ["--stagger" as string]: `${Math.min(index, 8) * 28}ms` }}
             >
-              <div className="min-w-0">
-                <Title level="3">#{ticket.number} · {ticket.subject}</Title>
-                <Subheadline level="2">
-                  {ticket.isPaid ? "Оплата подтверждена" : "Ожидает подтверждения оплаты"}
-                </Subheadline>
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-[var(--color-text)]">
+                    #{ticket.number} · {ticket.subject}
+                  </p>
+                  <p className="mt-1 text-xs text-[var(--color-muted)]">{ticket.productTitle || "Без товара"}</p>
+                </div>
+                <span className="rounded-full bg-[var(--color-bg)] px-2.5 py-1 text-[11px] text-[var(--color-muted)]">
+                  {renderStatus(ticket.status)}
+                </span>
               </div>
-            </Cell>
-          </Link>
-        ))}
-      </Section>
+              <p className="mt-3 line-clamp-2 text-sm leading-6 text-[var(--color-muted)]">
+                {ticket.lastMessage || "Без сообщений"}
+              </p>
+            </Link>
+          ))}
+        </div>
+      )}
     </Screen>
   )
 }
