@@ -334,7 +334,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
               ) : ticket.messages.length === 0 ? (
                 <ScreenEmpty
                   title="Сообщений пока нет"
-                  subtitle="Напиши первым, чтобы открыть диалог."
+                  subtitle="Диалог по заказу пока пустой."
                   icon={<CreditCard size={28} className="text-[var(--color-muted)]" />}
                 />
               ) : (
@@ -444,7 +444,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                 <textarea
                   value={message}
                   onChange={(event) => setMessage(event.target.value)}
-                  placeholder={isClosed ? "Тикет закрыт" : "Напиши сообщение"}
+                  placeholder={isClosed ? "Заказ закрыт" : "Напиши сообщение"}
                   disabled={isClosed}
                   className="min-h-24 w-full resize-none bg-transparent px-1 py-1 text-sm leading-6 text-[var(--color-text)] outline-none placeholder:text-[var(--color-muted)]"
                 />
@@ -658,7 +658,7 @@ function getOrderSteps(ticket: {
 
   return [
     {
-      title: "Тикет создан",
+      title: "Заказ создан",
       subtitle: "Заказ открыт и привязан к товару.",
       state: stepStates[0],
     },
@@ -686,9 +686,9 @@ function getOrderSteps(ticket: {
     {
       title: fulfilled ? "Заказ завершён" : "Выдача / закрытие",
       subtitle: ticket.deliveredKey
-        ? "Ключ уже выдан в этом тикете."
+        ? "Ключ уже выдан в этом заказе."
         : ticket.status === "CLOSED"
-          ? "Тикет закрыт."
+          ? "Заказ закрыт."
           : "Финальный этап после выдачи товара.",
       state: stepStates[3],
     },

@@ -17,14 +17,14 @@ export function getBot() {
   })
 
   bot.command("tickets", async (ctx) => {
-    await ctx.reply("Переход в тикеты:", {
-      reply_markup: new InlineKeyboard().webApp("Открыть тикеты", `${env.APP_URL}/tickets`),
+    await ctx.reply("Переход к заказам:", {
+      reply_markup: new InlineKeyboard().webApp("Открыть заказы", `${env.APP_URL}/tickets`),
     })
   })
 
   bot.command("help", async (ctx) => {
     await ctx.reply(
-      "Через миниаппку можно смотреть каталог, создавать тикеты и получать ключи после подтверждения оплаты.",
+      "Через миниаппку можно смотреть каталог, оформлять заказы и получать ключи после подтверждения оплаты.",
     )
   })
 

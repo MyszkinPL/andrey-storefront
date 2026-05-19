@@ -33,7 +33,7 @@ const templateMethod: PaymentMethodForm = {
   title: "СБП / Т-Банк",
   type: "MANUAL",
   details:
-    "Оплата по номеру телефона: +7...\nПолучатель: ...\nПосле оплаты отправь чек в тикет.",
+    "Оплата по номеру телефона: +7...\nПолучатель: ...\nПосле оплаты отправь чек в заказ.",
   iconDataUrl: "",
   cryptoAcceptedAssets: "",
   isActive: true,
@@ -200,7 +200,7 @@ export function AdminSettingsScreen() {
               <textarea
                 value={supportIntro}
                 onChange={(e) => setSupportIntro(e.target.value)}
-                placeholder="Текст на экране тикетов"
+                placeholder="Текст на экране заказов"
                 className="ui-input min-h-24"
               />
               <input

@@ -16,10 +16,10 @@ export function TicketsScreen() {
   const { data: ticketsData } = useQuery({ queryKey: ["tickets"], queryFn: getTickets })
   const { data: meData } = useQuery({ queryKey: ["me"], queryFn: getMe })
 
-  const quickTicket = useMutation({
+  const quickOrder = useMutation({
     mutationFn: () =>
       createTicket({
-        subject: "Нужна помощь",
+        subject: "Новый заказ",
         message: "Нужна консультация по товарам, оплате и выдаче.",
       }),
     onSuccess: async ({ ticketId }) => {
@@ -33,14 +33,14 @@ export function TicketsScreen() {
   return (
     <Screen>
       <ScreenHeader
-        title="Тикеты"
-        subtitle={meData?.settings.supportIntro || "Связь с продавцом и покупки"}
+        title="Заказы"
+        subtitle={meData?.settings.supportIntro || "Покупки, оплата и выдача"}
         trailing={
           <button
-            onClick={() => quickTicket.mutate()}
+            onClick={() => quickOrder.mutate()}
             className="rounded-full bg-[var(--color-accent)] px-3 py-1.5 text-xs font-semibold text-[var(--color-accent-text)]"
           >
-            Новый
+            Новый заказ
           </button>
         }
       />
@@ -48,8 +48,8 @@ export function TicketsScreen() {
       {tickets.length === 0 ? (
         <ScreenEmpty
           icon={<MessageSquarePlus size={32} className="text-[var(--color-muted)]" />}
-          title="Тикетов пока нет"
-          subtitle="Открой товар и создай покупку или общий запрос."
+          title="Заказов пока нет"
+          subtitle="Открой товар и оформи покупку."
         />
       ) : (
         <ScreenBody>

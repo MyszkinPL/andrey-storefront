@@ -53,7 +53,7 @@ export function ProductScreen({ productId }: { productId: string }) {
 
   useBackButton(() => router.back())
   useMainButton({
-    text: ticketMutation.isPending ? "Создаём..." : "Открыть тикет",
+    text: ticketMutation.isPending ? "Создаём..." : "Оформить заказ",
     onClick: () => ticketMutation.mutate(),
     visible: true,
     enabled: !ticketMutation.isPending && Boolean(data?.product) && Boolean(selectedMethodId),
@@ -69,7 +69,7 @@ export function ProductScreen({ productId }: { productId: string }) {
   const deliveryHint =
     product.deliveryType === "AUTO_KEY"
       ? `${product.availableKeyCount ?? 0} ключей в остатке`
-      : "Реквизиты и активация через тикет"
+      : "Оплата и активация через заказ"
 
   return (
     <Screen noTabBar className="pb-6">
@@ -246,9 +246,9 @@ export function ProductScreen({ productId }: { productId: string }) {
 
             <div className="mt-3 flex items-center justify-between rounded-[20px] border border-[var(--color-border)] bg-[var(--color-bg)] px-4 py-3">
               <div>
-                <p className="text-sm font-medium text-[var(--color-text)]">Переход в тикет</p>
+                <p className="text-sm font-medium text-[var(--color-text)]">Оформление заказа</p>
                 <p className="mt-1 text-xs text-[var(--color-muted)]">
-                  После выбора способа откроется диалог с оплатой и выдачей.
+                  После выбора способа откроется экран заказа с оплатой и выдачей.
                 </p>
               </div>
               <div className="flex size-9 items-center justify-center rounded-full bg-[var(--color-surface)] text-[var(--color-text)]">

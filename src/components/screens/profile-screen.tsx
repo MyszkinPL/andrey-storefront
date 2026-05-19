@@ -50,7 +50,7 @@ export function ProfileScreen() {
             <p className="text-sm font-semibold text-[var(--color-text)]">Поддержка</p>
           </div>
           <p className="text-sm leading-6 text-[var(--color-muted)]">
-            {meData?.settings.supportIntro || "Связь с продавцом внутри тикетов."}
+            {meData?.settings.supportIntro || "Связь с продавцом по заказам внутри магазина."}
           </p>
           {meData?.settings.supportUsername ? (
             <p className="mt-3 text-sm text-[var(--color-text)]">@{meData.settings.supportUsername}</p>

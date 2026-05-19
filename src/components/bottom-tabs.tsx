@@ -10,14 +10,14 @@ import { cn } from "@/lib/cn"
 
 const BUYER_TABS = [
   { href: "/catalog", label: "Каталог", icon: Store },
-  { href: "/tickets", label: "Тикеты", icon: Ticket },
+  { href: "/tickets", label: "Заказы", icon: Ticket },
   { href: "/profile", label: "Профиль", icon: LifeBuoy },
 ]
 
 const ADMIN_TABS = [
   { href: "/admin", label: "Обзор", icon: Home },
   { href: "/admin/products", label: "Товары", icon: Store },
-  { href: "/admin/tickets", label: "Тикеты", icon: Shield },
+  { href: "/admin/tickets", label: "Заказы", icon: Shield },
   { href: "/admin/settings", label: "Настройки", icon: Settings },
 ]
 

@@ -143,7 +143,7 @@ export function CatalogScreen() {
                       {product.priceRub.toLocaleString("ru-RU")} ₽
                     </p>
                     <span className="text-[11px] text-[var(--color-accent)]">
-                      {product.deliveryType === "AUTO_KEY" ? `${product.availableKeyCount ?? 0} keys` : "ticket"}
+                      {product.deliveryType === "AUTO_KEY" ? `${product.availableKeyCount ?? 0} keys` : "заказ"}
                     </span>
                   </div>
                 </div>

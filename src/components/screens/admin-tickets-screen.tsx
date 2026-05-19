@@ -18,10 +18,10 @@ export function AdminTicketsScreen() {
 
   return (
     <Screen>
-      <ScreenHeader title="Тикеты" subtitle="Оплата, статусы и выдача" />
+      <ScreenHeader title="Заказы" subtitle="Оплата, статусы, выдача и чат" />
 
       {tickets.length === 0 ? (
-        <ScreenEmpty title="Активных тикетов нет" subtitle="Новые покупки появятся здесь." icon={<Clock3 size={28} className="text-[var(--color-muted)]" />} />
+        <ScreenEmpty title="Активных заказов нет" subtitle="Новые покупки появятся здесь." icon={<Clock3 size={28} className="text-[var(--color-muted)]" />} />
       ) : (
         <ScreenBody>
           {tickets.map((ticket, index) => (

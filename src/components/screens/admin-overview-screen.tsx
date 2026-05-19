@@ -31,7 +31,7 @@ export function AdminOverviewScreen() {
       icon: Package2,
     },
     {
-      label: "Открытые тикеты",
+      label: "Активные заказы",
       value: ticketsData?.tickets.filter((item) => item.status !== "CLOSED").length || 0,
       icon: Ticket,
     },
@@ -53,7 +53,7 @@ export function AdminOverviewScreen() {
 
   const links = [
     { href: "/admin/products", title: "Товары", subtitle: "Каталог, характеристики и ключи" },
-    { href: "/admin/tickets", title: "Тикеты", subtitle: "Покупки, статусы и чат с клиентом" },
+    { href: "/admin/tickets", title: "Заказы", subtitle: "Покупки, статусы, оплата и чат с клиентом" },
     { href: "/admin/settings", title: "Настройки", subtitle: "Тексты магазина и способы оплаты" },
   ]
 
