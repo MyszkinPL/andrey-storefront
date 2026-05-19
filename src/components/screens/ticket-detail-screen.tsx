@@ -26,6 +26,13 @@ import { Screen, ScreenEmpty, ScreenHeader } from "@/components/screen"
 import { useBackButton, useHaptic, useMainButton } from "@/hooks/use-telegram"
 import { cn } from "@/lib/cn"
 
+const HIDDEN_SYSTEM_PREFIXES = [
+  "Выбран способ оплаты:",
+  "Crypto invoice создан.",
+  "Не удалось автоматически создать crypto invoice.",
+  "Оплата подтверждена. Начинаю выдачу.",
+]
+
 export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
   const router = useRouter()
   const haptic = useHaptic()
@@ -69,8 +76,17 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
 
   const isClosed = data?.ticket.status === "CLOSED"
   const canSend = message.trim().length > 0 && !isClosed && !sendMutation.isPending
+  const visibleMessages = useMemo(
+    () =>
+      (data?.ticket?.messages ?? []).filter(
+        (entry) =>
+          !HIDDEN_SYSTEM_PREFIXES.some((prefix) => entry.body.startsWith(prefix)),
+      ),
+    [data?.ticket?.messages],
+  )
+
   const groupedMessages = useMemo(() => {
-    const messages = data?.ticket?.messages ?? []
+    const messages = visibleMessages
 
     return messages.map((entry, index) => ({
       ...entry,
@@ -79,7 +95,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
         messages[index - 1]?.isMine !== entry.isMine ||
         messages[index - 1]?.senderRole !== entry.senderRole,
     }))
-  }, [data?.ticket?.messages])
+  }, [visibleMessages])
 
   useBackButton(() => router.back())
   useMainButton({
@@ -101,6 +117,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
   const invoiceMeta = [ticket.cryptoInvoiceStatus, ticket.cryptoInvoiceAmount, ticket.cryptoInvoiceAsset]
     .filter(Boolean)
     .join(" · ")
+  const orderSteps = getOrderSteps(ticket)
 
   return (
     <Screen noTabBar className="pb-6">
@@ -227,6 +244,52 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
         </div>
 
         <aside className="grid content-start gap-4 xl:sticky xl:top-4">
+          <section className="ui-card p-4">
+            <p className="text-sm font-semibold text-[var(--color-text)]">Статус заказа</p>
+            <div className="mt-4 grid gap-3">
+              {orderSteps.map((step, index) => (
+                <div key={step.title} className="flex gap-3">
+                  <div className="flex w-6 flex-col items-center">
+                    <div
+                      className={cn(
+                        "flex size-6 items-center justify-center rounded-full text-[11px] font-semibold",
+                        step.state === "done" &&
+                          "bg-[var(--color-accent)] text-[var(--color-accent-text)]",
+                        step.state === "current" &&
+                          "border border-[var(--color-accent)] bg-[var(--color-bg)] text-[var(--color-text)]",
+                        step.state === "upcoming" &&
+                          "bg-[var(--color-bg)] text-[var(--color-muted)]",
+                      )}
+                    >
+                      {index + 1}
+                    </div>
+                    {index < orderSteps.length - 1 ? (
+                      <div
+                        className={cn(
+                          "mt-1 h-full min-h-6 w-px",
+                          step.state === "done" ? "bg-[var(--color-accent)]/40" : "bg-[var(--color-border)]",
+                        )}
+                      />
+                    ) : null}
+                  </div>
+                  <div className="min-w-0 pb-3">
+                    <p
+                      className={cn(
+                        "text-sm font-medium",
+                        step.state === "upcoming"
+                          ? "text-[var(--color-muted)]"
+                          : "text-[var(--color-text)]",
+                      )}
+                    >
+                      {step.title}
+                    </p>
+                    <p className="mt-1 text-xs leading-5 text-[var(--color-muted)]">{step.subtitle}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
           {ticket.paymentMethodTitle ? (
             <section className="ui-card p-4">
               <div className="flex items-start gap-3">
@@ -289,6 +352,15 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                     <ExternalLink size={15} />
                   </a>
                 </div>
+              ) : ticket.paymentMethodType === "CRYPTO_PAY" ? (
+                <div className="mt-4 rounded-[18px] bg-[var(--color-bg)] p-4">
+                  <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--color-muted)]">
+                    Invoice
+                  </p>
+                  <p className="mt-2 text-sm text-[var(--color-text)]">
+                    Инвойс ещё не создан или не обновился. Можно обновить кнопкой справа сверху.
+                  </p>
+                </div>
               ) : null}
             </section>
           ) : null}
@@ -337,6 +409,66 @@ function renderStatus(status: string) {
     default:
       return status
   }
+}
+
+function getOrderSteps(ticket: {
+  status: string
+  isPaid: boolean
+  paymentMethodType: string | null
+  cryptoInvoiceUrl: string | null
+  cryptoInvoiceStatus: string | null
+  deliveredKey: string | null
+}) {
+  const invoiceReady =
+    ticket.paymentMethodType === "CRYPTO_PAY" ? Boolean(ticket.cryptoInvoiceUrl) : true
+  const paymentDone = ticket.isPaid
+  const workStarted = ticket.status === "IN_PROGRESS" || ticket.status === "CLOSED"
+  const fulfilled = Boolean(ticket.deliveredKey) || ticket.status === "CLOSED"
+
+  const stepStates = [
+    "done",
+    paymentDone ? "done" : invoiceReady ? "current" : "current",
+    fulfilled ? "done" : workStarted ? "current" : "upcoming",
+    fulfilled ? "done" : "upcoming",
+  ] as const
+
+  return [
+    {
+      title: "Тикет создан",
+      subtitle: "Заказ открыт и привязан к товару.",
+      state: stepStates[0],
+    },
+    {
+      title: paymentDone ? "Оплата подтверждена" : "Ожидание оплаты",
+      subtitle:
+        ticket.paymentMethodType === "CRYPTO_PAY"
+          ? invoiceReady
+            ? ticket.cryptoInvoiceStatus === "paid"
+              ? "Crypto Pay получил оплату."
+              : "Инвойс готов к оплате."
+            : "Инвойс ещё создаётся или требует обновления."
+          : "Ожидается подтверждение по выбранным реквизитам.",
+      state: stepStates[1],
+    },
+    {
+      title: workStarted ? "Заказ в работе" : "Ожидает обработки",
+      subtitle: fulfilled
+        ? "Продавец завершил выдачу."
+        : workStarted
+          ? "Продавец обрабатывает заказ."
+          : "Начнётся после подтверждения оплаты.",
+      state: stepStates[2],
+    },
+    {
+      title: fulfilled ? "Заказ завершён" : "Выдача / закрытие",
+      subtitle: ticket.deliveredKey
+        ? "Ключ уже выдан в этом тикете."
+        : ticket.status === "CLOSED"
+          ? "Тикет закрыт."
+          : "Финальный этап после выдачи товара.",
+      state: stepStates[3],
+    },
+  ]
 }
 
 function StatusBadge({

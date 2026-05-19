@@ -81,23 +81,10 @@ export async function POST(request: Request) {
         paymentMethodIconDataUrl: paymentMethod?.iconDataUrl,
         createdById: user.id,
         messages: {
-          create: [
-            {
-              body: payload.message,
-              senderId: user.id,
-            },
-            ...(paymentMethod
-              ? [
-                  {
-                    body:
-                      paymentMethod.type === PaymentMethodType.CRYPTO_PAY
-                        ? `Выбран способ оплаты: ${paymentMethod.title}. Подготовлю crypto invoice.`
-                        : `Выбран способ оплаты: ${paymentMethod.title}${paymentMethod.details ? `\n\n${paymentMethod.details}` : ""}`,
-                    senderId: user.id,
-                  },
-                ]
-              : []),
-          ],
+          create: {
+            body: payload.message,
+            senderId: user.id,
+          },
         },
       },
     })
@@ -122,24 +109,8 @@ export async function POST(request: Request) {
               cryptoInvoiceExpiresAt: invoice.expiresAt,
             },
           })
-
-          await prisma.ticketMessage.create({
-            data: {
-              ticketId: ticket.id,
-              senderId: user.id,
-              body: `Crypto invoice создан.\n${invoice.url}`,
-            },
-          })
         }
-      } catch {
-        await prisma.ticketMessage.create({
-          data: {
-            ticketId: ticket.id,
-            senderId: user.id,
-            body: "Не удалось автоматически создать crypto invoice. Админ сможет обновить его из тикета.",
-          },
-        })
-      }
+      } catch {}
     }
 
     return NextResponse.json({ ticketId: ticket.id })
