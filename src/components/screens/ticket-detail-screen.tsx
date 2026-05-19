@@ -1,11 +1,19 @@
 "use client"
 
-import { useState } from "react"
+import Image from "next/image"
+import { useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { format } from "date-fns"
 import { ru } from "date-fns/locale"
-import { CheckCheck, CreditCard, RefreshCcw, Shield, User2 } from "lucide-react"
+import {
+  CheckCheck,
+  CreditCard,
+  ExternalLink,
+  RefreshCcw,
+  Shield,
+  User2,
+} from "lucide-react"
 
 import {
   confirmTicketPayment,
@@ -44,7 +52,8 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
   })
 
   const statusMutation = useMutation({
-    mutationFn: (status: "OPEN" | "IN_PROGRESS" | "CLOSED") => updateTicketStatus(ticketId, status),
+    mutationFn: (status: "OPEN" | "IN_PROGRESS" | "CLOSED") =>
+      updateTicketStatus(ticketId, status),
     onSuccess: invalidate,
   })
 
@@ -60,6 +69,17 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
 
   const isClosed = data?.ticket.status === "CLOSED"
   const canSend = message.trim().length > 0 && !isClosed && !sendMutation.isPending
+  const groupedMessages = useMemo(() => {
+    const messages = data?.ticket?.messages ?? []
+
+    return messages.map((entry, index) => ({
+      ...entry,
+      showAvatar:
+        index === 0 ||
+        messages[index - 1]?.isMine !== entry.isMine ||
+        messages[index - 1]?.senderRole !== entry.senderRole,
+    }))
+  }, [data?.ticket?.messages])
 
   useBackButton(() => router.back())
   useMainButton({
@@ -73,39 +93,151 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
   if (!data?.ticket) return null
 
   const ticket = data.ticket
+  const statusLabel = renderStatus(ticket.status)
+  const createdAtLabel = format(new Date(ticket.createdAt), "dd MMMM · HH:mm", {
+    locale: ru,
+  })
+  const paymentStateLabel = ticket.isPaid ? "Оплачено" : "Ожидает оплату"
+  const invoiceMeta = [ticket.cryptoInvoiceStatus, ticket.cryptoInvoiceAmount, ticket.cryptoInvoiceAsset]
+    .filter(Boolean)
+    .join(" · ")
 
   return (
     <Screen noTabBar className="pb-6">
       <ScreenHeader
         title={ticket.productTitle || ticket.subject}
-        subtitle={`#${ticket.number} · ${renderStatus(ticket.status)}`}
+        subtitle={`#${ticket.number} · ${statusLabel}`}
       />
 
-      <div className="grid gap-3 px-4 pb-4">
-        <section className="rounded-[24px] bg-[var(--color-surface)] p-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-full bg-[var(--color-bg)] px-2.5 py-1 text-[10px] text-[var(--color-muted)]">
-              {ticket.isPaid ? "Оплачено" : "Ожидает оплату"}
-            </span>
-            {ticket.paymentMethodTitle ? (
-              <span className="rounded-full bg-[var(--color-bg)] px-2.5 py-1 text-[10px] text-[var(--color-muted)]">
-                {ticket.paymentMethodTitle}
-              </span>
-            ) : null}
-            <span className="ml-auto text-[11px] text-[var(--color-muted)]">
-              {format(new Date(ticket.createdAt), "dd MMM · HH:mm", { locale: ru })}
-            </span>
-          </div>
+      <div className="grid gap-4 px-4 pb-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="grid gap-4">
+          <section className="ui-card overflow-hidden">
+            <div className="border-b border-[var(--color-border)] px-4 py-3 sm:px-5">
+              <div className="flex flex-wrap items-center gap-2">
+                <StatusBadge kind={ticket.isPaid ? "paid" : "waiting"}>{paymentStateLabel}</StatusBadge>
+                <StatusBadge>{statusLabel}</StatusBadge>
+                {ticket.paymentMethodTitle ? (
+                  <StatusBadge>{ticket.paymentMethodTitle}</StatusBadge>
+                ) : null}
+                <span className="ml-auto text-[11px] text-[var(--color-muted)]">{createdAtLabel}</span>
+              </div>
+            </div>
 
+            <div className="grid gap-3 p-3 sm:p-4">
+              {ticket.messages.length === 0 ? (
+                <ScreenEmpty
+                  title="Сообщений пока нет"
+                  subtitle="Напиши первым, чтобы открыть диалог."
+                  icon={<CreditCard size={28} className="text-[var(--color-muted)]" />}
+                />
+              ) : (
+                <div className="grid gap-2">
+                  {groupedMessages.map((entry) => {
+                    const isAdmin = entry.senderRole === "ADMIN"
+
+                    return (
+                      <div
+                        key={entry.id}
+                        className={cn(
+                          "flex items-end gap-2",
+                          entry.isMine ? "justify-end" : "justify-start",
+                        )}
+                      >
+                        {!entry.isMine ? (
+                          <SenderAvatar isAdmin={isAdmin} visible={entry.showAvatar} />
+                        ) : null}
+
+                        <div
+                          className={cn(
+                            "max-w-[min(720px,86%)]",
+                            entry.isMine && "flex flex-col items-end",
+                          )}
+                        >
+                          {entry.showAvatar ? (
+                            <div
+                              className={cn(
+                                "mb-1 flex items-center gap-2 px-1 text-[11px]",
+                                entry.isMine ? "justify-end text-[var(--color-muted)]" : "text-[var(--color-muted)]",
+                              )}
+                            >
+                              <span className="font-medium text-[var(--color-text)]">
+                                {entry.isMine ? "Ты" : entry.senderName}
+                              </span>
+                              <span className="rounded-full bg-[var(--color-surface)] px-2 py-0.5">
+                                {isAdmin ? "Админ" : "Покупатель"}
+                              </span>
+                            </div>
+                          ) : null}
+
+                          <div
+                            className={cn(
+                              "rounded-[22px] px-4 py-3 shadow-[0_1px_0_color-mix(in_srgb,var(--color-text)_4%,transparent)_inset]",
+                              entry.isMine
+                                ? "rounded-br-md bg-[var(--color-accent)] text-[var(--color-accent-text)]"
+                                : "rounded-bl-md bg-[var(--color-surface-2)] text-[var(--color-text)]",
+                            )}
+                          >
+                            <p className="whitespace-pre-wrap break-words text-sm leading-6">
+                              {entry.body}
+                            </p>
+
+                            <div
+                              className={cn(
+                                "mt-2 flex items-center justify-end gap-1 text-[11px]",
+                                entry.isMine
+                                  ? "text-[var(--color-accent-text)]/78"
+                                  : "text-[var(--color-muted)]",
+                              )}
+                            >
+                              <span>{format(new Date(entry.createdAt), "HH:mm", { locale: ru })}</span>
+                              {entry.isMine ? <CheckCheck size={12} /> : null}
+                            </div>
+                          </div>
+                        </div>
+
+                        {entry.isMine ? (
+                          <SenderAvatar isAdmin={isAdmin} visible={entry.showAvatar} />
+                        ) : null}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          </section>
+
+          {ticket.deliveredKey ? (
+            <section className="ui-card p-4 sm:p-5">
+              <p className="text-sm font-semibold text-[var(--color-text)]">Выданный ключ</p>
+              <p className="mt-3 break-all rounded-[18px] bg-[var(--color-bg)] p-4 font-mono text-sm text-[var(--color-text)]">
+                {ticket.deliveredKey}
+              </p>
+            </section>
+          ) : null}
+
+          <section className="ui-card p-3 sm:p-4">
+            <textarea
+              value={message}
+              onChange={(event) => setMessage(event.target.value)}
+              placeholder={isClosed ? "Тикет закрыт" : "Напиши сообщение"}
+              disabled={isClosed}
+              className="min-h-28 w-full resize-none rounded-[20px] bg-[var(--color-bg)] px-4 py-3 text-sm leading-6 text-[var(--color-text)] outline-none placeholder:text-[var(--color-muted)]"
+            />
+          </section>
+        </div>
+
+        <aside className="grid content-start gap-4 xl:sticky xl:top-4">
           {ticket.paymentMethodTitle ? (
-            <div className="mt-3 rounded-[20px] bg-[var(--color-bg)] p-3">
-              <div className="flex items-center gap-3">
+            <section className="ui-card p-4">
+              <div className="flex items-start gap-3">
                 <PaymentMethodIcon
                   iconDataUrl={ticket.paymentMethodIconDataUrl}
                   title={ticket.paymentMethodTitle}
                 />
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-[var(--color-text)]">{ticket.paymentMethodTitle}</p>
+                  <p className="text-sm font-semibold text-[var(--color-text)]">
+                    {ticket.paymentMethodTitle}
+                  </p>
                   <p className="mt-1 text-xs text-[var(--color-muted)]">
                     {ticket.paymentMethodType === "CRYPTO_PAY" ? "Crypto Pay" : "Ручные реквизиты"}
                   </p>
@@ -113,151 +245,82 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                 {ticket.paymentMethodType === "CRYPTO_PAY" ? (
                   <button
                     onClick={() => refreshMutation.mutate()}
-                    className="flex size-9 items-center justify-center rounded-full bg-[var(--color-surface)] text-[var(--color-muted)]"
+                    className="flex size-10 items-center justify-center rounded-full bg-[var(--color-bg)] text-[var(--color-muted)]"
                   >
-                    <RefreshCcw size={14} className={refreshMutation.isPending ? "animate-spin" : ""} />
+                    <RefreshCcw
+                      size={15}
+                      className={refreshMutation.isPending ? "animate-spin" : ""}
+                    />
                   </button>
                 ) : null}
               </div>
 
               {ticket.paymentMethodDetails ? (
-                <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-[var(--color-muted)]">
-                  {ticket.paymentMethodDetails}
-                </p>
+                <div className="mt-4 rounded-[18px] bg-[var(--color-bg)] p-4">
+                  <p className="whitespace-pre-wrap text-sm leading-6 text-[var(--color-text)]">
+                    {ticket.paymentMethodDetails}
+                  </p>
+                </div>
               ) : null}
 
               {ticket.paymentMethodType === "CRYPTO_PAY" && ticket.cryptoInvoiceUrl ? (
-                <div className="mt-3 grid gap-2">
-                  <div className="rounded-2xl bg-[var(--color-surface)] px-3 py-2 text-xs text-[var(--color-muted)]">
-                    {ticket.cryptoInvoiceStatus || "invoice"}
-                    {ticket.cryptoInvoiceAmount ? ` · ${ticket.cryptoInvoiceAmount}` : ""}
-                    {ticket.cryptoInvoiceAsset ? ` · ${ticket.cryptoInvoiceAsset}` : ""}
+                <div className="mt-4 grid gap-3">
+                  <div className="rounded-[18px] bg-[var(--color-bg)] p-4">
+                    <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--color-muted)]">
+                      Invoice
+                    </p>
+                    <p className="mt-2 text-sm font-medium text-[var(--color-text)]">
+                      {invoiceMeta || "Ожидает обновление статуса"}
+                    </p>
+                    {ticket.cryptoInvoiceExpiresAt ? (
+                      <p className="mt-2 text-xs text-[var(--color-muted)]">
+                        До {format(new Date(ticket.cryptoInvoiceExpiresAt), "dd MMM · HH:mm", { locale: ru })}
+                      </p>
+                    ) : null}
                   </div>
+
                   <a
                     href={ticket.cryptoInvoiceUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="rounded-2xl bg-[var(--color-accent)] px-4 py-3 text-center text-sm font-semibold text-[var(--color-accent-text)]"
+                    className="flex items-center justify-center gap-2 rounded-[18px] bg-[var(--color-accent)] px-4 py-3 text-sm font-semibold text-[var(--color-accent-text)]"
                   >
                     Оплатить invoice
+                    <ExternalLink size={15} />
                   </a>
                 </div>
               ) : null}
-            </div>
+            </section>
           ) : null}
 
           {ticket.isAdmin ? (
-            <div className="mt-3 flex flex-wrap gap-2">
-              {!ticket.isPaid ? (
-                <button
-                  onClick={() => paymentMutation.mutate()}
-                  className="rounded-full bg-[var(--color-accent)] px-3 py-1.5 text-xs font-semibold text-[var(--color-accent-text)]"
-                >
-                  Подтвердить оплату
-                </button>
-              ) : null}
-              <button
-                onClick={() => statusMutation.mutate("IN_PROGRESS")}
-                className="rounded-full bg-[var(--color-bg)] px-3 py-1.5 text-xs font-medium text-[var(--color-text)]"
-              >
-                В работу
-              </button>
-              <button
-                onClick={() => statusMutation.mutate("CLOSED")}
-                className="rounded-full bg-[var(--color-bg)] px-3 py-1.5 text-xs font-medium text-[var(--color-text)]"
-              >
-                Закрыть
-              </button>
-            </div>
-          ) : null}
-        </section>
-
-        {ticket.deliveredKey ? (
-          <div className="rounded-[24px] bg-[var(--color-surface)] p-4">
-            <p className="text-sm font-semibold text-[var(--color-text)]">Выданный ключ</p>
-            <p className="mt-3 break-all rounded-2xl bg-[var(--color-bg)] p-3 font-mono text-sm text-[var(--color-text)]">
-              {ticket.deliveredKey}
-            </p>
-          </div>
-        ) : null}
-
-        {ticket.messages.length === 0 ? (
-          <ScreenEmpty
-            title="Сообщений пока нет"
-            subtitle="Напиши первым, чтобы открыть диалог."
-            icon={<CreditCard size={28} className="text-[var(--color-muted)]" />}
-          />
-        ) : (
-          <div className="grid gap-3">
-            {ticket.messages.map((entry) => {
-              const isAdmin = entry.senderRole === "ADMIN"
-              return (
-                <div
-                  key={entry.id}
-                  className={cn("flex gap-2", entry.isMine ? "justify-end" : "justify-start")}
-                >
-                  {!entry.isMine ? (
-                    <SenderAvatar isAdmin={isAdmin} />
-                  ) : null}
-                  <div
-                    className={cn(
-                      "max-w-[84%] rounded-[22px] px-4 py-3",
-                      entry.isMine
-                        ? "rounded-br-md bg-[var(--color-accent)] text-[var(--color-accent-text)]"
-                        : "rounded-bl-md bg-[var(--color-surface)] text-[var(--color-text)]",
-                    )}
+            <section className="ui-card p-4">
+              <p className="text-sm font-semibold text-[var(--color-text)]">Действия</p>
+              <div className="mt-3 grid gap-2">
+                {!ticket.isPaid ? (
+                  <button
+                    onClick={() => paymentMutation.mutate()}
+                    className="rounded-[18px] bg-[var(--color-accent)] px-4 py-3 text-sm font-semibold text-[var(--color-accent-text)]"
                   >
-                    <div className="mb-1 flex items-center gap-2">
-                      <span className={cn("text-xs font-semibold", entry.isMine ? "text-[var(--color-accent-text)]/88" : "text-[var(--color-text)]")}>
-                        {entry.isMine ? "Ты" : entry.senderName}
-                      </span>
-                      <span
-                        className={cn(
-                          "rounded-full px-2 py-0.5 text-[10px]",
-                          entry.isMine
-                            ? "bg-white/12 text-[var(--color-accent-text)]/88"
-                            : "bg-[var(--color-bg)] text-[var(--color-muted)]",
-                        )}
-                      >
-                        {isAdmin ? "Админ" : "Покупатель"}
-                      </span>
-                    </div>
-                    <p
-                      className={cn(
-                        "whitespace-pre-wrap text-sm leading-6",
-                        entry.isMine ? "text-[var(--color-accent-text)]" : "text-[var(--color-text)]",
-                      )}
-                    >
-                      {entry.body}
-                    </p>
-                    <div
-                      className={cn(
-                        "mt-2 flex items-center justify-end gap-1 text-[11px]",
-                        entry.isMine ? "text-[var(--color-accent-text)]/78" : "text-[var(--color-muted)]",
-                      )}
-                    >
-                      <span>{format(new Date(entry.createdAt), "HH:mm", { locale: ru })}</span>
-                      {entry.isMine ? <CheckCheck size={12} /> : null}
-                    </div>
-                  </div>
-                  {entry.isMine ? (
-                    <SenderAvatar isAdmin={isAdmin} mine />
-                  ) : null}
-                </div>
-              )
-            })}
-          </div>
-        )}
-
-        <div className="rounded-[24px] bg-[var(--color-surface)] p-4">
-          <textarea
-            value={message}
-            onChange={(event) => setMessage(event.target.value)}
-            placeholder={isClosed ? "Тикет закрыт" : "Сообщение"}
-            disabled={isClosed}
-            className="min-h-24 w-full rounded-2xl bg-[var(--color-bg)] px-4 py-3 text-sm text-[var(--color-text)] outline-none placeholder:text-[var(--color-muted)]"
-          />
-        </div>
+                    Подтвердить оплату
+                  </button>
+                ) : null}
+                <button
+                  onClick={() => statusMutation.mutate("IN_PROGRESS")}
+                  className="rounded-[18px] bg-[var(--color-bg)] px-4 py-3 text-sm font-medium text-[var(--color-text)]"
+                >
+                  В работу
+                </button>
+                <button
+                  onClick={() => statusMutation.mutate("CLOSED")}
+                  className="rounded-[18px] bg-[var(--color-bg)] px-4 py-3 text-sm font-medium text-[var(--color-text)]"
+                >
+                  Закрыть
+                </button>
+              </div>
+            </section>
+          ) : null}
+        </aside>
       </div>
     </Screen>
   )
@@ -276,6 +339,27 @@ function renderStatus(status: string) {
   }
 }
 
+function StatusBadge({
+  children,
+  kind = "default",
+}: {
+  children: React.ReactNode
+  kind?: "default" | "paid" | "waiting"
+}) {
+  return (
+    <span
+      className={cn(
+        "rounded-full px-2.5 py-1 text-[10px]",
+        kind === "paid" && "bg-[var(--color-accent)]/14 text-[var(--color-accent)]",
+        kind === "waiting" && "bg-[var(--color-bg)] text-[var(--color-muted)]",
+        kind === "default" && "bg-[var(--color-bg)] text-[var(--color-muted)]",
+      )}
+    >
+      {children}
+    </span>
+  )
+}
+
 function PaymentMethodIcon({
   iconDataUrl,
   title,
@@ -285,31 +369,37 @@ function PaymentMethodIcon({
 }) {
   if (iconDataUrl) {
     return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img src={iconDataUrl} alt="" className="size-12 rounded-2xl object-cover" />
+      <div className="relative size-12 overflow-hidden rounded-[18px]">
+        <Image src={iconDataUrl} alt="" fill unoptimized sizes="48px" className="object-cover" />
+      </div>
     )
   }
 
   return (
-    <div className="flex size-12 items-center justify-center rounded-2xl bg-[var(--color-surface)] text-xs font-semibold text-[var(--color-text)]">
+    <div className="flex size-12 items-center justify-center rounded-[18px] bg-[var(--color-bg)] text-xs font-semibold text-[var(--color-text)]">
       {title.slice(0, 2).toUpperCase()}
     </div>
   )
 }
 
-function SenderAvatar({ isAdmin, mine = false }: { isAdmin: boolean; mine?: boolean }) {
+function SenderAvatar({
+  isAdmin,
+  visible,
+}: {
+  isAdmin: boolean
+  visible: boolean
+}) {
   return (
-    <div
-      className={cn(
-        "flex size-9 shrink-0 items-center justify-center rounded-full",
-        mine ? "bg-[var(--color-surface)]" : "bg-[var(--color-surface)]",
-      )}
-    >
-      {isAdmin ? (
-        <Shield size={15} className={mine ? "text-[var(--color-accent)]" : "text-[var(--color-muted)]"} />
-      ) : (
-        <User2 size={15} className={mine ? "text-[var(--color-accent)]" : "text-[var(--color-muted)]"} />
-      )}
+    <div className="flex w-9 shrink-0 justify-center">
+      {visible ? (
+        <div className="flex size-9 items-center justify-center rounded-full bg-[var(--color-surface)]">
+          {isAdmin ? (
+            <Shield size={15} className="text-[var(--color-muted)]" />
+          ) : (
+            <User2 size={15} className="text-[var(--color-muted)]" />
+          )}
+        </div>
+      ) : null}
     </div>
   )
 }
