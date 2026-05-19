@@ -1,3 +1,5 @@
+import { List, Section, Subheadline, Title } from "@telegram-apps/telegram-ui"
+
 import { cn } from "@/lib/cn"
 
 export function Screen({
@@ -18,7 +20,7 @@ export function Screen({
       )}
       style={{ paddingTop: "env(safe-area-inset-top, 0)" }}
     >
-      {children}
+      <List>{children}</List>
     </main>
   )
 }
@@ -33,14 +35,19 @@ export function ScreenHeader({
   trailing?: React.ReactNode
 }) {
   return (
-    <header className="flex items-start justify-between gap-3 px-4 pb-3 pt-3">
-      <div className="min-w-0 flex-1">
-        <h1 className="truncate text-xl font-semibold">{title}</h1>
-        {subtitle ? (
-          <p className="mt-1 text-sm text-[var(--color-muted)]">{subtitle}</p>
-        ) : null}
-      </div>
-      {trailing}
-    </header>
+    <Section
+      header={
+        <div className="flex min-w-0 flex-1 items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <Title level="2">{title}</Title>
+            {subtitle ? <Subheadline level="2">{subtitle}</Subheadline> : null}
+          </div>
+          {trailing}
+        </div>
+      }
+      className="!bg-transparent"
+    >
+      <div />
+    </Section>
   )
 }

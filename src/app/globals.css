@@ -38,7 +38,7 @@
 
 html,
 body {
-  background: radial-gradient(circle at top, #203447 0%, var(--color-bg) 42%);
+  background: var(--color-bg);
   color: var(--color-text);
   overscroll-behavior: none;
   -webkit-tap-highlight-color: transparent;
@@ -74,13 +74,6 @@ textarea,
 [contenteditable="true"] {
   -webkit-user-select: text;
   user-select: text;
-}
-
-.glass-card {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02));
-  border: 1px solid var(--color-border);
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.22);
-  backdrop-filter: blur(18px);
 }
 
 .enter-card {

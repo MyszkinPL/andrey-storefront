@@ -3,7 +3,7 @@
 import { useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 
-import { getWebApp } from "@/lib/telegram"
+import { useTelegram } from "@/hooks/use-telegram"
 
 function resolveStartTarget(raw: string | null) {
   const value = (raw || "").trim()
@@ -20,13 +20,11 @@ function resolveStartTarget(raw: string | null) {
 export default function RootPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { startParam } = useTelegram()
 
   useEffect(() => {
-    const webApp = getWebApp()
-    const startParam =
-      webApp?.initDataUnsafe.start_param ?? searchParams.get("tgWebAppStartParam")
-    router.replace(resolveStartTarget(startParam))
-  }, [router, searchParams])
+    router.replace(resolveStartTarget(startParam ?? searchParams.get("tgWebAppStartParam")))
+  }, [router, searchParams, startParam])
 
   return null
 }

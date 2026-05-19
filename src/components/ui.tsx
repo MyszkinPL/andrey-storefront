@@ -1,56 +1,52 @@
+import {
+  Badge as TgBadge,
+  Button as TgButton,
+  type ButtonProps as TgButtonProps,
+  Input as TgInput,
+  type InputProps as TgInputProps,
+  Section,
+  Textarea as TgTextarea,
+  type TextareaProps as TgTextareaProps,
+} from "@telegram-apps/telegram-ui"
 import type { ComponentProps } from "react"
 
 import { cn } from "@/lib/cn"
 
 export function Card({ className, ...props }: ComponentProps<"div">) {
-  return <div className={cn("glass-card rounded-[24px] p-4", className)} {...props} />
+  return <Section className={cn(className)} {...props} />
 }
 
 export function Button({
   className,
   variant = "primary",
   ...props
-}: ComponentProps<"button"> & {
+}: TgButtonProps & {
   variant?: "primary" | "secondary" | "ghost" | "danger"
 }) {
   return (
-    <button
-      className={cn(
-        "rounded-2xl px-4 py-3 text-sm font-semibold transition-transform active:scale-[0.985] disabled:opacity-50",
-        variant === "primary" && "bg-[var(--color-accent)] text-[var(--color-accent-text)]",
-        variant === "secondary" &&
-          "border border-white/8 bg-[var(--color-surface)] text-[var(--color-text)]",
-        variant === "ghost" && "bg-transparent text-[var(--color-muted)]",
-        variant === "danger" && "bg-[var(--color-destructive)] text-white",
-        className,
-      )}
+    <TgButton
+      mode={
+        variant === "primary"
+          ? "filled"
+          : variant === "secondary"
+            ? "bezeled"
+            : variant === "ghost"
+              ? "plain"
+              : "outline"
+      }
+      size="l"
+      className={cn(className)}
       {...props}
     />
   )
 }
 
-export function Input(props: ComponentProps<"input">) {
-  return (
-    <input
-      {...props}
-      className={cn(
-        "w-full rounded-2xl border border-white/8 bg-[var(--color-surface)] px-4 py-3 text-sm text-[var(--color-text)] placeholder:text-[var(--color-muted)]",
-        props.className,
-      )}
-    />
-  )
+export function Input(props: TgInputProps) {
+  return <TgInput {...props} className={cn(props.className)} />
 }
 
-export function Textarea(props: ComponentProps<"textarea">) {
-  return (
-    <textarea
-      {...props}
-      className={cn(
-        "min-h-28 w-full rounded-2xl border border-white/8 bg-[var(--color-surface)] px-4 py-3 text-sm text-[var(--color-text)] placeholder:text-[var(--color-muted)]",
-        props.className,
-      )}
-    />
-  )
+export function Textarea(props: TgTextareaProps) {
+  return <TgTextarea {...props} className={cn(props.className)} />
 }
 
 export function Badge({
@@ -61,13 +57,8 @@ export function Badge({
   className?: string
 }) {
   return (
-    <span
-      className={cn(
-        "inline-flex items-center rounded-full border border-white/8 px-2.5 py-1 text-[11px] font-medium text-[var(--color-muted)]",
-        className,
-      )}
-    >
+    <TgBadge type="number" mode="secondary" className={cn(className)}>
       {children}
-    </span>
+    </TgBadge>
   )
 }

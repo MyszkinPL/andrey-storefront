@@ -1,41 +1,37 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useMemo, useRef } from "react"
+import { backButton, hapticFeedback, mainButton } from "@tma.js/sdk-react"
+import { retrieveLaunchParams } from "@tma.js/sdk"
 
-import { applyTelegramTheme, getWebApp } from "@/lib/telegram"
+import { useTelegramContext } from "@/components/telegram-provider"
+import { getRawInitData } from "@/lib/telegram"
 
 export function useTelegram() {
-  const [ready, setReady] = useState(false)
-
-  useEffect(() => {
-    const webApp = getWebApp()
-    if (!webApp) {
-      queueMicrotask(() => setReady(true))
-      return
+  const { ready, isTelegram } = useTelegramContext()
+  const launch = useMemo(() => {
+    if (!ready || !isTelegram || typeof window === "undefined") {
+      return { startParam: null as string | null, user: null as Record<string, unknown> | null }
     }
 
     try {
-      webApp.ready()
-      webApp.expand()
-      webApp.setBackgroundColor("bg_color")
-      webApp.setHeaderColor("bg_color")
-      webApp.disableVerticalSwipes?.()
-    } catch {}
-
-    applyTelegramTheme(webApp.themeParams)
-    const onTheme = () => applyTelegramTheme(webApp.themeParams)
-    webApp.onEvent("themeChanged", onTheme)
-    queueMicrotask(() => setReady(true))
-
-    return () => {
-      try {
-        webApp.offEvent("themeChanged", onTheme)
-      } catch {}
+      const launchParams = retrieveLaunchParams()
+      return {
+        startParam: launchParams.tgWebAppStartParam ?? null,
+        user: launchParams.tgWebAppData?.user ?? null,
+      }
+    } catch {
+      return { startParam: null as string | null, user: null as Record<string, unknown> | null }
     }
-  }, [])
+  }, [isTelegram, ready])
 
-  const webApp = getWebApp()
-  return { webApp, ready, user: webApp?.initDataUnsafe.user ?? null }
+  return {
+    ready,
+    isTelegram,
+    initData: isTelegram ? (getRawInitData() ?? "") : "",
+    startParam: launch.startParam,
+    user: launch.user,
+  }
 }
 
 export function useMainButton(config: {
@@ -52,33 +48,53 @@ export function useMainButton(config: {
   }, [config.onClick])
 
   useEffect(() => {
-    const webApp = getWebApp()
-    if (!webApp) return
-    const button = webApp.MainButton
     const handler = () => latestOnClick.current()
 
     if (!config.visible) {
-      button.hide()
-      button.hideProgress()
+      if (mainButton.hide.isAvailable()) {
+        mainButton.hide()
+      }
+      if (mainButton.hideLoader.isAvailable()) {
+        mainButton.hideLoader()
+      }
       return
     }
 
-    button.setText(config.text)
-    button.setParams({
-      is_visible: config.visible ?? true,
-      is_active: config.enabled ?? true,
-    })
-    if (config.progress) button.showProgress(false)
-    else button.hideProgress()
-    button.show()
-    button.onClick(handler)
+    if (mainButton.setText.isAvailable()) {
+      mainButton.setText(config.text)
+    }
+    if (mainButton.setParams.isAvailable()) {
+      mainButton.setParams({
+        isVisible: config.visible ?? true,
+        isEnabled: config.enabled ?? true,
+      })
+    }
+    if (config.progress) {
+      if (mainButton.showLoader.isAvailable()) {
+        mainButton.showLoader()
+      }
+    } else if (mainButton.hideLoader.isAvailable()) {
+      mainButton.hideLoader()
+    }
+    if (mainButton.show.isAvailable()) {
+      mainButton.show()
+    }
+    if (mainButton.onClick.isAvailable()) {
+      mainButton.onClick(handler)
+    }
 
     return () => {
       try {
-        button.offClick(handler)
+        if (mainButton.offClick.isAvailable()) {
+          mainButton.offClick(handler)
+        }
       } catch {}
-      button.hide()
-      button.hideProgress()
+      if (mainButton.hide.isAvailable()) {
+        mainButton.hide()
+      }
+      if (mainButton.hideLoader.isAvailable()) {
+        mainButton.hideLoader()
+      }
     }
   }, [config.enabled, config.progress, config.text, config.visible])
 }
@@ -91,19 +107,28 @@ export function useBackButton(onClick: () => void, visible = true) {
   }, [onClick])
 
   useEffect(() => {
-    const webApp = getWebApp()
-    if (!webApp) return
     const handler = () => latestOnClick.current()
 
-    if (visible) webApp.BackButton.show()
-    else webApp.BackButton.hide()
-    webApp.BackButton.onClick(handler)
+    if (visible) {
+      if (backButton.show.isAvailable()) {
+        backButton.show()
+      }
+    } else if (backButton.hide.isAvailable()) {
+      backButton.hide()
+    }
+    if (backButton.onClick.isAvailable()) {
+      backButton.onClick(handler)
+    }
 
     return () => {
       try {
-        webApp.BackButton.offClick(handler)
+        if (backButton.offClick.isAvailable()) {
+          backButton.offClick(handler)
+        }
       } catch {}
-      webApp.BackButton.hide()
+      if (backButton.hide.isAvailable()) {
+        backButton.hide()
+      }
     }
   }, [visible])
 }
@@ -112,12 +137,16 @@ export function useHaptic() {
   return {
     select: () => {
       try {
-        getWebApp()?.HapticFeedback.selectionChanged()
+        if (hapticFeedback.selectionChanged.isAvailable()) {
+          hapticFeedback.selectionChanged()
+        }
       } catch {}
     },
     success: () => {
       try {
-        getWebApp()?.HapticFeedback.notificationOccurred("success")
+        if (hapticFeedback.notificationOccurred.isAvailable()) {
+          hapticFeedback.notificationOccurred("success")
+        }
       } catch {}
     },
   }

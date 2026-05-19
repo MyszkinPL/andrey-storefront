@@ -1,13 +1,13 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { Placeholder, Spinner } from "@telegram-apps/telegram-ui"
 
 import { authenticateWithTelegram } from "@/lib/api"
-import { isInTelegram } from "@/lib/telegram"
 import { useTelegram } from "@/hooks/use-telegram"
 
 export function AuthGate({ children }: { children: React.ReactNode }) {
-  const { ready, webApp } = useTelegram()
+  const { ready, initData, isTelegram } = useTelegram()
   const [state, setState] = useState<"loading" | "ok" | "outside" | "error">("loading")
   const [error, setError] = useState("")
 
@@ -20,7 +20,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
         return
       }
 
-      if (!isInTelegram()) {
+      if (!isTelegram) {
         if (process.env.NEXT_PUBLIC_ALLOW_DEV_AUTH === "true") {
           authenticateWithTelegram("", true)
             .then(() => setState("ok"))
@@ -35,19 +35,19 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
         return
       }
 
-      authenticateWithTelegram(webApp?.initData || "")
+      authenticateWithTelegram(initData)
         .then(() => setState("ok"))
         .catch((err: unknown) => {
           setError(err instanceof Error ? err.message : "Auth failed")
           setState("error")
         })
     })
-  }, [ready, webApp])
+  }, [initData, isTelegram, ready])
 
   if (state === "loading") {
     return (
       <div className="flex min-h-dvh items-center justify-center">
-        <div className="size-8 animate-spin rounded-full border-2 border-[var(--color-accent)] border-t-transparent" />
+        <Spinner size="m" />
       </div>
     )
   }
@@ -55,12 +55,10 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   if (state === "outside") {
     return (
       <div className="flex min-h-dvh items-center justify-center px-6 text-center">
-        <div className="glass-card rounded-[28px] px-6 py-5">
-          <p className="text-lg font-semibold">Открой магазин из Telegram</p>
-          <p className="mt-2 text-sm text-[var(--color-muted)]">
-            Авторизация идёт через Telegram `initData`. Для локальной разработки можно включить dev auth.
-          </p>
-        </div>
+        <Placeholder
+          header="Открой магазин из Telegram"
+          description="Авторизация идёт через Telegram initData. Для локальной разработки можно включить dev auth."
+        />
       </div>
     )
   }
