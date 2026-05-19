@@ -763,14 +763,37 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                 {ticket.paymentMethodType === "CRYPTO_PAY" && ticket.cryptoInvoiceUrl ? (
                   <div className="mt-4 grid gap-3">
                     <div className="rounded-[18px] bg-[var(--color-bg)] p-4">
-                      <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--color-muted)]">
-                        Invoice
-                      </p>
-                      <p className="mt-2 text-sm font-medium text-[var(--color-text)]">
-                        {invoiceMeta || "Ожидает обновление статуса"}
-                      </p>
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-[10px] uppercase tracking-[0.16em] text-[var(--color-muted)]">
+                            Статус
+                          </p>
+                          <p className="mt-1 text-sm font-medium text-[var(--color-text)]">
+                            {ticket.cryptoInvoiceStatus === "paid"
+                              ? "Оплачен"
+                              : "Ждёт оплату"}
+                          </p>
+                        </div>
+                        {ticket.cryptoInvoiceAmount || ticket.cryptoInvoiceAsset ? (
+                          <div className="text-right">
+                            <p className="text-[10px] uppercase tracking-[0.16em] text-[var(--color-muted)]">
+                              Invoice
+                            </p>
+                            <p className="mt-1 text-sm font-medium text-[var(--color-text)]">
+                              {[ticket.cryptoInvoiceAmount, ticket.cryptoInvoiceAsset]
+                                .filter(Boolean)
+                                .join(" · ") || "—"}
+                            </p>
+                          </div>
+                        ) : null}
+                      </div>
+
+                      {invoiceMeta ? (
+                        <p className="mt-3 text-xs text-[var(--color-muted)]">{invoiceMeta}</p>
+                      ) : null}
+
                       {ticket.cryptoInvoiceExpiresAt ? (
-                        <p className="mt-2 text-xs text-[var(--color-muted)]">
+                        <p className="mt-3 text-xs text-[var(--color-muted)]">
                           До{" "}
                           {format(new Date(ticket.cryptoInvoiceExpiresAt), "dd MMM · HH:mm", {
                             locale: ru,
@@ -785,19 +808,34 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                       rel="noreferrer"
                       className="flex items-center justify-center gap-2 rounded-[18px] bg-[var(--color-accent)] px-4 py-3 text-sm font-semibold text-[var(--color-accent-text)]"
                     >
-                      Оплатить invoice
+                      Открыть invoice
                       <ExternalLink size={15} />
                     </a>
                   </div>
                 ) : ticket.paymentMethodType === "CRYPTO_PAY" ? (
                   <div className="mt-4 rounded-[18px] bg-[var(--color-bg)] p-4">
-                    <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--color-muted)]">
-                      Invoice
-                    </p>
-                    <p className="mt-2 text-sm text-[var(--color-text)]">
-                      {mode === "admin"
-                        ? "Инвойс ещё не создан или не обновился. Проверь настройки Crypto Pay или обнови статус кнопкой справа сверху."
-                        : "Invoice ещё не появился. Обнови экран чуть позже или дождись, пока продавец подготовит оплату."}
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-medium text-[var(--color-text)]">
+                          Invoice ещё не готов
+                        </p>
+                        <p className="mt-1 text-xs text-[var(--color-muted)]">
+                          Обнови статус чуть позже.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => refreshMutation.mutate()}
+                        className="rounded-full bg-[var(--color-surface)] px-3 py-1.5 text-xs text-[var(--color-text)]"
+                      >
+                        Обновить
+                      </button>
+                    </div>
+                  </div>
+                ) : ticket.paymentMethodType === "MANUAL" && !ticket.paymentMethodDetails ? (
+                  <div className="mt-4 rounded-[18px] bg-[var(--color-bg)] p-4">
+                    <p className="text-sm text-[var(--color-muted)]">
+                      Реквизиты пока не добавлены.
                     </p>
                   </div>
                 ) : null}
