@@ -22,6 +22,31 @@ export async function optimizeSquareImage(file: File, size = 768) {
   return canvas.toDataURL("image/webp", 0.88)
 }
 
+export async function optimizeMessageImage(
+  file: File,
+  maxWidth = 1600,
+  maxHeight = 1600,
+) {
+  const source = await readFileAsDataUrl(file)
+  const image = await loadImage(source)
+  const canvas = document.createElement("canvas")
+  const ratio = Math.min(
+    1,
+    maxWidth / image.width,
+    maxHeight / image.height,
+  )
+
+  canvas.width = Math.max(1, Math.round(image.width * ratio))
+  canvas.height = Math.max(1, Math.round(image.height * ratio))
+
+  const context = canvas.getContext("2d")
+  if (!context) throw new Error("Canvas is unavailable")
+
+  context.drawImage(image, 0, 0, canvas.width, canvas.height)
+
+  return canvas.toDataURL("image/webp", 0.9)
+}
+
 function readFileAsDataUrl(file: File) {
   return new Promise<string>((resolve, reject) => {
     const reader = new FileReader()

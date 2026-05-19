@@ -1,7 +1,7 @@
 "use client"
 
 import Image from "next/image"
-import { useMemo, useState } from "react"
+import { useMemo, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { format } from "date-fns"
@@ -10,9 +10,12 @@ import {
   CheckCheck,
   CreditCard,
   ExternalLink,
+  ImagePlus,
   RefreshCcw,
+  SendHorizontal,
   Shield,
   User2,
+  X,
 } from "lucide-react"
 
 import {
@@ -21,7 +24,9 @@ import {
   refreshCryptoInvoice,
   sendTicketMessage,
   updateTicketStatus,
+  type TicketMessageAttachment,
 } from "@/lib/api"
+import { optimizeMessageImage } from "@/lib/image"
 import { useMode } from "@/components/mode-provider"
 import { Screen, ScreenEmpty, ScreenHeader } from "@/components/screen"
 import { useBackButton, useHaptic } from "@/hooks/use-telegram"
@@ -34,12 +39,18 @@ const HIDDEN_SYSTEM_PREFIXES = [
   "Оплата подтверждена. Начинаю выдачу.",
 ]
 
+const MAX_ATTACHMENTS = 6
+
 export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
   const router = useRouter()
   const haptic = useHaptic()
   const queryClient = useQueryClient()
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
   const { mode } = useMode()
   const [message, setMessage] = useState("")
+  const [attachments, setAttachments] = useState<TicketMessageAttachment[]>([])
+  const [isUploading, setIsUploading] = useState(false)
+  const [previewImage, setPreviewImage] = useState<string | null>(null)
   const { data } = useQuery({
     queryKey: ["ticket", ticketId],
     queryFn: () => getTicket(ticketId),
@@ -52,9 +63,15 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
   }
 
   const sendMutation = useMutation({
-    mutationFn: () => sendTicketMessage(ticketId, message.trim()),
+    mutationFn: () =>
+      sendTicketMessage(ticketId, {
+        body: message.trim(),
+        attachments,
+      }),
     onSuccess: async () => {
       setMessage("")
+      setAttachments([])
+      if (fileInputRef.current) fileInputRef.current.value = ""
       haptic.success()
       await invalidate()
     },
@@ -78,7 +95,9 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
 
   const isClosed = data?.ticket.status === "CLOSED"
   const isAwaitingPayment = !data?.ticket?.isPaid
-  const canSend = message.trim().length > 0 && !isClosed && !sendMutation.isPending
+  const hasDraftContent = message.trim().length > 0 || attachments.length > 0
+  const canSend =
+    hasDraftContent && !isClosed && !isUploading && !sendMutation.isPending
   const visibleMessages = useMemo(
     () =>
       (data?.ticket?.messages ?? []).filter(
@@ -93,7 +112,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
 
     return messages.map((entry, index) => ({
       ...entry,
-      showAvatar:
+      showMeta:
         index === 0 ||
         messages[index - 1]?.isMine !== entry.isMine ||
         messages[index - 1]?.senderRole !== entry.senderRole,
@@ -108,7 +127,8 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
   const isSupportFlow = !ticket.productTitle && !ticket.paymentMethodTitle
   const isBuyerView = mode === "buyer"
   const adminToolsVisible = ticket.isAdmin && mode === "admin"
-  const shouldLockBuyerChat = !isSupportFlow && isBuyerView && isAwaitingPayment && !isClosed
+  const shouldLockBuyerChat =
+    !isSupportFlow && isBuyerView && isAwaitingPayment && !isClosed
   const showRawPaymentDetails =
     ticket.paymentMethodType !== "CRYPTO_PAY" || mode === "admin"
   const statusLabel = renderStatus(ticket.status)
@@ -120,10 +140,41 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
     : ticket.isPaid
       ? "Оплачено"
       : "Ожидает оплату"
-  const invoiceMeta = [ticket.cryptoInvoiceStatus, ticket.cryptoInvoiceAmount, ticket.cryptoInvoiceAsset]
+  const invoiceMeta = [
+    ticket.cryptoInvoiceStatus,
+    ticket.cryptoInvoiceAmount,
+    ticket.cryptoInvoiceAsset,
+  ]
     .filter(Boolean)
     .join(" · ")
   const orderSteps = getOrderSteps(ticket)
+
+  async function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(event.target.files ?? [])
+    if (!files.length) return
+
+    const nextFiles = files.slice(0, Math.max(0, MAX_ATTACHMENTS - attachments.length))
+    if (!nextFiles.length) {
+      event.target.value = ""
+      return
+    }
+
+    setIsUploading(true)
+
+    try {
+      const processed = await Promise.all(
+        nextFiles.map(async (file) => ({
+          type: "image" as const,
+          url: await optimizeMessageImage(file),
+        })),
+      )
+
+      setAttachments((current) => [...current, ...processed].slice(0, MAX_ATTACHMENTS))
+    } finally {
+      setIsUploading(false)
+      event.target.value = ""
+    }
+  }
 
   if (shouldLockBuyerChat) {
     return (
@@ -138,7 +189,9 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
             <div className="flex flex-wrap items-center gap-2">
               <StatusBadge kind="waiting">Оплата</StatusBadge>
               <StatusBadge>{ticket.paymentMethodTitle || "Способ оплаты"}</StatusBadge>
-              <span className="ml-auto text-[11px] text-[var(--color-muted)]">{createdAtLabel}</span>
+              <span className="ml-auto text-[11px] text-[var(--color-muted)]">
+                {createdAtLabel}
+              </span>
             </div>
 
             <div className="mt-4 grid gap-4">
@@ -160,7 +213,10 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                     state: "upcoming" as const,
                   },
                 ].map((step, index) => (
-                  <div key={step.title} className="flex items-center gap-3 rounded-[16px] bg-[var(--color-surface)] px-3 py-3">
+                  <div
+                    key={step.title}
+                    className="flex items-center gap-3 rounded-[16px] bg-[var(--color-surface)] px-3 py-3"
+                  >
                     <div
                       className={cn(
                         "flex size-7 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold",
@@ -172,8 +228,12 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                       {index + 1}
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-[var(--color-text)]">{step.title}</p>
-                      <p className="mt-0.5 text-xs text-[var(--color-muted)]">{step.subtitle}</p>
+                      <p className="text-sm font-medium text-[var(--color-text)]">
+                        {step.title}
+                      </p>
+                      <p className="mt-0.5 text-xs text-[var(--color-muted)]">
+                        {step.subtitle}
+                      </p>
                     </div>
                   </div>
                 ))}
@@ -191,7 +251,9 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                         {ticket.paymentMethodTitle}
                       </p>
                       <p className="mt-1 text-xs text-[var(--color-muted)]">
-                        {ticket.paymentMethodType === "CRYPTO_PAY" ? "Оплата через Crypto Bot" : "Реквизиты для оплаты"}
+                        {ticket.paymentMethodType === "CRYPTO_PAY"
+                          ? "Оплата через Crypto Bot"
+                          : "Реквизиты для оплаты"}
                       </p>
                     </div>
                     {ticket.paymentMethodType === "CRYPTO_PAY" ? (
@@ -224,12 +286,16 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                               Статус
                             </p>
                             <p className="mt-1 text-sm font-medium text-[var(--color-text)]">
-                              {ticket.cryptoInvoiceStatus === "paid" ? "Оплачено" : "Ожидает оплату"}
+                              {ticket.cryptoInvoiceStatus === "paid"
+                                ? "Оплачено"
+                                : "Ожидает оплату"}
                             </p>
                           </div>
                         </div>
                         {ticket.cryptoInvoiceAsset ? (
-                          <p className="mt-3 text-xs text-[var(--color-muted)]">{ticket.cryptoInvoiceAsset}</p>
+                          <p className="mt-3 text-xs text-[var(--color-muted)]">
+                            {ticket.cryptoInvoiceAsset}
+                          </p>
                         ) : null}
                       </div>
 
@@ -249,17 +315,13 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                         Подготавливаю оплату. Обнови экран чуть позже.
                       </p>
                     </div>
-                  ) : (
-                    <>
-                      {ticket.paymentMethodDetails && showRawPaymentDetails ? (
-                        <div className="mt-4 rounded-[18px] bg-[var(--color-surface)] p-4">
-                          <p className="whitespace-pre-wrap text-sm leading-6 text-[var(--color-text)]">
-                            {ticket.paymentMethodDetails}
-                          </p>
-                        </div>
-                      ) : null}
-                    </>
-                  )}
+                  ) : ticket.paymentMethodDetails && showRawPaymentDetails ? (
+                    <div className="mt-4 rounded-[18px] bg-[var(--color-surface)] p-4">
+                      <p className="whitespace-pre-wrap text-sm leading-6 text-[var(--color-text)]">
+                        {ticket.paymentMethodDetails}
+                      </p>
+                    </div>
+                  ) : null}
                 </section>
               ) : null}
             </div>
@@ -286,171 +348,240 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
           <section className="ui-card overflow-hidden">
             <div className="border-b border-[var(--color-border)] px-4 py-3 sm:px-5">
               <div className="flex flex-wrap items-center gap-2">
-                <StatusBadge kind={ticket.isPaid ? "paid" : "waiting"}>{paymentStateLabel}</StatusBadge>
+                <StatusBadge kind={ticket.isPaid ? "paid" : "waiting"}>
+                  {paymentStateLabel}
+                </StatusBadge>
                 <StatusBadge>{isSupportFlow ? "Поддержка" : statusLabel}</StatusBadge>
                 {ticket.paymentMethodTitle ? (
                   <StatusBadge>{ticket.paymentMethodTitle}</StatusBadge>
                 ) : null}
-                <span className="ml-auto text-[11px] text-[var(--color-muted)]">{createdAtLabel}</span>
+                <span className="ml-auto text-[11px] text-[var(--color-muted)]">
+                  {createdAtLabel}
+                </span>
               </div>
             </div>
 
-            <div className="grid gap-3 p-3 sm:p-4">
-              {shouldLockBuyerChat ? (
-                <div className="ui-card-soft p-5">
-                  <p className="text-sm font-semibold text-[var(--color-text)]">
-                    Сначала оплата, потом чат
-                  </p>
-                  <p className="mt-2 text-sm leading-6 text-[var(--color-muted)]">
-                    Пока заказ не оплачен, переписка закрыта. Оплати invoice или реквизиты справа — после подтверждения откроется нормальный чат с продавцом и выдачей товара.
-                  </p>
-                  <div className="mt-4 rounded-[18px] bg-[var(--color-bg)] p-4">
-                    <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--color-muted)]">
-                      Запрос на покупку
-                    </p>
-                    <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-[var(--color-text)]">
-                      {ticket.messages[0]?.body || ticket.subject}
-                    </p>
-                  </div>
-                </div>
-              ) : ticket.messages.length === 0 ? (
+            {groupedMessages.length === 0 ? (
+              <div className="p-4 sm:p-5">
                 <ScreenEmpty
                   title="Сообщений пока нет"
-                  subtitle="Диалог по заказу пока пустой."
+                  subtitle={
+                    isSupportFlow
+                      ? "Начни диалог с продавцом."
+                      : "После оплаты здесь будет нормальный диалог по заказу."
+                  }
                   icon={<CreditCard size={28} className="text-[var(--color-muted)]" />}
                 />
-              ) : (
-                <div className="grid gap-2">
-                  {groupedMessages.map((entry) => {
-                    const isAdmin = entry.senderRole === "ADMIN"
-                    const senderRoleLabel =
-                      entry.isMine && isBuyerView
-                        ? "Покупатель"
-                        : isAdmin
-                          ? "Админ"
-                          : "Покупатель"
+              </div>
+            ) : (
+              <div className="grid gap-3 bg-[linear-gradient(180deg,color-mix(in_srgb,var(--color-bg)_78%,transparent),transparent_24%)] px-3 py-4 sm:px-4 sm:py-5">
+                {groupedMessages.map((entry) => {
+                  const isAdmin = entry.senderRole === "ADMIN"
+                  const senderRoleLabel = isAdmin ? "Админ" : "Покупатель"
 
-                    return (
+                  return (
+                    <div
+                      key={entry.id}
+                      className={cn(
+                        "flex items-end gap-2",
+                        entry.isMine ? "justify-end" : "justify-start",
+                      )}
+                    >
+                      {!entry.isMine ? (
+                        <SenderAvatar isAdmin={isAdmin} visible={entry.showMeta} />
+                      ) : null}
+
                       <div
-                        key={entry.id}
                         className={cn(
-                          "flex items-end gap-2",
-                          entry.isMine ? "justify-end" : "justify-start",
+                          "max-w-[min(820px,92%)]",
+                          entry.isMine && "flex flex-col items-end",
                         )}
                       >
-                        {!entry.isMine ? (
-                          <SenderAvatar isAdmin={isAdmin} visible={entry.showAvatar} />
+                        {entry.showMeta ? (
+                          <div
+                            className={cn(
+                              "mb-1 flex items-center gap-2 px-1 text-[11px] text-[var(--color-muted)]",
+                              entry.isMine ? "justify-end" : "justify-start",
+                            )}
+                          >
+                            <span className="font-medium text-[var(--color-text)]">
+                              {entry.isMine ? "Ты" : entry.senderName}
+                            </span>
+                            <span className="rounded-full bg-[var(--color-surface)] px-2 py-0.5">
+                              {senderRoleLabel}
+                            </span>
+                          </div>
                         ) : null}
 
                         <div
                           className={cn(
-                            "max-w-[min(720px,86%)]",
-                            entry.isMine && "flex flex-col items-end",
+                            "overflow-hidden rounded-[24px] px-3 py-3 shadow-[0_1px_0_color-mix(in_srgb,var(--color-text)_4%,transparent)_inset]",
+                            entry.isMine
+                              ? "rounded-br-md bg-[var(--color-accent)] text-[var(--color-accent-text)]"
+                              : "rounded-bl-md bg-[var(--color-surface-2)] text-[var(--color-text)]",
                           )}
                         >
-                          {entry.showAvatar ? (
+                          {entry.attachments.length > 0 ? (
                             <div
                               className={cn(
-                                "mb-1 flex items-center gap-2 px-1 text-[11px]",
-                                entry.isMine ? "justify-end text-[var(--color-muted)]" : "text-[var(--color-muted)]",
+                                "grid gap-2",
+                                entry.attachments.length === 1
+                                  ? "grid-cols-1"
+                                  : "grid-cols-2",
+                                entry.body && "mb-3",
                               )}
                             >
-                              <span className="font-medium text-[var(--color-text)]">
-                                {entry.isMine ? "Ты" : entry.senderName}
-                              </span>
-                              <span className="rounded-full bg-[var(--color-surface)] px-2 py-0.5">
-                                {senderRoleLabel}
-                              </span>
+                              {entry.attachments.map((attachment, index) => (
+                                <button
+                                  key={`${entry.id}-${index}`}
+                                  type="button"
+                                  onClick={() => setPreviewImage(attachment.url)}
+                                  className="group relative overflow-hidden rounded-[18px] bg-[color-mix(in_srgb,var(--color-bg)_72%,transparent)]"
+                                >
+                                  <div className="relative aspect-[4/3] w-full">
+                                    <Image
+                                      src={attachment.url}
+                                      alt=""
+                                      fill
+                                      unoptimized
+                                      sizes="(max-width: 768px) 72vw, 320px"
+                                      className="object-cover transition-transform duration-200 group-hover:scale-[1.02]"
+                                    />
+                                  </div>
+                                </button>
+                              ))}
                             </div>
+                          ) : null}
+
+                          {entry.body ? (
+                            <p className="whitespace-pre-wrap break-words text-sm leading-6">
+                              {entry.body}
+                            </p>
                           ) : null}
 
                           <div
                             className={cn(
-                              "rounded-[22px] px-4 py-3 shadow-[0_1px_0_color-mix(in_srgb,var(--color-text)_4%,transparent)_inset]",
+                              "mt-2 flex items-center justify-end gap-1 text-[11px]",
                               entry.isMine
-                                ? "rounded-br-md bg-[var(--color-accent)] text-[var(--color-accent-text)]"
-                                : "rounded-bl-md bg-[var(--color-surface-2)] text-[var(--color-text)]",
+                                ? "text-[var(--color-accent-text)]/78"
+                                : "text-[var(--color-muted)]",
                             )}
                           >
-                            <p className="whitespace-pre-wrap break-words text-sm leading-6">
-                              {entry.body}
-                            </p>
-
-                            <div
-                              className={cn(
-                                "mt-2 flex items-center justify-end gap-1 text-[11px]",
-                                entry.isMine
-                                  ? "text-[var(--color-accent-text)]/78"
-                                  : "text-[var(--color-muted)]",
-                              )}
-                            >
-                              <span>{format(new Date(entry.createdAt), "HH:mm", { locale: ru })}</span>
-                              {entry.isMine ? <CheckCheck size={12} /> : null}
-                            </div>
+                            <span>
+                              {format(new Date(entry.createdAt), "HH:mm", { locale: ru })}
+                            </span>
+                            {entry.isMine ? <CheckCheck size={12} /> : null}
                           </div>
                         </div>
-
-                        {entry.isMine ? (
-                          <SenderAvatar isAdmin={isAdmin} visible={entry.showAvatar} />
-                        ) : null}
                       </div>
-                    )
-                  })}
+
+                      {entry.isMine ? (
+                        <SenderAvatar isAdmin={isAdmin} visible={entry.showMeta} />
+                      ) : null}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            <div className="border-t border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-3 sm:px-4">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={handleFileChange}
+              />
+
+              {attachments.length > 0 ? (
+                <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
+                  {attachments.map((attachment, index) => (
+                    <div
+                      key={`${attachment.url}-${index}`}
+                      className="relative h-20 w-20 shrink-0 overflow-hidden rounded-[18px] border border-[var(--color-border)] bg-[var(--color-bg)]"
+                    >
+                      <Image
+                        src={attachment.url}
+                        alt=""
+                        fill
+                        unoptimized
+                        sizes="80px"
+                        className="object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setAttachments((current) =>
+                            current.filter((_, currentIndex) => currentIndex !== index),
+                          )
+                        }
+                        className="absolute right-1 top-1 flex size-6 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--color-bg)_82%,transparent)] text-[var(--color-text)]"
+                      >
+                        <X size={13} />
+                      </button>
+                    </div>
+                  ))}
                 </div>
-              )}
+              ) : null}
+
+              <div className="flex items-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isClosed || isUploading || attachments.length >= MAX_ATTACHMENTS}
+                  className="flex size-11 shrink-0 items-center justify-center rounded-[18px] bg-[var(--color-bg)] text-[var(--color-text)] disabled:opacity-45"
+                >
+                  <ImagePlus size={18} />
+                </button>
+
+                <div className="min-w-0 flex-1 rounded-[22px] bg-[var(--color-bg)] px-3 py-2">
+                  <textarea
+                    value={message}
+                    onChange={(event) => setMessage(event.target.value)}
+                    placeholder={
+                      isClosed
+                        ? "Заказ закрыт"
+                        : isSupportFlow
+                          ? "Напиши сообщение или прикрепи скрин"
+                          : "Сообщение по заказу или скрин"
+                    }
+                    disabled={isClosed}
+                    className="min-h-[54px] max-h-40 w-full resize-none bg-transparent py-1 text-sm leading-6 text-[var(--color-text)] outline-none placeholder:text-[var(--color-muted)]"
+                  />
+                  <div className="flex items-center justify-between gap-3 px-1 pt-1">
+                    <span className="text-[11px] text-[var(--color-muted)]">
+                      {isUploading
+                        ? "Обрабатываю изображения..."
+                        : `${attachments.length}/${MAX_ATTACHMENTS} вложений`}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => canSend && sendMutation.mutate()}
+                      disabled={!canSend}
+                      className={cn(
+                        "flex size-10 items-center justify-center rounded-full transition-colors",
+                        canSend
+                          ? "bg-[var(--color-accent)] text-[var(--color-accent-text)]"
+                          : "bg-[var(--color-surface-2)] text-[var(--color-muted)]",
+                      )}
+                    >
+                      <SendHorizontal size={16} />
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           </section>
 
-          {!shouldLockBuyerChat && !isSupportFlow ? (
-            <section className="ui-card px-4 py-3 sm:px-5">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-sm font-semibold text-[var(--color-text)]">Чат по заказу</p>
-                  <p className="mt-1 text-xs text-[var(--color-muted)]">
-                    Переписка открыта после этапа оплаты.
-                  </p>
-                </div>
-                <StatusBadge kind={ticket.isPaid ? "paid" : "waiting"}>
-                  {ticket.isPaid ? "Оплачено" : "Ждёт оплату"}
-                </StatusBadge>
-              </div>
-            </section>
-          ) : null}
-
           {ticket.deliveredKey ? (
             <section className="ui-card p-4 sm:p-5">
-              <p className="text-sm font-semibold text-[var(--color-text)]">Выданный ключ</p>
+              <p className="text-sm font-semibold text-[var(--color-text)]">
+                Выданный ключ
+              </p>
               <p className="mt-3 break-all rounded-[18px] bg-[var(--color-bg)] p-4 font-mono text-sm text-[var(--color-text)]">
                 {ticket.deliveredKey}
               </p>
-            </section>
-          ) : null}
-
-          {!shouldLockBuyerChat ? (
-            <section className="ui-card p-3 sm:p-4">
-              <div className="rounded-[20px] bg-[var(--color-bg)] p-3">
-                <textarea
-                  value={message}
-                  onChange={(event) => setMessage(event.target.value)}
-                  placeholder={isClosed ? "Заказ закрыт" : "Напиши сообщение"}
-                  disabled={isClosed}
-                  className="min-h-24 w-full resize-none bg-transparent px-1 py-1 text-sm leading-6 text-[var(--color-text)] outline-none placeholder:text-[var(--color-muted)]"
-                />
-                <div className="mt-3 flex items-center justify-end">
-                  <button
-                    onClick={() => canSend && sendMutation.mutate()}
-                    disabled={!canSend}
-                    className={cn(
-                      "rounded-[16px] px-4 py-2.5 text-sm font-semibold transition-colors",
-                      canSend
-                        ? "bg-[var(--color-accent)] text-[var(--color-accent-text)]"
-                        : "bg-[var(--color-surface)] text-[var(--color-muted)]",
-                    )}
-                  >
-                    {sendMutation.isPending ? "Отправка..." : "Отправить"}
-                  </button>
-                </div>
-              </div>
             </section>
           ) : null}
         </div>
@@ -480,7 +611,9 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                         <div
                           className={cn(
                             "mt-1 h-full min-h-6 w-px",
-                            step.state === "done" ? "bg-[var(--color-accent)]/40" : "bg-[var(--color-border)]",
+                            step.state === "done"
+                              ? "bg-[var(--color-accent)]/40"
+                              : "bg-[var(--color-border)]",
                           )}
                         />
                       ) : null}
@@ -496,7 +629,9 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                       >
                         {step.title}
                       </p>
-                      <p className="mt-1 text-xs leading-5 text-[var(--color-muted)]">{step.subtitle}</p>
+                      <p className="mt-1 text-xs leading-5 text-[var(--color-muted)]">
+                        {step.subtitle}
+                      </p>
                     </div>
                   </div>
                 ))}
@@ -504,112 +639,121 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
             </section>
 
             {ticket.paymentMethodTitle ? (
-            <section className="ui-card p-4">
-              <div className="flex items-start gap-3">
-                <PaymentMethodIcon
-                  iconDataUrl={ticket.paymentMethodIconDataUrl}
-                  title={ticket.paymentMethodTitle}
-                />
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-[var(--color-text)]">
-                    {ticket.paymentMethodTitle}
-                  </p>
-                  <p className="mt-1 text-xs text-[var(--color-muted)]">
-                    {ticket.paymentMethodType === "CRYPTO_PAY" ? "Crypto Pay" : "Ручные реквизиты"}
-                  </p>
+              <section className="ui-card p-4">
+                <div className="flex items-start gap-3">
+                  <PaymentMethodIcon
+                    iconDataUrl={ticket.paymentMethodIconDataUrl}
+                    title={ticket.paymentMethodTitle}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-[var(--color-text)]">
+                      {ticket.paymentMethodTitle}
+                    </p>
+                    <p className="mt-1 text-xs text-[var(--color-muted)]">
+                      {ticket.paymentMethodType === "CRYPTO_PAY"
+                        ? "Crypto Pay"
+                        : "Ручные реквизиты"}
+                    </p>
+                  </div>
+                  {ticket.paymentMethodType === "CRYPTO_PAY" ? (
+                    <button
+                      onClick={() => refreshMutation.mutate()}
+                      className="flex size-10 items-center justify-center rounded-full bg-[var(--color-bg)] text-[var(--color-muted)]"
+                    >
+                      <RefreshCcw
+                        size={15}
+                        className={refreshMutation.isPending ? "animate-spin" : ""}
+                      />
+                    </button>
+                  ) : null}
                 </div>
-                {ticket.paymentMethodType === "CRYPTO_PAY" ? (
-                  <button
-                    onClick={() => refreshMutation.mutate()}
-                    className="flex size-10 items-center justify-center rounded-full bg-[var(--color-bg)] text-[var(--color-muted)]"
-                  >
-                    <RefreshCcw
-                      size={15}
-                      className={refreshMutation.isPending ? "animate-spin" : ""}
-                    />
-                  </button>
+
+                {ticket.paymentMethodDetails && showRawPaymentDetails ? (
+                  <div className="mt-4 rounded-[18px] bg-[var(--color-bg)] p-4">
+                    <p className="whitespace-pre-wrap text-sm leading-6 text-[var(--color-text)]">
+                      {ticket.paymentMethodDetails}
+                    </p>
+                  </div>
                 ) : null}
-              </div>
 
-              {ticket.paymentMethodDetails && showRawPaymentDetails ? (
-                <div className="mt-4 rounded-[18px] bg-[var(--color-bg)] p-4">
-                  <p className="whitespace-pre-wrap text-sm leading-6 text-[var(--color-text)]">
-                    {ticket.paymentMethodDetails}
-                  </p>
-                </div>
-              ) : null}
+                {ticket.paymentMethodType === "CRYPTO_PAY" && ticket.cryptoInvoiceUrl ? (
+                  <div className="mt-4 grid gap-3">
+                    <div className="rounded-[18px] bg-[var(--color-bg)] p-4">
+                      <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--color-muted)]">
+                        Invoice
+                      </p>
+                      <p className="mt-2 text-sm font-medium text-[var(--color-text)]">
+                        {invoiceMeta || "Ожидает обновление статуса"}
+                      </p>
+                      {ticket.cryptoInvoiceExpiresAt ? (
+                        <p className="mt-2 text-xs text-[var(--color-muted)]">
+                          До{" "}
+                          {format(new Date(ticket.cryptoInvoiceExpiresAt), "dd MMM · HH:mm", {
+                            locale: ru,
+                          })}
+                        </p>
+                      ) : null}
+                    </div>
 
-              {ticket.paymentMethodType === "CRYPTO_PAY" && ticket.cryptoInvoiceUrl ? (
-                <div className="mt-4 grid gap-3">
-                  <div className="rounded-[18px] bg-[var(--color-bg)] p-4">
+                    <a
+                      href={ticket.cryptoInvoiceUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center justify-center gap-2 rounded-[18px] bg-[var(--color-accent)] px-4 py-3 text-sm font-semibold text-[var(--color-accent-text)]"
+                    >
+                      Оплатить invoice
+                      <ExternalLink size={15} />
+                    </a>
+                  </div>
+                ) : ticket.paymentMethodType === "CRYPTO_PAY" ? (
+                  <div className="mt-4 rounded-[18px] bg-[var(--color-bg)] p-4">
                     <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--color-muted)]">
                       Invoice
                     </p>
-                    <p className="mt-2 text-sm font-medium text-[var(--color-text)]">
-                      {invoiceMeta || "Ожидает обновление статуса"}
+                    <p className="mt-2 text-sm text-[var(--color-text)]">
+                      {mode === "admin"
+                        ? "Инвойс ещё не создан или не обновился. Проверь настройки Crypto Pay или обнови статус кнопкой справа сверху."
+                        : "Invoice ещё не появился. Обнови экран чуть позже или дождись, пока продавец подготовит оплату."}
                     </p>
-                    {ticket.cryptoInvoiceExpiresAt ? (
-                      <p className="mt-2 text-xs text-[var(--color-muted)]">
-                        До {format(new Date(ticket.cryptoInvoiceExpiresAt), "dd MMM · HH:mm", { locale: ru })}
-                      </p>
-                    ) : null}
                   </div>
-
-                  <a
-                    href={ticket.cryptoInvoiceUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex items-center justify-center gap-2 rounded-[18px] bg-[var(--color-accent)] px-4 py-3 text-sm font-semibold text-[var(--color-accent-text)]"
-                  >
-                    Оплатить invoice
-                    <ExternalLink size={15} />
-                  </a>
-                </div>
-              ) : ticket.paymentMethodType === "CRYPTO_PAY" ? (
-                <div className="mt-4 rounded-[18px] bg-[var(--color-bg)] p-4">
-                  <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--color-muted)]">
-                    Invoice
-                  </p>
-                  <p className="mt-2 text-sm text-[var(--color-text)]">
-                    {mode === "admin"
-                      ? "Инвойс ещё не создан или не обновился. Проверь настройки Crypto Pay или обнови статус кнопкой справа сверху."
-                      : "Invoice ещё не появился. Обнови экран чуть позже или дождись, пока продавец подготовит оплату."}
-                  </p>
-                </div>
-              ) : null}
-            </section>
+                ) : null}
+              </section>
             ) : null}
 
             {adminToolsVisible ? (
-            <section className="ui-card p-4">
-              <p className="text-sm font-semibold text-[var(--color-text)]">Действия</p>
-              <div className="mt-3 grid gap-2">
-                {!ticket.isPaid ? (
+              <section className="ui-card p-4">
+                <p className="text-sm font-semibold text-[var(--color-text)]">Действия</p>
+                <div className="mt-3 grid gap-2">
+                  {!ticket.isPaid ? (
+                    <button
+                      onClick={() => paymentMutation.mutate()}
+                      className="rounded-[18px] bg-[var(--color-accent)] px-4 py-3 text-sm font-semibold text-[var(--color-accent-text)]"
+                    >
+                      Подтвердить оплату
+                    </button>
+                  ) : null}
                   <button
-                    onClick={() => paymentMutation.mutate()}
-                    className="rounded-[18px] bg-[var(--color-accent)] px-4 py-3 text-sm font-semibold text-[var(--color-accent-text)]"
+                    onClick={() => statusMutation.mutate("IN_PROGRESS")}
+                    className="rounded-[18px] bg-[var(--color-bg)] px-4 py-3 text-sm font-medium text-[var(--color-text)]"
                   >
-                    Подтвердить оплату
+                    В работу
                   </button>
-                ) : null}
-                <button
-                  onClick={() => statusMutation.mutate("IN_PROGRESS")}
-                  className="rounded-[18px] bg-[var(--color-bg)] px-4 py-3 text-sm font-medium text-[var(--color-text)]"
-                >
-                  В работу
-                </button>
-                <button
-                  onClick={() => statusMutation.mutate("CLOSED")}
-                  className="rounded-[18px] bg-[var(--color-bg)] px-4 py-3 text-sm font-medium text-[var(--color-text)]"
-                >
-                  Закрыть
-                </button>
-              </div>
-            </section>
+                  <button
+                    onClick={() => statusMutation.mutate("CLOSED")}
+                    className="rounded-[18px] bg-[var(--color-bg)] px-4 py-3 text-sm font-medium text-[var(--color-text)]"
+                  >
+                    Закрыть
+                  </button>
+                </div>
+              </section>
             ) : null}
           </aside>
         ) : null}
       </div>
+
+      {previewImage ? (
+        <ImagePreviewModal src={previewImage} onClose={() => setPreviewImage(null)} />
+      ) : null}
     </Screen>
   )
 }
@@ -663,16 +807,15 @@ function getOrderSteps(ticket: {
         : paymentDone
           ? "Оплата подтверждена"
           : "Ожидание оплаты",
-      subtitle:
-        closedUnpaid
-          ? "Оплата не была подтверждена, заказ закрыт."
-          : ticket.paymentMethodType === "CRYPTO_PAY"
-            ? invoiceReady
-              ? ticket.cryptoInvoiceStatus === "paid"
-                ? "Crypto Pay получил оплату."
-                : "Инвойс готов к оплате."
-              : "Инвойс ещё создаётся или требует обновления."
-            : "Ожидается подтверждение по выбранным реквизитам.",
+      subtitle: closedUnpaid
+        ? "Оплата не была подтверждена, заказ закрыт."
+        : ticket.paymentMethodType === "CRYPTO_PAY"
+          ? invoiceReady
+            ? ticket.cryptoInvoiceStatus === "paid"
+              ? "Crypto Pay получил оплату."
+              : "Инвойс готов к оплате."
+            : "Инвойс ещё создаётся или требует обновления."
+          : "Ожидается подтверждение по выбранным реквизитам.",
       state: stepStates[1],
     },
     {
@@ -684,10 +827,10 @@ function getOrderSteps(ticket: {
       subtitle: closedUnpaid
         ? "Этот этап не начался, потому что оплаты не было."
         : fulfilled
-        ? "Продавец завершил выдачу."
-        : workStarted
-          ? "Продавец обрабатывает заказ."
-          : "Начнётся после подтверждения оплаты.",
+          ? "Продавец завершил выдачу."
+          : workStarted
+            ? "Продавец обрабатывает заказ."
+            : "Начнётся после подтверждения оплаты.",
       state: stepStates[2],
     },
     {
@@ -699,10 +842,10 @@ function getOrderSteps(ticket: {
       subtitle: closedUnpaid
         ? "Товар не выдавался, потому что заказ закрыт без оплаты."
         : ticket.deliveredKey
-        ? "Ключ уже выдан в этом заказе."
-        : ticket.status === "CLOSED"
-          ? "Заказ закрыт."
-          : "Финальный этап после выдачи товара.",
+          ? "Ключ уже выдан в этом заказе."
+          : ticket.status === "CLOSED"
+            ? "Заказ закрыт."
+            : "Финальный этап после выдачи товара.",
       state: stepStates[3],
     },
   ]
@@ -739,7 +882,14 @@ function PaymentMethodIcon({
   if (iconDataUrl) {
     return (
       <div className="relative size-12 overflow-hidden rounded-[18px]">
-        <Image src={iconDataUrl} alt="" fill unoptimized sizes="48px" className="object-cover" />
+        <Image
+          src={iconDataUrl}
+          alt=""
+          fill
+          unoptimized
+          sizes="48px"
+          className="object-cover"
+        />
       </div>
     )
   }
@@ -769,6 +919,38 @@ function SenderAvatar({
           )}
         </div>
       ) : null}
+    </div>
+  )
+}
+
+function ImagePreviewModal({
+  src,
+  onClose,
+}: {
+  src: string
+  onClose: () => void
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[color-mix(in_srgb,var(--color-bg)_90%,transparent)] p-3 backdrop-blur"
+      onClick={onClose}
+    >
+      <div
+        className="relative flex h-[min(90vh,920px)] w-full max-w-6xl items-center justify-center overflow-hidden rounded-[28px] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 sm:p-6"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute right-4 top-4 z-10 flex size-10 items-center justify-center rounded-full border border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-bg)_76%,transparent)] text-[var(--color-text)]"
+        >
+          <X size={16} />
+        </button>
+
+        <div className="relative h-full w-full">
+          <Image src={src} alt="" fill unoptimized sizes="100vw" className="object-contain" />
+        </div>
+      </div>
     </div>
   )
 }

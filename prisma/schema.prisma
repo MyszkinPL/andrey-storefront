@@ -119,6 +119,7 @@ model TicketMessage {
   ticketId  String
   senderId  String
   body      String
+  attachments Json?
   createdAt DateTime @default(now())
   ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
   sender    User     @relation(fields: [senderId], references: [id])

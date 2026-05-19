@@ -5,7 +5,17 @@ import { requireUser } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 
 const schema = z.object({
-  body: z.string().min(1),
+  body: z.string().trim().optional().default(""),
+  attachments: z
+    .array(
+      z.object({
+        type: z.literal("image"),
+        url: z.string().min(1),
+      }),
+    )
+    .max(6)
+    .optional()
+    .default([]),
 })
 
 export async function POST(
@@ -16,6 +26,14 @@ export async function POST(
     const user = await requireUser()
     const { id } = await params
     const payload = schema.parse(await request.json())
+    const body = payload.body.trim()
+    const attachments = payload.attachments.filter((attachment) =>
+      attachment.url.startsWith("data:image/"),
+    )
+
+    if (!body && attachments.length === 0) {
+      return NextResponse.json({ error: "Message is empty" }, { status: 400 })
+    }
 
     const ticket = await prisma.ticket.findUnique({ where: { id } })
     if (!ticket) return NextResponse.json({ error: "Not found" }, { status: 404 })
@@ -28,7 +46,8 @@ export async function POST(
       data: {
         ticketId: id,
         senderId: user.id,
-        body: payload.body,
+        body,
+        attachments,
       },
     })
 

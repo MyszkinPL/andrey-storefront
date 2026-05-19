@@ -7,6 +7,23 @@ import { requireUser } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { confirmTicketPaymentFlow } from "@/lib/ticket-payment"
 
+function normalizeAttachments(value: unknown) {
+  if (!Array.isArray(value)) return []
+
+  return value
+    .filter(
+      (attachment): attachment is { type: "image"; url: string } =>
+        typeof attachment === "object" &&
+        attachment !== null &&
+        attachment.type === "image" &&
+        typeof attachment.url === "string",
+    )
+    .map((attachment) => ({
+      type: "image" as const,
+      url: attachment.url,
+    }))
+}
+
 const schema = z.object({
   status: z.nativeEnum(TicketStatus).optional(),
   confirmPayment: z.boolean().optional(),
@@ -156,6 +173,7 @@ export async function GET(
       messages: ticket.messages.map((message) => ({
         id: message.id,
         body: message.body,
+        attachments: normalizeAttachments(message.attachments),
         createdAt: message.createdAt,
         isMine: message.senderId === user.id,
         senderName: message.sender.firstName,

@@ -16,6 +16,11 @@ export type ProductSpecInput = {
   value: string
 }
 
+export type TicketMessageAttachment = {
+  type: "image"
+  url: string
+}
+
 export type PaymentMethodInput = {
   id?: string
   title: string
@@ -178,6 +183,7 @@ export function getTicket(id: string) {
       messages: Array<{
         id: string
         body: string
+        attachments: TicketMessageAttachment[]
         createdAt: string
         isMine: boolean
         senderName: string
@@ -187,10 +193,16 @@ export function getTicket(id: string) {
   }>(`/api/tickets/${id}`)
 }
 
-export function sendTicketMessage(id: string, body: string) {
+export function sendTicketMessage(
+  id: string,
+  payload: {
+    body?: string
+    attachments?: TicketMessageAttachment[]
+  },
+) {
   return api<{ ok: true }>(`/api/tickets/${id}/messages`, {
     method: "POST",
-    body: JSON.stringify({ body }),
+    body: JSON.stringify(payload),
   })
 }
 
