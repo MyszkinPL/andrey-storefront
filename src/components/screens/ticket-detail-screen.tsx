@@ -148,6 +148,30 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
     .filter(Boolean)
     .join(" · ")
   const orderSteps = getOrderSteps(ticket)
+  const headerActions = adminToolsVisible ? (
+    <div className="flex flex-wrap justify-end gap-2">
+      {!ticket.isPaid ? (
+        <button
+          onClick={() => paymentMutation.mutate()}
+          className="rounded-full bg-[var(--color-accent)] px-3 py-1.5 text-xs font-semibold text-[var(--color-accent-text)]"
+        >
+          Подтвердить оплату
+        </button>
+      ) : null}
+      <button
+        onClick={() => statusMutation.mutate("IN_PROGRESS")}
+        className="rounded-full bg-[var(--color-bg)] px-3 py-1.5 text-xs font-medium text-[var(--color-text)]"
+      >
+        В работу
+      </button>
+      <button
+        onClick={() => statusMutation.mutate("CLOSED")}
+        className="rounded-full bg-[var(--color-bg)] px-3 py-1.5 text-xs font-medium text-[var(--color-text)]"
+      >
+        Закрыть
+      </button>
+    </div>
+  ) : null
 
   async function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.target.files ?? [])
@@ -354,6 +378,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
             ]}
           />
         }
+        trailing={headerActions}
       />
 
       <div className="flex min-h-0 flex-1 flex-col px-4 pb-4">
@@ -613,12 +638,8 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
             <aside className="order-1 grid min-h-0 content-start gap-4 overflow-y-auto xl:order-2">
             {adminToolsVisible ? (
               <section className="ui-card shrink-0 p-4">
-                <p className="text-sm font-semibold text-[var(--color-text)]">Инфо по заказу</p>
+                <p className="text-sm font-semibold text-[var(--color-text)]">Контакты</p>
                 <div className="mt-4 grid gap-2">
-                  <InfoRow label="Номер" value={`#${ticket.number}`} />
-                  <InfoRow label="Товар" value={ticket.productTitle || ticket.subject} />
-                  <InfoRow label="Категория" value={ticket.productCategory || "—"} />
-                  <InfoRow label="Создан" value={createdAtLabel} />
                   <InfoRow
                     label="Покупатель"
                     value={
@@ -780,34 +801,6 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                     </p>
                   </div>
                 ) : null}
-              </section>
-            ) : null}
-
-            {adminToolsVisible ? (
-              <section className="ui-card shrink-0 p-4">
-                <p className="text-sm font-semibold text-[var(--color-text)]">Действия</p>
-                <div className="mt-3 grid gap-2">
-                  {!ticket.isPaid ? (
-                    <button
-                      onClick={() => paymentMutation.mutate()}
-                      className="rounded-[18px] bg-[var(--color-accent)] px-4 py-3 text-sm font-semibold text-[var(--color-accent-text)]"
-                    >
-                      Подтвердить оплату
-                    </button>
-                  ) : null}
-                  <button
-                    onClick={() => statusMutation.mutate("IN_PROGRESS")}
-                    className="rounded-[18px] bg-[var(--color-bg)] px-4 py-3 text-sm font-medium text-[var(--color-text)]"
-                  >
-                    В работу
-                  </button>
-                  <button
-                    onClick={() => statusMutation.mutate("CLOSED")}
-                    className="rounded-[18px] bg-[var(--color-bg)] px-4 py-3 text-sm font-medium text-[var(--color-text)]"
-                  >
-                    Закрыть
-                  </button>
-                </div>
               </section>
             ) : null}
           </aside>
