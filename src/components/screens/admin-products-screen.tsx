@@ -1,8 +1,17 @@
 "use client"
 
+import Image from "next/image"
 import { useMemo, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { ImagePlus, Plus, Trash2 } from "lucide-react"
+import {
+  CopyPlus,
+  ImagePlus,
+  PackagePlus,
+  PencilLine,
+  Plus,
+  Trash2,
+  X,
+} from "lucide-react"
 
 import { getProducts, saveAdminProduct, updateAdminProduct } from "@/lib/api"
 import { optimizeSquareImage } from "@/lib/image"
@@ -14,31 +23,45 @@ type SpecForm = {
   value: string
 }
 
-const emptyForm = {
+type ProductForm = {
+  id: string
+  title: string
+  category: string
+  description: string
+  imageDataUrl: string
+  priceRub: string
+  deliveryType: "MANUAL" | "AUTO_KEY"
+  keyPoolText: string
+  isActive: boolean
+  specs: SpecForm[]
+}
+
+const emptyForm: ProductForm = {
   id: "",
   title: "",
   category: "",
   description: "",
   imageDataUrl: "",
   priceRub: "0",
-  deliveryType: "MANUAL" as "MANUAL" | "AUTO_KEY",
+  deliveryType: "MANUAL",
   keyPoolText: "",
   isActive: true,
-  specs: [{ label: "", value: "" }] as SpecForm[],
+  specs: [{ label: "", value: "" }],
 }
 
 export function AdminProductsScreen() {
   const queryClient = useQueryClient()
   const { data } = useQuery({ queryKey: ["products"], queryFn: getProducts })
-  const [form, setForm] = useState(emptyForm)
+  const [form, setForm] = useState<ProductForm>(emptyForm)
+  const [isEditorOpen, setIsEditorOpen] = useState(false)
   const [uploading, setUploading] = useState(false)
 
   const mutation = useMutation({
     mutationFn: async () => {
       const payload = {
-        title: form.title,
-        category: form.category || undefined,
-        description: form.description,
+        title: form.title.trim(),
+        category: form.category.trim() || undefined,
+        description: form.description.trim(),
         imageDataUrl: form.imageDataUrl || undefined,
         priceRub: Number(form.priceRub),
         deliveryType: form.deliveryType,
@@ -56,12 +79,52 @@ export function AdminProductsScreen() {
       return saveAdminProduct(payload)
     },
     onSuccess: async () => {
-      setForm(emptyForm)
+      closeEditor()
       await queryClient.invalidateQueries({ queryKey: ["products"] })
     },
   })
 
   const products = useMemo(() => data?.products ?? [], [data?.products])
+
+  function closeEditor() {
+    setForm(emptyForm)
+    setIsEditorOpen(false)
+  }
+
+  function openCreateEditor() {
+    setForm(emptyForm)
+    setIsEditorOpen(true)
+  }
+
+  function openEditEditor(product: (typeof products)[number]) {
+    setForm({
+      id: product.id,
+      title: product.title,
+      category: product.category || "",
+      description: product.description,
+      imageDataUrl: product.imageDataUrl || "",
+      priceRub: String(product.priceRub),
+      deliveryType: product.deliveryType,
+      keyPoolText: "",
+      isActive: product.isActive,
+      specs: product.specs.length > 0 ? product.specs : [{ label: "", value: "" }],
+    })
+    setIsEditorOpen(true)
+  }
+
+  function openDuplicateEditor(product: (typeof products)[number]) {
+    setForm({
+      ...emptyForm,
+      title: `${product.title} copy`,
+      category: product.category || "",
+      description: product.description,
+      imageDataUrl: product.imageDataUrl || "",
+      priceRub: String(product.priceRub),
+      deliveryType: product.deliveryType,
+      specs: product.specs.length > 0 ? product.specs : [{ label: "", value: "" }],
+    })
+    setIsEditorOpen(true)
+  }
 
   async function handleImageChange(file: File | null) {
     if (!file) return
@@ -76,272 +139,479 @@ export function AdminProductsScreen() {
 
   return (
     <Screen>
-      <ScreenHeader title="Товары" subtitle="Карточки, квадратные изображения и характеристики" />
+      <ScreenHeader title="Товары" subtitle="Каталог, карточки и параметры товара" />
 
-      <div className="grid gap-3 px-4 pb-4 xl:grid-cols-[1.15fr_0.85fr]">
-        <div className="grid gap-3">
-          {products.map((product) => (
-            <div key={product.id} className="overflow-hidden rounded-[24px] bg-[var(--color-surface)]">
-              <div className="grid gap-3 p-3 sm:grid-cols-[116px_1fr]">
-                <div className="aspect-square overflow-hidden rounded-[20px] bg-[var(--color-bg)]">
-                  {product.imageDataUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={product.imageDataUrl} alt="" className="size-full object-cover" />
-                  ) : null}
-                </div>
-                <div className="min-w-0">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-[var(--color-text)]">{product.title}</p>
-                      <p className="mt-1 text-xs text-[var(--color-muted)]">
-                        {product.category || "Без категории"} · {product.priceRub.toLocaleString("ru-RU")} ₽
-                      </p>
-                    </div>
-                    <span className="rounded-full bg-[var(--color-bg)] px-2.5 py-1 text-[11px] text-[var(--color-muted)]">
-                      {product.deliveryType === "AUTO_KEY" ? "Авто" : "Ручная"}
-                    </span>
-                  </div>
-
-                  <div className="mt-3 flex flex-wrap gap-1.5">
-                    {product.specs.slice(0, 3).map((spec) => (
-                      <span
-                        key={`${product.id}-${spec.label}`}
-                        className="rounded-full bg-[var(--color-bg)] px-2 py-1 text-[10px] text-[var(--color-muted)]"
-                      >
-                        {spec.label}: {spec.value}
-                      </span>
-                    ))}
-                    {product.deliveryType === "AUTO_KEY" ? (
-                      <span className="rounded-full bg-[var(--color-bg)] px-2 py-1 text-[10px] text-[var(--color-accent)]">
-                        {product.availableKeyCount ?? 0} keys
-                      </span>
-                    ) : null}
-                  </div>
-
-                  <p className="mt-3 line-clamp-3 text-sm leading-6 text-[var(--color-muted)]">
-                    {product.description}
-                  </p>
-
-                  <div className="mt-3 flex gap-2">
-                    <button
-                      onClick={() =>
-                        setForm({
-                          id: product.id,
-                          title: product.title,
-                          category: product.category || "",
-                          description: product.description,
-                          imageDataUrl: product.imageDataUrl || "",
-                          priceRub: String(product.priceRub),
-                          deliveryType: product.deliveryType,
-                          keyPoolText: "",
-                          isActive: product.isActive,
-                          specs: product.specs.length > 0 ? product.specs : [{ label: "", value: "" }],
-                        })
-                      }
-                      className="rounded-full bg-[var(--color-bg)] px-3 py-1.5 text-xs font-medium text-[var(--color-text)]"
-                    >
-                      Редактировать
-                    </button>
-                    <button
-                      onClick={() =>
-                        setForm({
-                          ...emptyForm,
-                          title: `${product.title} copy`,
-                          category: product.category || "",
-                          description: product.description,
-                          imageDataUrl: product.imageDataUrl || "",
-                          priceRub: String(product.priceRub),
-                          deliveryType: product.deliveryType,
-                          specs: product.specs.length > 0 ? product.specs : [{ label: "", value: "" }],
-                        })
-                      }
-                      className="rounded-full bg-[var(--color-bg)] px-3 py-1.5 text-xs font-medium text-[var(--color-muted)]"
-                    >
-                      Дублировать
-                    </button>
-                  </div>
-                </div>
-              </div>
+      <div className="grid gap-4 px-4 pb-4">
+        <section className="ui-card p-4 sm:p-5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-base font-semibold text-[var(--color-text)]">
+                Каталог товаров
+              </p>
+              <p className="mt-1 text-sm text-[var(--color-muted)]">
+                Создание и редактирование теперь открываются отдельно, без боковой каши.
+              </p>
             </div>
-          ))}
-        </div>
 
-        <div className="rounded-[28px] bg-[var(--color-surface)] p-4">
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-sm font-semibold text-[var(--color-text)]">
-              {form.id ? "Редактирование" : "Новый товар"}
-            </p>
             <button
-              onClick={() => setForm(emptyForm)}
-              className="text-xs text-[var(--color-muted)]"
+              onClick={openCreateEditor}
+              className="inline-flex items-center justify-center gap-2 rounded-[18px] bg-[var(--color-accent)] px-4 py-3 text-sm font-semibold text-[var(--color-accent-text)]"
             >
-              Сбросить
+              <PackagePlus size={16} />
+              Новый товар
             </button>
           </div>
+        </section>
 
-          <div className="mt-4 grid gap-3">
-            <label className="block">
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(event) => handleImageChange(event.target.files?.[0] || null)}
-              />
-              <div className="overflow-hidden rounded-[24px] bg-[var(--color-bg)]">
-                <div className="aspect-square">
-                  {form.imageDataUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={form.imageDataUrl} alt="" className="size-full object-cover" />
-                  ) : (
-                    <button
-                      type="button"
-                      className="flex size-full flex-col items-center justify-center gap-2 text-[var(--color-muted)]"
-                    >
-                      <ImagePlus size={22} />
-                      <span className="text-xs">{uploading ? "Обработка..." : "Загрузить квадрат"}</span>
-                    </button>
-                  )}
+        {products.length === 0 ? (
+          <section className="ui-card flex min-h-72 flex-col items-center justify-center gap-3 p-6 text-center">
+            <div className="flex size-14 items-center justify-center rounded-full bg-[var(--color-bg)] text-[var(--color-muted)]">
+              <PackagePlus size={22} />
+            </div>
+            <div>
+              <p className="text-base font-semibold text-[var(--color-text)]">
+                Товаров пока нет
+              </p>
+              <p className="mt-1 text-sm text-[var(--color-muted)]">
+                Создай первую карточку и она сразу появится в магазине.
+              </p>
+            </div>
+            <button
+              onClick={openCreateEditor}
+              className="rounded-[18px] bg-[var(--color-accent)] px-4 py-3 text-sm font-semibold text-[var(--color-accent-text)]"
+            >
+              Создать товар
+            </button>
+          </section>
+        ) : (
+          <div className="grid gap-3 xl:grid-cols-2">
+            {products.map((product) => (
+              <article
+                key={product.id}
+                className="ui-card overflow-hidden p-3 sm:p-4"
+              >
+                <div className="grid gap-4 sm:grid-cols-[136px_minmax(0,1fr)]">
+                  <div className="relative aspect-square overflow-hidden rounded-[22px] bg-[var(--color-bg)]">
+                    {product.imageDataUrl ? (
+                      <Image
+                        src={product.imageDataUrl}
+                        alt=""
+                        fill
+                        unoptimized
+                        sizes="160px"
+                        className="object-cover"
+                      />
+                    ) : (
+                      <div className="flex size-full items-center justify-center text-[var(--color-muted)]">
+                        <ImagePlus size={24} />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="min-w-0">
+                    <div className="flex items-start gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="truncate text-base font-semibold text-[var(--color-text)]">
+                            {product.title}
+                          </p>
+                          {!product.isActive ? (
+                            <span className="rounded-full bg-[var(--color-bg)] px-2.5 py-1 text-[11px] text-[var(--color-muted)]">
+                              Скрыт
+                            </span>
+                          ) : null}
+                        </div>
+                        <p className="mt-1 text-sm text-[var(--color-muted)]">
+                          {product.category || "Без категории"} ·{" "}
+                          {product.priceRub.toLocaleString("ru-RU")} ₽
+                        </p>
+                      </div>
+
+                      <span className="rounded-full bg-[var(--color-bg)] px-2.5 py-1 text-[11px] text-[var(--color-muted)]">
+                        {product.deliveryType === "AUTO_KEY" ? "Автовыдача" : "Ручная"}
+                      </span>
+                    </div>
+
+                    <div className="mt-3 flex flex-wrap gap-1.5">
+                      {product.specs.slice(0, 3).map((spec) => (
+                        <span
+                          key={`${product.id}-${spec.label}`}
+                          className="rounded-full bg-[var(--color-bg)] px-2.5 py-1 text-[11px] text-[var(--color-muted)]"
+                        >
+                          {spec.label}: {spec.value}
+                        </span>
+                      ))}
+                      {product.specs.length > 3 ? (
+                        <span className="rounded-full bg-[var(--color-bg)] px-2.5 py-1 text-[11px] text-[var(--color-muted)]">
+                          +{product.specs.length - 3}
+                        </span>
+                      ) : null}
+                      {product.deliveryType === "AUTO_KEY" ? (
+                        <span className="rounded-full bg-[var(--color-accent)]/14 px-2.5 py-1 text-[11px] text-[var(--color-accent)]">
+                          {product.availableKeyCount ?? 0} keys
+                        </span>
+                      ) : null}
+                    </div>
+
+                    <p className="mt-4 line-clamp-4 text-sm leading-6 text-[var(--color-muted)]">
+                      {product.description}
+                    </p>
+
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <button
+                        onClick={() => openEditEditor(product)}
+                        className="inline-flex items-center gap-2 rounded-[16px] bg-[var(--color-bg)] px-3.5 py-2 text-sm font-medium text-[var(--color-text)]"
+                      >
+                        <PencilLine size={14} />
+                        Редактировать
+                      </button>
+                      <button
+                        onClick={() => openDuplicateEditor(product)}
+                        className="inline-flex items-center gap-2 rounded-[16px] bg-[var(--color-bg)] px-3.5 py-2 text-sm font-medium text-[var(--color-muted)]"
+                      >
+                        <CopyPlus size={14} />
+                        Дублировать
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {isEditorOpen ? (
+        <ProductEditorModal
+          form={form}
+          uploading={uploading}
+          saving={mutation.isPending}
+          onClose={closeEditor}
+          onSave={() => mutation.mutate()}
+          onImageChange={handleImageChange}
+          onChange={setForm}
+        />
+      ) : null}
+    </Screen>
+  )
+}
+
+function ProductEditorModal({
+  form,
+  uploading,
+  saving,
+  onClose,
+  onSave,
+  onImageChange,
+  onChange,
+}: {
+  form: ProductForm
+  uploading: boolean
+  saving: boolean
+  onClose: () => void
+  onSave: () => void
+  onImageChange: (file: File | null) => void
+  onChange: React.Dispatch<React.SetStateAction<ProductForm>>
+}) {
+  const canSave =
+    form.title.trim().length > 0 &&
+    form.description.trim().length > 0 &&
+    Number(form.priceRub) >= 0 &&
+    !uploading &&
+    !saving
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-[var(--color-overlay)] p-3 md:items-center md:p-6">
+      <div className="ui-card flex h-[min(92vh,1040px)] w-full max-w-5xl flex-col overflow-hidden">
+        <div className="flex items-start justify-between gap-4 border-b border-[var(--color-border)] px-4 py-4 sm:px-5">
+          <div>
+            <p className="text-base font-semibold text-[var(--color-text)]">
+              {form.id ? "Редактирование товара" : "Новый товар"}
+            </p>
+            <p className="mt-1 text-sm text-[var(--color-muted)]">
+              Отдельное окно для карточки, чтобы не смешивать список и форму.
+            </p>
+          </div>
+
+          <button
+            onClick={onClose}
+            className="flex size-10 items-center justify-center rounded-full bg-[var(--color-bg)] text-[var(--color-muted)]"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-5">
+          <div className="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
+            <section className="grid content-start gap-4">
+              <label className="block">
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(event) => onImageChange(event.target.files?.[0] || null)}
+                />
+                <div className="overflow-hidden rounded-[26px] bg-[var(--color-bg)]">
+                  <div className="relative aspect-square">
+                    {form.imageDataUrl ? (
+                      <Image
+                        src={form.imageDataUrl}
+                        alt=""
+                        fill
+                        unoptimized
+                        sizes="320px"
+                        className="object-cover"
+                      />
+                    ) : (
+                      <div className="flex size-full flex-col items-center justify-center gap-3 text-[var(--color-muted)]">
+                        <ImagePlus size={24} />
+                        <span className="text-sm">
+                          {uploading ? "Обработка..." : "Загрузить квадрат"}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </label>
+
+              <div className="ui-card-soft p-4">
+                <p className="text-sm font-medium text-[var(--color-text)]">Превью</p>
+                <div className="mt-3 rounded-[22px] bg-[var(--color-surface)] p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-[var(--color-text)]">
+                        {form.title || "Название товара"}
+                      </p>
+                      <p className="mt-1 text-xs text-[var(--color-muted)]">
+                        {form.category || "Категория"} ·{" "}
+                        {Number(form.priceRub || 0).toLocaleString("ru-RU")} ₽
+                      </p>
+                    </div>
+                    <span className="rounded-full bg-[var(--color-bg)] px-2.5 py-1 text-[10px] text-[var(--color-muted)]">
+                      {form.deliveryType === "AUTO_KEY" ? "Автовыдача" : "Ручная"}
+                    </span>
+                  </div>
                 </div>
               </div>
-            </label>
+            </section>
 
-            <input
-              value={form.title}
-              onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))}
-              placeholder="Название"
-              className="w-full rounded-2xl bg-[var(--color-bg)] px-4 py-3 text-sm text-[var(--color-text)] outline-none"
-            />
-            <input
-              value={form.category}
-              onChange={(event) => setForm((prev) => ({ ...prev, category: event.target.value }))}
-              placeholder="Категория"
-              className="w-full rounded-2xl bg-[var(--color-bg)] px-4 py-3 text-sm text-[var(--color-text)] outline-none"
-            />
-            <input
-              value={form.priceRub}
-              type="number"
-              onChange={(event) => setForm((prev) => ({ ...prev, priceRub: event.target.value }))}
-              placeholder="Цена"
-              className="w-full rounded-2xl bg-[var(--color-bg)] px-4 py-3 text-sm text-[var(--color-text)] outline-none"
-            />
+            <section className="grid content-start gap-4">
+              <div className="grid gap-3 md:grid-cols-2">
+                <Field label="Название">
+                  <input
+                    value={form.title}
+                    onChange={(event) =>
+                      onChange((prev) => ({ ...prev, title: event.target.value }))
+                    }
+                    placeholder="DRIP LITE LIFETIME"
+                    className="ui-input"
+                  />
+                </Field>
 
-            <div className="flex rounded-full bg-[var(--color-bg)] p-1">
-              {(["MANUAL", "AUTO_KEY"] as const).map((type) => (
-                <button
-                  key={type}
-                  onClick={() => setForm((prev) => ({ ...prev, deliveryType: type }))}
-                  className={cn(
-                    "flex-1 rounded-full px-4 py-2 text-sm",
-                    form.deliveryType === type
-                      ? "bg-[var(--color-accent)] text-[var(--color-accent-text)]"
-                      : "text-[var(--color-muted)]",
-                  )}
-                >
-                  {type === "MANUAL" ? "Ручная" : "Автовыдача"}
-                </button>
-              ))}
-            </div>
+                <Field label="Категория">
+                  <input
+                    value={form.category}
+                    onChange={(event) =>
+                      onChange((prev) => ({ ...prev, category: event.target.value }))
+                    }
+                    placeholder="майнкрафт"
+                    className="ui-input"
+                  />
+                </Field>
 
-            <textarea
-              value={form.description}
-              onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
-              placeholder="Описание"
-              className="min-h-32 w-full rounded-2xl bg-[var(--color-bg)] px-4 py-3 text-sm text-[var(--color-text)] outline-none"
-            />
+                <Field label="Цена">
+                  <input
+                    value={form.priceRub}
+                    type="number"
+                    onChange={(event) =>
+                      onChange((prev) => ({ ...prev, priceRub: event.target.value }))
+                    }
+                    placeholder="4990"
+                    className="ui-input"
+                  />
+                </Field>
 
-            <div className="rounded-2xl bg-[var(--color-bg)] p-3">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-sm font-medium text-[var(--color-text)]">Характеристики</p>
-                <button
-                  onClick={() =>
-                    setForm((prev) => ({
-                      ...prev,
-                      specs: [...prev.specs, { label: "", value: "" }],
-                    }))
-                  }
-                  className="rounded-full bg-[var(--color-surface)] px-2.5 py-1 text-xs text-[var(--color-text)]"
-                >
-                  <Plus size={12} className="inline-block" /> добавить
-                </button>
+                <Field label="Публикация">
+                  <label className="flex h-[50px] items-center gap-3 rounded-2xl bg-[var(--color-bg)] px-4">
+                    <input
+                      checked={form.isActive}
+                      onChange={(event) =>
+                        onChange((prev) => ({ ...prev, isActive: event.target.checked }))
+                      }
+                      type="checkbox"
+                      className="size-4 accent-[var(--color-accent)]"
+                    />
+                    <span className="text-sm text-[var(--color-text)]">
+                      Показывать в магазине
+                    </span>
+                  </label>
+                </Field>
               </div>
 
-              <div className="mt-3 grid gap-2">
-                {form.specs.map((spec, index) => (
-                  <div key={`${index}-${form.id || "new"}`} className="grid grid-cols-[1fr_1fr_auto] gap-2">
-                    <input
-                      value={spec.label}
-                      onChange={(event) =>
-                        setForm((prev) => ({
-                          ...prev,
-                          specs: prev.specs.map((item, itemIndex) =>
-                            itemIndex === index ? { ...item, label: event.target.value } : item,
-                          ),
-                        }))
-                      }
-                      placeholder="Название"
-                      className="w-full rounded-2xl bg-[var(--color-surface)] px-3 py-3 text-sm text-[var(--color-text)] outline-none"
-                    />
-                    <input
-                      value={spec.value}
-                      onChange={(event) =>
-                        setForm((prev) => ({
-                          ...prev,
-                          specs: prev.specs.map((item, itemIndex) =>
-                            itemIndex === index ? { ...item, value: event.target.value } : item,
-                          ),
-                        }))
-                      }
-                      placeholder="Значение"
-                      className="w-full rounded-2xl bg-[var(--color-surface)] px-3 py-3 text-sm text-[var(--color-text)] outline-none"
-                    />
+              <div className="grid gap-2">
+                <p className="px-1 text-sm font-medium text-[var(--color-text)]">Выдача</p>
+                <div className="flex rounded-[22px] bg-[var(--color-bg)] p-1">
+                  {(["MANUAL", "AUTO_KEY"] as const).map((type) => (
                     <button
-                      onClick={() =>
-                        setForm((prev) => ({
-                          ...prev,
-                          specs:
-                            prev.specs.length === 1
-                              ? [{ label: "", value: "" }]
-                              : prev.specs.filter((_, itemIndex) => itemIndex !== index),
-                        }))
-                      }
-                      className="flex size-11 items-center justify-center rounded-2xl bg-[var(--color-surface)] text-[var(--color-muted)]"
+                      key={type}
+                      onClick={() => onChange((prev) => ({ ...prev, deliveryType: type }))}
+                      className={cn(
+                        "flex-1 rounded-[18px] px-4 py-2.5 text-sm font-medium transition-colors",
+                        form.deliveryType === type
+                          ? "bg-[var(--color-accent)] text-[var(--color-accent-text)]"
+                          : "text-[var(--color-muted)]",
+                      )}
                     >
-                      <Trash2 size={16} />
+                      {type === "MANUAL" ? "Ручная выдача" : "Автовыдача ключей"}
                     </button>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
 
-            {form.deliveryType === "AUTO_KEY" ? (
-              <textarea
-                value={form.keyPoolText}
-                onChange={(event) => setForm((prev) => ({ ...prev, keyPoolText: event.target.value }))}
-                placeholder="Один ключ на строку"
-                className="min-h-28 w-full rounded-2xl bg-[var(--color-bg)] px-4 py-3 text-sm text-[var(--color-text)] outline-none"
-              />
-            ) : null}
+              <Field label="Описание">
+                <textarea
+                  value={form.description}
+                  onChange={(event) =>
+                    onChange((prev) => ({ ...prev, description: event.target.value }))
+                  }
+                  placeholder="Краткое и нормальное описание товара"
+                  className="ui-input min-h-36"
+                />
+              </Field>
 
-            <label className="flex items-center gap-3 rounded-2xl bg-[var(--color-bg)] px-4 py-3">
-              <input
-                checked={form.isActive}
-                onChange={(event) => setForm((prev) => ({ ...prev, isActive: event.target.checked }))}
-                type="checkbox"
-                className="size-4 accent-[var(--color-accent)]"
-              />
-              <span className="text-sm text-[var(--color-text)]">Показывать в магазине</span>
-            </label>
+              <div className="ui-card-soft p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-medium text-[var(--color-text)]">
+                      Характеристики
+                    </p>
+                    <p className="mt-1 text-xs text-[var(--color-muted)]">
+                      Каждая строка станет отдельным пунктом в карточке товара.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() =>
+                      onChange((prev) => ({
+                        ...prev,
+                        specs: [...prev.specs, { label: "", value: "" }],
+                      }))
+                    }
+                    className="inline-flex items-center gap-2 rounded-[16px] bg-[var(--color-bg)] px-3 py-2 text-sm font-medium text-[var(--color-text)]"
+                  >
+                    <Plus size={14} />
+                    Добавить
+                  </button>
+                </div>
 
+                <div className="mt-4 grid gap-2">
+                  {form.specs.map((spec, index) => (
+                    <div
+                      key={`${index}-${form.id || "new"}`}
+                      className="grid gap-2 md:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)_48px]"
+                    >
+                      <input
+                        value={spec.label}
+                        onChange={(event) =>
+                          onChange((prev) => ({
+                            ...prev,
+                            specs: prev.specs.map((item, itemIndex) =>
+                              itemIndex === index
+                                ? { ...item, label: event.target.value }
+                                : item,
+                            ),
+                          }))
+                        }
+                        placeholder="Название"
+                        className="ui-input"
+                      />
+                      <input
+                        value={spec.value}
+                        onChange={(event) =>
+                          onChange((prev) => ({
+                            ...prev,
+                            specs: prev.specs.map((item, itemIndex) =>
+                              itemIndex === index
+                                ? { ...item, value: event.target.value }
+                                : item,
+                            ),
+                          }))
+                        }
+                        placeholder="Значение"
+                        className="ui-input"
+                      />
+                      <button
+                        onClick={() =>
+                          onChange((prev) => ({
+                            ...prev,
+                            specs:
+                              prev.specs.length === 1
+                                ? [{ label: "", value: "" }]
+                                : prev.specs.filter((_, itemIndex) => itemIndex !== index),
+                          }))
+                        }
+                        className="flex h-[50px] items-center justify-center rounded-2xl bg-[var(--color-bg)] text-[var(--color-muted)]"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {form.deliveryType === "AUTO_KEY" ? (
+                <Field label="Пул ключей">
+                  <textarea
+                    value={form.keyPoolText}
+                    onChange={(event) =>
+                      onChange((prev) => ({ ...prev, keyPoolText: event.target.value }))
+                    }
+                    placeholder="Один ключ на строку"
+                    className="ui-input min-h-32"
+                  />
+                </Field>
+              ) : null}
+            </section>
+          </div>
+        </div>
+
+        <div className="border-t border-[var(--color-border)] px-4 py-4 sm:px-5">
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <button
-              onClick={() => mutation.mutate()}
-              disabled={mutation.isPending || uploading}
-              className="rounded-2xl bg-[var(--color-accent)] px-4 py-3 text-sm font-semibold text-[var(--color-accent-text)]"
+              onClick={onClose}
+              className="rounded-[18px] bg-[var(--color-bg)] px-4 py-3 text-sm font-medium text-[var(--color-text)]"
             >
-              {mutation.isPending ? "Сохранение..." : "Сохранить"}
+              Отмена
+            </button>
+            <button
+              onClick={onSave}
+              disabled={!canSave}
+              className={cn(
+                "rounded-[18px] px-4 py-3 text-sm font-semibold",
+                canSave
+                  ? "bg-[var(--color-accent)] text-[var(--color-accent-text)]"
+                  : "bg-[var(--color-bg)] text-[var(--color-muted)]",
+              )}
+            >
+              {saving ? "Сохранение..." : form.id ? "Сохранить изменения" : "Создать товар"}
             </button>
           </div>
         </div>
       </div>
-    </Screen>
+    </div>
+  )
+}
+
+function Field({
+  label,
+  children,
+}: {
+  label: string
+  children: React.ReactNode
+}) {
+  return (
+    <label className="grid gap-2">
+      <span className="px-1 text-sm font-medium text-[var(--color-text)]">{label}</span>
+      {children}
+    </label>
   )
 }
