@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process"
 
-const port = process.env.PORT || "3001"
+const port = process.env.PORT || "3000"
 const appUrl = process.env.APP_URL
 const botToken = process.env.BOT_TOKEN
 const databaseUrl = process.env.DATABASE_URL?.trim()

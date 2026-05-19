@@ -3,10 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -p 3001",
+    "dev": "next dev -p 3000",
     "build": "next build",
     "start": "node scripts/start.mjs",
-    "start:plain": "next start -p 3001",
+    "start:plain": "next start -p 3000",
     "lint": "eslint",
     "prisma:generate": "prisma generate"
   },
