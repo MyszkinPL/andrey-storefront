@@ -22,6 +22,7 @@ import {
   sendTicketMessage,
   updateTicketStatus,
 } from "@/lib/api"
+import { useMode } from "@/components/mode-provider"
 import { Screen, ScreenEmpty, ScreenHeader } from "@/components/screen"
 import { useBackButton, useHaptic } from "@/hooks/use-telegram"
 import { cn } from "@/lib/cn"
@@ -37,6 +38,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
   const router = useRouter()
   const haptic = useHaptic()
   const queryClient = useQueryClient()
+  const { mode } = useMode()
   const [message, setMessage] = useState("")
   const { data } = useQuery({
     queryKey: ["ticket", ticketId],
@@ -104,7 +106,9 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
 
   const ticket = data.ticket
   const isSupportFlow = !ticket.productTitle && !ticket.paymentMethodTitle
-  const shouldLockBuyerChat = !isSupportFlow && !ticket.isAdmin && isAwaitingPayment && !isClosed
+  const isBuyerView = mode === "buyer"
+  const adminToolsVisible = ticket.isAdmin && mode === "admin"
+  const shouldLockBuyerChat = !isSupportFlow && isBuyerView && isAwaitingPayment && !isClosed
   const statusLabel = renderStatus(ticket.status)
   const createdAtLabel = format(new Date(ticket.createdAt), "dd MMMM · HH:mm", {
     locale: ru,
@@ -351,6 +355,12 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                 <div className="grid gap-2">
                   {groupedMessages.map((entry) => {
                     const isAdmin = entry.senderRole === "ADMIN"
+                    const senderRoleLabel =
+                      entry.isMine && isBuyerView
+                        ? "Покупатель"
+                        : isAdmin
+                          ? "Админ"
+                          : "Покупатель"
 
                     return (
                       <div
@@ -381,7 +391,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                                 {entry.isMine ? "Ты" : entry.senderName}
                               </span>
                               <span className="rounded-full bg-[var(--color-surface)] px-2 py-0.5">
-                                {isAdmin ? "Админ" : "Покупатель"}
+                                {senderRoleLabel}
                               </span>
                             </div>
                           ) : null}
@@ -600,7 +610,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
             </section>
             ) : null}
 
-            {ticket.isAdmin ? (
+            {adminToolsVisible ? (
             <section className="ui-card p-4">
               <p className="text-sm font-semibold text-[var(--color-text)]">Действия</p>
               <div className="mt-3 grid gap-2">
