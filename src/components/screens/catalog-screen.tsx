@@ -1,12 +1,12 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { Search, Sparkles } from "lucide-react"
 import Link from "next/link"
 import { useQuery } from "@tanstack/react-query"
+import { Cell, Placeholder, Section, Subheadline, Text, Title } from "@telegram-apps/telegram-ui"
 
 import { getMe, getProducts } from "@/lib/api"
-import { Badge, Card, Input } from "@/components/ui"
+import { Badge, Input } from "@/components/ui"
 import { Screen, ScreenHeader } from "@/components/screen"
 
 export function CatalogScreen() {
@@ -32,76 +32,56 @@ export function CatalogScreen() {
         subtitle={meData?.settings.welcomeText}
       />
 
-      <div className="grid gap-4 px-4 lg:grid-cols-[1.2fr,0.8fr]">
-        <Card className="rounded-[28px] p-5">
-          <p className="text-2xl font-semibold">Подписки, лицензии и ключи</p>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--color-muted)]">
-            Магазин работает как mini app в Telegram и как desktop storefront. Для key-based товаров поддерживается автовыдача после подтверждения оплаты.
-          </p>
-        </Card>
-        <Card className="rounded-[28px] p-5">
-          <div className="flex items-center gap-3">
-            <div className="rounded-2xl bg-[var(--color-accent)]/15 p-3 text-[var(--color-accent)]">
-              <Sparkles size={18} />
-            </div>
-            <div>
-              <p className="font-semibold">Desktop + Mobile</p>
-              <p className="text-sm text-[var(--color-muted)]">Один UX для ПК, мобилки и Telegram.</p>
-            </div>
-          </div>
-        </Card>
-      </div>
+      <Section>
+        <Title level="3">Подписки, лицензии и ключи</Title>
+        <Text className="mt-2 block">
+          Магазин работает как mini app в Telegram и как storefront на ПК. Для товаров с ключами поддерживается автовыдача после подтверждения оплаты.
+        </Text>
+      </Section>
 
-      <div className="px-4 pt-4">
-        <div className="glass-card flex items-center gap-3 rounded-[22px] px-4 py-3">
-          <Search size={18} className="text-[var(--color-muted)]" />
-          <Input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Поиск по программам и подпискам"
-            className="border-0 bg-transparent px-0 py-0"
+      <Section header="Поиск" footer="Один UX для ПК, мобилки и Telegram.">
+        <Input
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Поиск по программам и подпискам"
+        />
+      </Section>
+
+      <Section header="Каталог">
+        {products.length === 0 ? (
+          <Placeholder
+            header="Ничего не найдено"
+            description="Попробуй изменить запрос или проверь список товаров в админке."
           />
-        </div>
-      </div>
+        ) : null}
 
-      <section className="grid gap-3 px-4 pb-5 pt-4 md:grid-cols-2 xl:grid-cols-3">
-        {products.map((product, index) => (
+        {products.map((product) => (
           <Link key={product.id} href={`/product/${product.id}`}>
-            <Card
-              className="enter-card flex h-full flex-col gap-3 p-5"
-              style={{ ["--stagger" as string]: `${index * 35}ms` }}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-lg font-semibold">{product.title}</p>
-                  <p className="mt-1 text-sm text-[var(--color-muted)]">
-                    {product.category || "Software subscription"}
-                  </p>
-                </div>
+            <Cell
+              multiline
+              subtitle={`${product.priceRub.toLocaleString("ru-RU")} ₽`}
+              description={product.description}
+              after={
                 <Badge>
                   {product.deliveryType === "AUTO_KEY" ? "Автовыдача" : "Ручная выдача"}
                 </Badge>
+              }
+            >
+              <div className="min-w-0">
+                <Title level="3">{product.title}</Title>
+                <Subheadline level="2">
+                  {product.category || "Software subscription"}
+                </Subheadline>
+                {product.deliveryType === "AUTO_KEY" ? (
+                  <Subheadline level="2">
+                    Остаток ключей: {product.availableKeyCount ?? 0}
+                  </Subheadline>
+                ) : null}
               </div>
-              <p className="line-clamp-4 text-sm leading-6 text-[var(--color-muted)]">
-                {product.description}
-              </p>
-              <div className="mt-auto flex items-center justify-between pt-2">
-                <div>
-                  <span className="text-xl font-semibold">
-                    {product.priceRub.toLocaleString("ru-RU")} ₽
-                  </span>
-                  {product.deliveryType === "AUTO_KEY" ? (
-                    <p className="mt-1 text-xs text-[var(--color-muted)]">
-                      Остаток ключей: {product.availableKeyCount ?? 0}
-                    </p>
-                  ) : null}
-                </div>
-                <span className="text-sm text-[var(--color-accent)]">Открыть</span>
-              </div>
-            </Card>
+            </Cell>
           </Link>
         ))}
-      </section>
+      </Section>
     </Screen>
   )
 }

@@ -2,9 +2,10 @@
 
 import Link from "next/link"
 import { useQuery } from "@tanstack/react-query"
+import { Cell, Placeholder, Section, Subheadline, Title } from "@telegram-apps/telegram-ui"
 
 import { getTickets } from "@/lib/api"
-import { Badge, Card } from "@/components/ui"
+import { Badge } from "@/components/ui"
 import { Screen, ScreenHeader } from "@/components/screen"
 
 export function AdminTicketsScreen() {
@@ -18,29 +19,50 @@ export function AdminTicketsScreen() {
     <Screen>
       <ScreenHeader title="Тикеты" subtitle="Оплаты, статусы, ручная обработка и автовыдача" />
 
-      <div className="flex flex-col gap-3 px-4 pb-5">
+      <Section header="Очередь">
+        {(data?.tickets || []).length === 0 ? (
+          <Placeholder
+            header="Активных тикетов нет"
+            description="Когда кто-то создаст новый запрос на покупку или поддержку, он появится здесь."
+          />
+        ) : null}
+
         {(data?.tickets || []).map((ticket) => (
           <Link key={ticket.id} href={`/tickets/${ticket.id}`}>
-            <Card className="space-y-3 p-5">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-base font-semibold">
-                    #{ticket.number} · {ticket.subject}
-                  </p>
-                  <p className="mt-1 text-sm text-[var(--color-muted)]">
-                    {ticket.productTitle || "Без товара"}
-                  </p>
-                </div>
+            <Cell
+              multiline
+              subtitle={ticket.productTitle || "Без товара"}
+              description={ticket.lastMessage || "Без сообщений"}
+              after={
                 <div className="flex flex-col items-end gap-1">
-                  <Badge>{ticket.status}</Badge>
+                  <Badge>{renderStatus(ticket.status)}</Badge>
                   {ticket.isPaid ? <Badge className="text-[var(--color-accent)]">Оплачено</Badge> : null}
                 </div>
+              }
+            >
+              <div className="min-w-0">
+                <Title level="3">#{ticket.number} · {ticket.subject}</Title>
+                <Subheadline level="2">
+                  {ticket.isPaid ? "Оплата подтверждена" : "Ожидает подтверждения оплаты"}
+                </Subheadline>
               </div>
-              <p className="line-clamp-2 text-sm text-[var(--color-muted)]">{ticket.lastMessage}</p>
-            </Card>
+            </Cell>
           </Link>
         ))}
-      </div>
+      </Section>
     </Screen>
   )
+}
+
+function renderStatus(status: string) {
+  switch (status) {
+    case "OPEN":
+      return "Открыт"
+    case "IN_PROGRESS":
+      return "В работе"
+    case "CLOSED":
+      return "Закрыт"
+    default:
+      return status
+  }
 }

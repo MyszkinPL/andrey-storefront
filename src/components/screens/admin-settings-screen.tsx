@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { Checkbox, Placeholder, Section } from "@telegram-apps/telegram-ui"
 
 import { getMe, getPaymentMethods, saveSettings } from "@/lib/api"
-import { Button, Card, Input, Textarea } from "@/components/ui"
+import { Button, Input, Textarea } from "@/components/ui"
 import { Screen, ScreenHeader } from "@/components/screen"
 
 type PaymentMethodForm = {
@@ -64,77 +65,89 @@ export function AdminSettingsScreen() {
     <Screen>
       <ScreenHeader title="Настройки" subtitle="Тексты, контакты и реквизиты оплаты" />
 
-      <div className="grid gap-3 px-4 pb-5 xl:grid-cols-[1fr,1fr]">
-        <Card className="space-y-3 p-5">
-          <p className="text-base font-semibold">Магазин</p>
-          <Input value={shopName} onChange={(event) => setShopName(event.target.value)} placeholder="Название" />
-          <Textarea
-            value={welcomeText}
-            onChange={(event) => setWelcomeText(event.target.value)}
-            placeholder="Текст на главной"
-          />
-          <Textarea
-            value={supportIntro}
-            onChange={(event) => setSupportIntro(event.target.value)}
-            placeholder="Текст на экране тикетов"
-          />
-          <Input
-            value={supportUsername}
-            onChange={(event) => setSupportUsername(event.target.value)}
-            placeholder="Telegram username support"
-          />
-        </Card>
+      <Section header="Магазин">
+        <Input value={shopName} onChange={(event) => setShopName(event.target.value)} placeholder="Название" />
+        <Textarea
+          value={welcomeText}
+          onChange={(event) => setWelcomeText(event.target.value)}
+          placeholder="Текст на главной"
+        />
+        <Textarea
+          value={supportIntro}
+          onChange={(event) => setSupportIntro(event.target.value)}
+          placeholder="Текст на экране тикетов"
+        />
+        <Input
+          value={supportUsername}
+          onChange={(event) => setSupportUsername(event.target.value)}
+          placeholder="Telegram username support"
+        />
+      </Section>
 
-        <Card className="space-y-3 p-5">
-          <p className="text-base font-semibold">Реквизиты</p>
-          <div className="flex flex-col gap-3">
-            {paymentMethods.map((method, index) => (
-              <div key={method.id || index} className="rounded-2xl border border-white/8 p-3">
-                <Input
-                  value={method.title}
-                  onChange={(event) =>
-                    setPaymentMethods((prev) =>
-                      prev.map((item, itemIndex) =>
-                        itemIndex === index ? { ...item, title: event.target.value } : item,
-                      ),
-                    )
-                  }
-                  placeholder="Название способа оплаты"
-                />
-                <Textarea
-                  value={method.details}
-                  onChange={(event) =>
-                    setPaymentMethods((prev) =>
-                      prev.map((item, itemIndex) =>
-                        itemIndex === index ? { ...item, details: event.target.value } : item,
-                      ),
-                    )
-                  }
-                  placeholder="Реквизиты"
-                  className="mt-3"
-                />
-              </div>
-            ))}
+      <Section header="Реквизиты" footer="Можно держать несколько способов оплаты и временно выключать любой из них.">
+        {paymentMethods.length === 0 ? (
+          <Placeholder
+            header="Реквизитов пока нет"
+            description="Добавь хотя бы один способ оплаты ниже."
+          />
+        ) : null}
+
+        {paymentMethods.map((method, index) => (
+          <div key={method.id || index} className="pb-4">
+            <Input
+              value={method.title}
+              onChange={(event) =>
+                setPaymentMethods((prev) =>
+                  prev.map((item, itemIndex) =>
+                    itemIndex === index ? { ...item, title: event.target.value } : item,
+                  ),
+                )
+              }
+              placeholder="Название способа оплаты"
+            />
+            <Textarea
+              value={method.details}
+              onChange={(event) =>
+                setPaymentMethods((prev) =>
+                  prev.map((item, itemIndex) =>
+                    itemIndex === index ? { ...item, details: event.target.value } : item,
+                  ),
+                )
+              }
+              placeholder="Реквизиты"
+              className="mt-3"
+            />
+            <label className="mt-3 flex items-center gap-3">
+              <Checkbox
+                checked={method.isActive}
+                onChange={(event) =>
+                  setPaymentMethods((prev) =>
+                    prev.map((item, itemIndex) =>
+                      itemIndex === index ? { ...item, isActive: event.target.checked } : item,
+                    ),
+                  )
+                }
+              />
+              <span>Способ оплаты активен</span>
+            </label>
           </div>
-          <Button
-            variant="secondary"
-            onClick={() =>
-              setPaymentMethods((prev) => [
-                ...prev,
-                { title: "", details: "", isActive: true },
-              ])
-            }
-          >
-            Добавить реквизит
-          </Button>
-        </Card>
-      </div>
+        ))}
 
-      <div className="px-4 pb-5">
-        <Button onClick={() => mutation.mutate()} disabled={mutation.isPending} className="w-full">
+        <Button
+          variant="secondary"
+          onClick={() =>
+            setPaymentMethods((prev) => [...prev, { title: "", details: "", isActive: true }])
+          }
+        >
+          Добавить реквизит
+        </Button>
+      </Section>
+
+      <Section>
+        <Button onClick={() => mutation.mutate()} disabled={mutation.isPending} stretched>
           {mutation.isPending ? "Сохранение..." : "Сохранить настройки"}
         </Button>
-      </div>
+      </Section>
     </Screen>
   )
 }

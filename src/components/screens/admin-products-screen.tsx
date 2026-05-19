@@ -2,9 +2,10 @@
 
 import { useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { Cell, Checkbox, Placeholder, Section, SegmentedControl, Subheadline, Title } from "@telegram-apps/telegram-ui"
 
 import { getProducts, saveAdminProduct, updateAdminProduct } from "@/lib/api"
-import { Button, Card, Input, Textarea } from "@/components/ui"
+import { Badge, Button, Input, Textarea } from "@/components/ui"
 import { Screen, ScreenHeader } from "@/components/screen"
 
 const emptyForm = {
@@ -48,125 +49,131 @@ export function AdminProductsScreen() {
     <Screen>
       <ScreenHeader title="Товары" subtitle="Каталог подписок и товаров с пулом ключей" />
 
-      <div className="grid gap-3 px-4 pb-5 xl:grid-cols-[1.2fr,0.8fr]">
-        <div className="flex flex-col gap-3">
-          {(data?.products || []).map((product) => (
-            <Card key={product.id} className="space-y-3 p-5">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-base font-semibold">{product.title}</p>
-                  <p className="mt-1 text-sm text-[var(--color-muted)]">
-                    {product.category || "Без категории"} ·{" "}
-                    {product.deliveryType === "AUTO_KEY" ? "автовыдача" : "ручная выдача"}
-                  </p>
-                </div>
-                <span className="text-sm text-[var(--color-accent)]">
-                  {product.priceRub.toLocaleString("ru-RU")} ₽
-                </span>
-              </div>
-              <p className="line-clamp-3 text-sm leading-6 text-[var(--color-muted)]">
-                {product.description}
-              </p>
-              {product.deliveryType === "AUTO_KEY" ? (
-                <p className="text-xs text-[var(--color-muted)]">
-                  Свободных ключей: {product.availableKeyCount ?? 0}
-                </p>
-              ) : null}
-              <div className="flex gap-2">
-                <Button
-                  variant="secondary"
-                  onClick={() =>
-                    setForm({
-                      id: product.id,
-                      title: product.title,
-                      category: product.category || "",
-                      description: product.description,
-                      priceRub: String(product.priceRub),
-                      deliveryType: product.deliveryType,
-                      keyPoolText: "",
-                      isActive: product.isActive,
-                    })
-                  }
-                >
-                  Редактировать
-                </Button>
-                <Button
-                  variant="ghost"
-                  onClick={() =>
-                    updateAdminProduct(product.id, {
-                      title: product.title,
-                      category: product.category || "",
-                      description: product.description,
-                      priceRub: product.priceRub,
-                      deliveryType: product.deliveryType,
-                      isActive: !product.isActive,
-                    }).then(() => queryClient.invalidateQueries({ queryKey: ["products"] }))
-                  }
-                >
-                  {product.isActive ? "Скрыть" : "Показать"}
-                </Button>
-              </div>
-            </Card>
-          ))}
-        </div>
+      <Section header="Каталог">
+        {(data?.products || []).length === 0 ? (
+          <Placeholder
+            header="Товаров пока нет"
+            description="Добавь первую подписку или продукт через форму ниже."
+          />
+        ) : null}
 
-        <Card className="h-fit space-y-3 p-5">
-          <p className="text-base font-semibold">{form.id ? "Редактировать товар" : "Новый товар"}</p>
-          <Input
-            value={form.title}
-            onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))}
-            placeholder="Название"
-          />
-          <Input
-            value={form.category}
-            onChange={(event) => setForm((prev) => ({ ...prev, category: event.target.value }))}
-            placeholder="Категория"
-          />
-          <Input
-            value={form.priceRub}
-            type="number"
-            onChange={(event) => setForm((prev) => ({ ...prev, priceRub: event.target.value }))}
-            placeholder="Цена"
-          />
-          <div className="grid grid-cols-2 gap-2">
-            <Button
-              variant={form.deliveryType === "MANUAL" ? "primary" : "secondary"}
+        {(data?.products || []).map((product) => (
+          <div key={product.id}>
+            <Cell
+              multiline
+              subtitle={`${product.category || "Без категории"} · ${product.priceRub.toLocaleString("ru-RU")} ₽`}
+              description={product.description}
+              after={
+                <Badge>{product.deliveryType === "AUTO_KEY" ? "Автовыдача" : "Ручная"}</Badge>
+              }
+            >
+              <div className="min-w-0">
+                <Title level="3">{product.title}</Title>
+                <Subheadline level="2">
+                  {product.isActive ? "Показывается в каталоге" : "Скрыт из каталога"}
+                </Subheadline>
+                {product.deliveryType === "AUTO_KEY" ? (
+                  <Subheadline level="2">
+                    Остаток ключей: {product.availableKeyCount ?? 0}
+                  </Subheadline>
+                ) : null}
+              </div>
+            </Cell>
+
+            <div className="mt-2 flex flex-wrap gap-2 px-4 pb-3">
+              <Button
+                variant="secondary"
+                onClick={() =>
+                  setForm({
+                    id: product.id,
+                    title: product.title,
+                    category: product.category || "",
+                    description: product.description,
+                    priceRub: String(product.priceRub),
+                    deliveryType: product.deliveryType,
+                    keyPoolText: "",
+                    isActive: product.isActive,
+                  })
+                }
+              >
+                Редактировать
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() =>
+                  updateAdminProduct(product.id, {
+                    title: product.title,
+                    category: product.category || "",
+                    description: product.description,
+                    priceRub: product.priceRub,
+                    deliveryType: product.deliveryType,
+                    isActive: !product.isActive,
+                  }).then(() => queryClient.invalidateQueries({ queryKey: ["products"] }))
+                }
+              >
+                {product.isActive ? "Скрыть" : "Показать"}
+              </Button>
+            </div>
+          </div>
+        ))}
+      </Section>
+
+      <Section header={form.id ? "Редактировать товар" : "Новый товар"}>
+        <Input
+          value={form.title}
+          onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))}
+          placeholder="Название"
+        />
+        <Input
+          value={form.category}
+          onChange={(event) => setForm((prev) => ({ ...prev, category: event.target.value }))}
+          placeholder="Категория"
+        />
+        <Input
+          value={form.priceRub}
+          type="number"
+          onChange={(event) => setForm((prev) => ({ ...prev, priceRub: event.target.value }))}
+          placeholder="Цена"
+        />
+        <div className="mt-2">
+          <SegmentedControl>
+            <SegmentedControl.Item
+              selected={form.deliveryType === "MANUAL"}
               onClick={() => setForm((prev) => ({ ...prev, deliveryType: "MANUAL" }))}
             >
-              Ручная выдача
-            </Button>
-            <Button
-              variant={form.deliveryType === "AUTO_KEY" ? "primary" : "secondary"}
+              Ручная
+            </SegmentedControl.Item>
+            <SegmentedControl.Item
+              selected={form.deliveryType === "AUTO_KEY"}
               onClick={() => setForm((prev) => ({ ...prev, deliveryType: "AUTO_KEY" }))}
             >
-              Автовыдача ключей
-            </Button>
-          </div>
+              Автовыдача
+            </SegmentedControl.Item>
+          </SegmentedControl>
+        </div>
+        <Textarea
+          value={form.description}
+          onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
+          placeholder="Описание"
+        />
+        {form.deliveryType === "AUTO_KEY" ? (
           <Textarea
-            value={form.description}
-            onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
-            placeholder="Описание"
+            value={form.keyPoolText}
+            onChange={(event) => setForm((prev) => ({ ...prev, keyPoolText: event.target.value }))}
+            placeholder="Один ключ на строку. При редактировании сюда можно добавить новые ключи."
           />
-          {form.deliveryType === "AUTO_KEY" ? (
-            <Textarea
-              value={form.keyPoolText}
-              onChange={(event) => setForm((prev) => ({ ...prev, keyPoolText: event.target.value }))}
-              placeholder="Один ключ на строку. При редактировании сюда можно добавить новые ключи."
-            />
-          ) : null}
-          <label className="flex items-center gap-3 text-sm text-[var(--color-muted)]">
-            <input
-              type="checkbox"
-              checked={form.isActive}
-              onChange={(event) => setForm((prev) => ({ ...prev, isActive: event.target.checked }))}
-            />
-            Показывать в каталоге
-          </label>
-          <Button onClick={() => mutation.mutate()} disabled={mutation.isPending}>
-            {mutation.isPending ? "Сохранение..." : "Сохранить"}
-          </Button>
-        </Card>
-      </div>
+        ) : null}
+        <label className="mt-2 flex items-center gap-3">
+          <Checkbox
+            checked={form.isActive}
+            onChange={(event) => setForm((prev) => ({ ...prev, isActive: event.target.checked }))}
+          />
+          <span>Показывать в каталоге</span>
+        </label>
+        <Button onClick={() => mutation.mutate()} disabled={mutation.isPending} stretched className="mt-3">
+          {mutation.isPending ? "Сохранение..." : "Сохранить"}
+        </Button>
+      </Section>
     </Screen>
   )
 }

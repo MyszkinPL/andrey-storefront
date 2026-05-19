@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { format } from "date-fns"
 import { ru } from "date-fns/locale"
+import { Cell, Placeholder, Section, Spinner, Subheadline, Text, Title } from "@telegram-apps/telegram-ui"
 
 import {
   confirmTicketPayment,
@@ -12,7 +13,7 @@ import {
   sendTicketMessage,
   updateTicketStatus,
 } from "@/lib/api"
-import { Button, Card, Textarea } from "@/components/ui"
+import { Button, Textarea } from "@/components/ui"
 import { Screen, ScreenHeader } from "@/components/screen"
 import { useBackButton, useHaptic, useMainButton } from "@/hooks/use-telegram"
 
@@ -69,25 +70,29 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
     return (
       <Screen noTabBar>
         <div className="flex min-h-dvh items-center justify-center">
-          <div className="size-8 animate-spin rounded-full border-2 border-[var(--color-accent)] border-t-transparent" />
+          <Spinner size="m" />
         </div>
       </Screen>
     )
   }
 
+  const ticket = data.ticket
+
   return (
     <Screen noTabBar className="pb-6">
       <ScreenHeader
-        title={`#${data.ticket.number} · ${data.ticket.subject}`}
-        subtitle={data.ticket.productTitle || "Общий тикет"}
+        title={`#${ticket.number} · ${ticket.subject}`}
+        subtitle={ticket.productTitle || "Общий тикет"}
       />
 
-      <div className="flex flex-1 flex-col gap-3 px-4">
-        {data.ticket.isAdmin ? (
-          <div className="flex flex-wrap gap-2">
-            {!data.ticket.isPaid ? (
-              <Button onClick={() => paymentMutation.mutate()}>Подтвердить оплату</Button>
-            ) : null}
+      {ticket.isAdmin ? (
+        <Section header="Действия">
+          {!ticket.isPaid ? (
+            <Button stretched onClick={() => paymentMutation.mutate()} disabled={paymentMutation.isPending}>
+              {paymentMutation.isPending ? "Подтверждаем..." : "Подтвердить оплату"}
+            </Button>
+          ) : null}
+          <div className="mt-3 flex flex-wrap gap-2">
             <Button variant="secondary" onClick={() => statusMutation.mutate("IN_PROGRESS")}>
               В работу
             </Button>
@@ -95,46 +100,54 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
               Закрыть
             </Button>
           </div>
-        ) : null}
+        </Section>
+      ) : null}
 
-        {data.ticket.deliveredKey ? (
-          <Card className="border-[var(--color-accent)]/20 bg-[var(--color-accent)]/12 p-5">
-            <p className="text-sm font-semibold text-[var(--color-accent)]">Выданный ключ</p>
-            <p className="mt-2 break-all font-mono text-sm">{data.ticket.deliveredKey}</p>
-          </Card>
-        ) : null}
+      {ticket.deliveredKey ? (
+        <Section header="Выданный ключ" footer="Ключ появляется здесь после подтверждения оплаты.">
+          <Text className="break-all font-mono">{ticket.deliveredKey}</Text>
+        </Section>
+      ) : null}
 
-        <div className="flex flex-1 flex-col gap-3">
-          {data.ticket.messages.map((entry) => (
-            <div key={entry.id} className={`flex ${entry.isMine ? "justify-end" : "justify-start"}`}>
-              <Card className={`max-w-[88%] p-4 ${entry.isMine ? "bg-[var(--color-accent)]/14" : ""}`}>
-                <p className="text-xs text-[var(--color-muted)]">
-                  {entry.senderName} · {entry.senderRole === "ADMIN" ? "админ" : "клиент"}
-                </p>
-                <p className="mt-2 whitespace-pre-wrap text-sm leading-6">{entry.body}</p>
-                <p className="mt-2 text-[11px] text-[var(--color-muted)]">
-                  {format(new Date(entry.createdAt), "dd MMM · HH:mm", { locale: ru })}
-                </p>
-              </Card>
-            </div>
-          ))}
-        </div>
-
-        <Card className="p-3">
-          <Textarea
-            value={message}
-            onChange={(event) => setMessage(event.target.value)}
-            placeholder={isClosed ? "Тикет закрыт" : "Напиши сообщение"}
-            disabled={isClosed}
-            className="border-0 bg-transparent"
+      <Section header="Переписка">
+        {ticket.messages.length === 0 ? (
+          <Placeholder
+            header="Сообщений пока нет"
+            description="Напиши первым, чтобы открыть диалог по оплате и выдаче."
           />
-          <div className="mt-3 flex justify-end">
-            <Button onClick={() => sendMutation.mutate()} disabled={!canSend}>
-              Отправить
-            </Button>
-          </div>
-        </Card>
-      </div>
+        ) : null}
+
+        {ticket.messages.map((entry) => (
+          <Cell
+            key={entry.id}
+            multiline
+            subtitle={`${entry.senderName} · ${entry.senderRole === "ADMIN" ? "админ" : "клиент"}`}
+            description={format(new Date(entry.createdAt), "dd MMM · HH:mm", { locale: ru })}
+            className={entry.isMine ? "bg-[var(--tg-theme-secondary-bg-color)]/70" : undefined}
+          >
+            <div className="min-w-0">
+              <Title level="3">{entry.isMine ? "Ты" : entry.senderName}</Title>
+              <Subheadline level="2" className="mt-1 whitespace-pre-wrap">
+                {entry.body}
+              </Subheadline>
+            </div>
+          </Cell>
+        ))}
+      </Section>
+
+      <Section header="Новое сообщение">
+        <Textarea
+          value={message}
+          onChange={(event) => setMessage(event.target.value)}
+          placeholder={isClosed ? "Тикет закрыт" : "Напиши сообщение"}
+          disabled={isClosed}
+        />
+        <div className="mt-3 flex justify-end">
+          <Button onClick={() => sendMutation.mutate()} disabled={!canSend}>
+            {sendMutation.isPending ? "Отправка..." : "Отправить"}
+          </Button>
+        </div>
+      </Section>
     </Screen>
   )
 }

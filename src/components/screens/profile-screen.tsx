@@ -1,9 +1,10 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
+import { Cell, Placeholder, Section, Text, Title } from "@telegram-apps/telegram-ui"
 
 import { getMe, getPaymentMethods } from "@/lib/api"
-import { Badge, Card } from "@/components/ui"
+import { Badge } from "@/components/ui"
 import { Screen, ScreenHeader } from "@/components/screen"
 
 export function ProfileScreen() {
@@ -20,36 +21,30 @@ export function ProfileScreen() {
         subtitle={meData?.user.username ? `@${meData.user.username}` : "Telegram customer"}
       />
 
-      <div className="grid gap-3 px-4 pb-5 lg:grid-cols-[0.9fr,1.1fr]">
-        <Card className="space-y-3 p-5">
+      <Section
+        header={
           <div className="flex items-center justify-between gap-3">
-            <p className="text-base font-semibold">Поддержка</p>
+            <span>Поддержка</span>
             {meData?.user.role === "ADMIN" ? <Badge>Админ</Badge> : null}
           </div>
-          <p className="text-sm leading-6 text-[var(--color-muted)]">
-            {meData?.settings.supportIntro}
-          </p>
-          {meData?.settings.supportUsername ? (
-            <p className="text-sm text-[var(--color-accent)]">
-              Telegram: @{meData.settings.supportUsername}
-            </p>
-          ) : null}
-        </Card>
+        }
+      >
+        <Text>{meData?.settings.supportIntro}</Text>
+        {meData?.settings.supportUsername ? (
+          <Text className="mt-2 block">Telegram: @{meData.settings.supportUsername}</Text>
+        ) : null}
+      </Section>
 
-        <Card className="space-y-3 p-5">
-          <p className="text-base font-semibold">Реквизиты</p>
-          <div className="grid gap-3">
-            {(paymentData?.paymentMethods || []).map((method) => (
-              <div key={method.id} className="rounded-2xl border border-white/8 px-4 py-3">
-                <p className="text-sm font-medium">{method.title}</p>
-                <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-[var(--color-muted)]">
-                  {method.details}
-                </p>
-              </div>
-            ))}
-          </div>
-        </Card>
-      </div>
+      <Section header="Реквизиты">
+        {(paymentData?.paymentMethods || []).length === 0 ? (
+          <Placeholder header="Реквизитов пока нет" description="Админ добавит способы оплаты в настройках." />
+        ) : null}
+        {(paymentData?.paymentMethods || []).map((method) => (
+          <Cell key={method.id} multiline description={method.details}>
+            <Title level="3">{method.title}</Title>
+          </Cell>
+        ))}
+      </Section>
     </Screen>
   )
 }

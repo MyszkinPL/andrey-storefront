@@ -2,10 +2,9 @@
 
 import Link from "next/link"
 import { useQuery } from "@tanstack/react-query"
-import { ArrowRight, Boxes, CreditCard, KeyRound, Ticket } from "lucide-react"
+import { Cell, Section, Subheadline, Title } from "@telegram-apps/telegram-ui"
 
 import { getMe, getPaymentMethods, getProducts, getTickets } from "@/lib/api"
-import { Card } from "@/components/ui"
 import { Screen, ScreenHeader } from "@/components/screen"
 
 export function AdminOverviewScreen() {
@@ -29,12 +28,10 @@ export function AdminOverviewScreen() {
     {
       label: "Активные товары",
       value: productsData?.products.filter((item) => item.isActive).length || 0,
-      icon: Boxes,
     },
     {
       label: "Открытые тикеты",
       value: ticketsData?.tickets.filter((item) => item.status !== "CLOSED").length || 0,
-      icon: Ticket,
     },
     {
       label: "Ключи в наличии",
@@ -43,12 +40,10 @@ export function AdminOverviewScreen() {
           (sum, item) => sum + (item.deliveryType === "AUTO_KEY" ? item.availableKeyCount || 0 : 0),
           0,
         ) || 0,
-      icon: KeyRound,
     },
     {
       label: "Реквизиты",
       value: paymentData?.paymentMethods.length || 0,
-      icon: CreditCard,
     },
   ]
 
@@ -62,34 +57,26 @@ export function AdminOverviewScreen() {
     <Screen>
       <ScreenHeader title="Админка" subtitle="Полноценное управление магазином с ПК и мобильных" />
 
-      <div className="grid gap-3 px-4 md:grid-cols-2 xl:grid-cols-4">
-        {stats.map((item) => {
-          const Icon = item.icon
-          return (
-            <Card key={item.label} className="space-y-3 p-5">
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-[var(--color-muted)]">{item.label}</p>
-                <Icon size={18} className="text-[var(--color-accent)]" />
-              </div>
-              <p className="text-3xl font-semibold">{item.value}</p>
-            </Card>
-          )
-        })}
-      </div>
+      <Section header="Сводка">
+        {stats.map((item) => (
+          <Cell key={item.label} after={<Title level="2">{item.value}</Title>}>
+            {item.label}
+          </Cell>
+        ))}
+      </Section>
 
-      <div className="flex flex-col gap-3 px-4 pb-5 pt-4">
+      <Section header="Управление">
         {links.map((item) => (
           <Link key={item.href} href={item.href}>
-            <Card className="flex items-center justify-between gap-3 p-5">
-              <div>
-                <p className="text-base font-semibold">{item.title}</p>
-                <p className="mt-1 text-sm text-[var(--color-muted)]">{item.subtitle}</p>
+            <Cell multiline subtitle={item.subtitle}>
+              <div className="min-w-0">
+                <Title level="3">{item.title}</Title>
+                <Subheadline level="2">{item.subtitle}</Subheadline>
               </div>
-              <ArrowRight size={18} className="text-[var(--color-muted)]" />
-            </Card>
+            </Cell>
           </Link>
         ))}
-      </div>
+      </Section>
     </Screen>
   )
 }
