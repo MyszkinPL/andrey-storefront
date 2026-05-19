@@ -33,9 +33,17 @@ if (appUrl && botToken) {
   })
 }
 
-const server = spawn(process.platform === "win32" ? "npx.cmd" : "npx", ["next", "start", "-p", port], {
+const serverCommand =
+  process.platform === "win32"
+    ? ["node.exe", ["server.js"]]
+    : ["node", ["server.js"]]
+
+const server = spawn(serverCommand[0], serverCommand[1], {
   stdio: "inherit",
-  env: process.env,
+  env: {
+    ...process.env,
+    PORT: port,
+  },
 })
 
 server.on("exit", (code) => process.exit(code ?? 0))
