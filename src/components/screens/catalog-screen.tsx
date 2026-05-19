@@ -118,24 +118,13 @@ export function CatalogScreen() {
                 </div>
 
                 <div className="flex flex-col gap-2 p-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="line-clamp-2 text-sm font-semibold leading-tight text-[var(--color-text)]">
-                        {product.title}
-                      </p>
-                      <p className="mt-1 text-[11px] text-[var(--color-muted)]">
-                        {product.category || "digital"}
-                      </p>
-                    </div>
-                    <span className="ui-pill">{product.specs.length}</span>
-                  </div>
-
-                  <div className="flex flex-wrap gap-1.5">
-                    {product.specs.slice(0, 2).map((spec) => (
-                      <span key={`${product.id}-${spec.label}`} className="ui-pill">
-                        {spec.label}: {spec.value}
-                      </span>
-                    ))}
+                  <div className="min-w-0">
+                    <p className="line-clamp-2 text-sm font-semibold leading-tight text-[var(--color-text)]">
+                      {product.title}
+                    </p>
+                    <p className="mt-1 text-[11px] text-[var(--color-muted)]">
+                      {product.category || "digital"}
+                    </p>
                   </div>
 
                   <div className="mt-auto flex items-end justify-between gap-2">

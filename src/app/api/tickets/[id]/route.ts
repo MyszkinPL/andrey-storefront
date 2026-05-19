@@ -137,6 +137,8 @@ export async function GET(
     where: { id },
     include: {
       product: true,
+      createdBy: true,
+      assignedTo: true,
       deliveredKey: true,
       messages: {
         include: { sender: true },
@@ -159,8 +161,28 @@ export async function GET(
       createdAt: ticket.createdAt,
       isPaid: ticket.isPaid,
       productTitle: ticket.product?.title || null,
+      productCategory: ticket.product?.category || null,
       deliveredKey: ticket.deliveredKey?.value || null,
       isAdmin: user.role === "ADMIN",
+      createdBy:
+        user.role === "ADMIN"
+          ? {
+              id: ticket.createdBy.id,
+              firstName: ticket.createdBy.firstName,
+              lastName: ticket.createdBy.lastName,
+              username: ticket.createdBy.username,
+              photoUrl: ticket.createdBy.photoUrl,
+            }
+          : null,
+      assignedTo:
+        user.role === "ADMIN" && ticket.assignedTo
+          ? {
+              id: ticket.assignedTo.id,
+              firstName: ticket.assignedTo.firstName,
+              lastName: ticket.assignedTo.lastName,
+              username: ticket.assignedTo.username,
+            }
+          : null,
       paymentMethodTitle: ticket.paymentMethodTitle || null,
       paymentMethodType: ticket.paymentMethodType || null,
       paymentMethodDetails: ticket.paymentMethodDetails || null,

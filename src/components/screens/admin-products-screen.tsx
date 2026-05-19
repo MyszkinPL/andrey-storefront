@@ -4,8 +4,10 @@ import Image from "next/image"
 import { useMemo, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
+  Check,
   CopyPlus,
   ImagePlus,
+  KeyRound,
   PackagePlus,
   PencilLine,
   Plus,
@@ -13,7 +15,7 @@ import {
   X,
 } from "lucide-react"
 
-import { getProducts, saveAdminProduct, updateAdminProduct } from "@/lib/api"
+import { getProduct, getProducts, saveAdminProduct, updateAdminProduct } from "@/lib/api"
 import { optimizeSquareImage } from "@/lib/image"
 import { Screen, ScreenHeader } from "@/components/screen"
 import { cn } from "@/lib/cn"
@@ -32,6 +34,7 @@ type ProductForm = {
   priceRub: string
   deliveryType: "MANUAL" | "AUTO_KEY"
   keyPoolText: string
+  removeKeyIds: string[]
   isActive: boolean
   specs: SpecForm[]
 }
@@ -45,6 +48,7 @@ const emptyForm: ProductForm = {
   priceRub: "0",
   deliveryType: "MANUAL",
   keyPoolText: "",
+  removeKeyIds: [],
   isActive: true,
   specs: [{ label: "", value: "" }],
 }
@@ -66,6 +70,7 @@ export function AdminProductsScreen() {
         priceRub: Number(form.priceRub),
         deliveryType: form.deliveryType,
         keyPoolText: form.keyPoolText,
+        removeKeyIds: form.removeKeyIds,
         isActive: form.isActive,
         specs: form.specs
           .map((spec) => ({
@@ -85,6 +90,13 @@ export function AdminProductsScreen() {
   })
 
   const products = useMemo(() => data?.products ?? [], [data?.products])
+  const categoryOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(products.map((product) => product.category?.trim()).filter(Boolean)),
+      ) as string[],
+    [products],
+  )
 
   function closeEditor() {
     setForm(emptyForm)
@@ -106,6 +118,7 @@ export function AdminProductsScreen() {
       priceRub: String(product.priceRub),
       deliveryType: product.deliveryType,
       keyPoolText: "",
+      removeKeyIds: [],
       isActive: product.isActive,
       specs: product.specs.length > 0 ? product.specs : [{ label: "", value: "" }],
     })
@@ -121,6 +134,7 @@ export function AdminProductsScreen() {
       imageDataUrl: product.imageDataUrl || "",
       priceRub: String(product.priceRub),
       deliveryType: product.deliveryType,
+      removeKeyIds: [],
       specs: product.specs.length > 0 ? product.specs : [{ label: "", value: "" }],
     })
     setIsEditorOpen(true)
@@ -149,7 +163,7 @@ export function AdminProductsScreen() {
                 Каталог товаров
               </p>
               <p className="mt-1 text-sm text-[var(--color-muted)]">
-                Создание и редактирование теперь открываются отдельно, без боковой каши.
+                Товары отдельно, редактор отдельно. Без мусора в одном экране.
               </p>
             </div>
 
@@ -233,24 +247,15 @@ export function AdminProductsScreen() {
                     </div>
 
                     <div className="mt-3 flex flex-wrap gap-1.5">
-                      {product.specs.slice(0, 3).map((spec) => (
-                        <span
-                          key={`${product.id}-${spec.label}`}
-                          className="rounded-full bg-[var(--color-bg)] px-2.5 py-1 text-[11px] text-[var(--color-muted)]"
-                        >
-                          {spec.label}: {spec.value}
-                        </span>
-                      ))}
-                      {product.specs.length > 3 ? (
-                        <span className="rounded-full bg-[var(--color-bg)] px-2.5 py-1 text-[11px] text-[var(--color-muted)]">
-                          +{product.specs.length - 3}
-                        </span>
-                      ) : null}
                       {product.deliveryType === "AUTO_KEY" ? (
                         <span className="rounded-full bg-[var(--color-accent)]/14 px-2.5 py-1 text-[11px] text-[var(--color-accent)]">
-                          {product.availableKeyCount ?? 0} keys
+                          {product.availableKeyCount ?? 0} ключей
                         </span>
-                      ) : null}
+                      ) : (
+                        <span className="rounded-full bg-[var(--color-bg)] px-2.5 py-1 text-[11px] text-[var(--color-muted)]">
+                          Ручная выдача
+                        </span>
+                      )}
                     </div>
 
                     <p className="mt-4 line-clamp-4 text-sm leading-6 text-[var(--color-muted)]">
@@ -284,6 +289,7 @@ export function AdminProductsScreen() {
       {isEditorOpen ? (
         <ProductEditorModal
           form={form}
+          categoryOptions={categoryOptions}
           uploading={uploading}
           saving={mutation.isPending}
           onClose={closeEditor}
@@ -298,6 +304,7 @@ export function AdminProductsScreen() {
 
 function ProductEditorModal({
   form,
+  categoryOptions,
   uploading,
   saving,
   onClose,
@@ -306,6 +313,7 @@ function ProductEditorModal({
   onChange,
 }: {
   form: ProductForm
+  categoryOptions: string[]
   uploading: boolean
   saving: boolean
   onClose: () => void
@@ -313,6 +321,14 @@ function ProductEditorModal({
   onImageChange: (file: File | null) => void
   onChange: React.Dispatch<React.SetStateAction<ProductForm>>
 }) {
+  const { data: productData } = useQuery({
+    queryKey: ["admin-product", form.id],
+    queryFn: () => getProduct(form.id),
+    enabled: Boolean(form.id),
+  })
+
+  const editableKeys = productData?.product.editableKeys ?? []
+  const visibleKeys = editableKeys.filter((key) => !form.removeKeyIds.includes(key.id))
   const canSave =
     form.title.trim().length > 0 &&
     form.description.trim().length > 0 &&
@@ -409,14 +425,41 @@ function ProductEditorModal({
                 </Field>
 
                 <Field label="Категория">
-                  <input
-                    value={form.category}
-                    onChange={(event) =>
-                      onChange((prev) => ({ ...prev, category: event.target.value }))
-                    }
-                    placeholder="майнкрафт"
-                    className="ui-input"
-                  />
+                  <div className="grid gap-2">
+                    <input
+                      value={form.category}
+                      onChange={(event) =>
+                        onChange((prev) => ({ ...prev, category: event.target.value }))
+                      }
+                      placeholder="Новая или существующая категория"
+                      className="ui-input"
+                    />
+                    {categoryOptions.length > 0 ? (
+                      <div className="flex flex-wrap gap-2">
+                        {categoryOptions.map((category) => {
+                          const active = form.category.trim() === category
+
+                          return (
+                            <button
+                              key={category}
+                              type="button"
+                              onClick={() =>
+                                onChange((prev) => ({ ...prev, category }))
+                              }
+                              className={cn(
+                                "rounded-full px-3 py-1.5 text-xs transition-colors",
+                                active
+                                  ? "bg-[var(--color-accent)] text-[var(--color-accent-text)]"
+                                  : "bg-[var(--color-bg)] text-[var(--color-muted)]",
+                              )}
+                            >
+                              {category}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    ) : null}
+                  </div>
                 </Field>
 
                 <Field label="Цена">
@@ -559,16 +602,96 @@ function ProductEditorModal({
               </div>
 
               {form.deliveryType === "AUTO_KEY" ? (
-                <Field label="Пул ключей">
-                  <textarea
-                    value={form.keyPoolText}
-                    onChange={(event) =>
-                      onChange((prev) => ({ ...prev, keyPoolText: event.target.value }))
-                    }
-                    placeholder="Один ключ на строку"
-                    className="ui-input min-h-32"
-                  />
-                </Field>
+                <div className="ui-card-soft p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-medium text-[var(--color-text)]">
+                        Пул ключей
+                      </p>
+                      <p className="mt-1 text-xs text-[var(--color-muted)]">
+                        Добавляй новые ключи отдельно, старые можно убрать поштучно.
+                      </p>
+                    </div>
+                    <div className="rounded-full bg-[var(--color-bg)] px-3 py-1.5 text-xs text-[var(--color-text)]">
+                      {visibleKeys.length} в наличии
+                    </div>
+                  </div>
+
+                  {form.id ? (
+                    <div className="mt-4 grid gap-2">
+                      <p className="text-xs font-medium uppercase tracking-[0.14em] text-[var(--color-muted)]">
+                        Текущие ключи
+                      </p>
+                      {visibleKeys.length > 0 ? (
+                        <div className="grid gap-2 max-h-56 overflow-y-auto pr-1">
+                          {visibleKeys.map((key) => (
+                            <div
+                              key={key.id}
+                              className="flex items-center gap-2 rounded-[18px] bg-[var(--color-bg)] px-3 py-3"
+                            >
+                              <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[var(--color-surface)] text-[var(--color-muted)]">
+                                <KeyRound size={14} />
+                              </div>
+                              <code className="min-w-0 flex-1 truncate text-xs text-[var(--color-text)]">
+                                {key.value}
+                              </code>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  onChange((prev) => ({
+                                    ...prev,
+                                    removeKeyIds: [...prev.removeKeyIds, key.id],
+                                  }))
+                                }
+                                className="rounded-full bg-[var(--color-surface)] px-3 py-1.5 text-xs text-[var(--color-muted)]"
+                              >
+                                Убрать
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="rounded-[18px] bg-[var(--color-bg)] px-4 py-4 text-sm text-[var(--color-muted)]">
+                          Активных ключей сейчас нет.
+                        </div>
+                      )}
+                    </div>
+                  ) : null}
+
+                  {form.removeKeyIds.length > 0 ? (
+                    <div className="mt-4 rounded-[18px] bg-[var(--color-bg)] p-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2 text-sm text-[var(--color-text)]">
+                          <Check size={14} className="text-[var(--color-accent)]" />
+                          Помечено на удаление: {form.removeKeyIds.length}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            onChange((prev) => ({ ...prev, removeKeyIds: [] }))
+                          }
+                          className="text-xs text-[var(--color-muted)]"
+                        >
+                          Сбросить
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  <div className="mt-4 grid gap-2">
+                    <p className="text-xs font-medium uppercase tracking-[0.14em] text-[var(--color-muted)]">
+                      Добавить новые
+                    </p>
+                    <textarea
+                      value={form.keyPoolText}
+                      onChange={(event) =>
+                        onChange((prev) => ({ ...prev, keyPoolText: event.target.value }))
+                      }
+                      placeholder="Один ключ на строку"
+                      className="ui-input min-h-32"
+                    />
+                  </div>
+                </div>
               ) : null}
             </section>
           </div>

@@ -16,6 +16,12 @@ export type ProductSpecInput = {
   value: string
 }
 
+export type AdminProductKey = {
+  id: string
+  value: string
+  createdAt: string
+}
+
 export type TicketMessageAttachment = {
   type: "image"
   url: string
@@ -126,6 +132,7 @@ export function getProduct(id: string) {
       deliveryType: "MANUAL" | "AUTO_KEY"
       isActive: boolean
       availableKeyCount?: number
+      editableKeys?: AdminProductKey[]
       specs: ProductSpecInput[]
     }
   }>(`/api/products/${id}`)
@@ -150,10 +157,13 @@ export function getTickets() {
       number: number
       subject: string
       status: TicketStatus
+      createdAt: string
       updatedAt: string
       isPaid: boolean
       productTitle: string | null
+      productCategory: string | null
       paymentMethodTitle: string | null
+      paymentMethodType: PaymentMethodType | null
       lastMessage: string | null
     }>
   }>("/api/tickets")
@@ -169,8 +179,22 @@ export function getTicket(id: string) {
       createdAt: string
       isPaid: boolean
       productTitle: string | null
+      productCategory: string | null
       deliveredKey: string | null
       isAdmin: boolean
+      createdBy: {
+        id: string
+        firstName: string
+        lastName: string | null
+        username: string | null
+        photoUrl: string | null
+      } | null
+      assignedTo: {
+        id: string
+        firstName: string
+        lastName: string | null
+        username: string | null
+      } | null
       paymentMethodTitle: string | null
       paymentMethodType: PaymentMethodType | null
       paymentMethodDetails: string | null
@@ -269,6 +293,7 @@ export function updateAdminProduct(
     deliveryType: "MANUAL" | "AUTO_KEY"
     isActive: boolean
     keyPoolText?: string
+    removeKeyIds?: string[]
     specs: ProductSpecInput[]
   },
 ) {

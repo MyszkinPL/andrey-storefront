@@ -35,10 +35,13 @@ export async function GET() {
       number: ticket.number,
       subject: ticket.subject,
       status: ticket.status,
+      createdAt: ticket.createdAt,
       updatedAt: ticket.updatedAt,
       isPaid: ticket.isPaid,
       productTitle: ticket.product?.title || null,
+      productCategory: ticket.product?.category || null,
       paymentMethodTitle: ticket.paymentMethodTitle || null,
+      paymentMethodType: ticket.paymentMethodType || null,
       lastMessage: ticket.messages[0]?.body || null,
     })),
   })

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { z } from "zod"
 
-import { requireAdmin } from "@/lib/auth"
+import { getCurrentUser, requireAdmin } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 
 const schema = z.object({
@@ -12,6 +12,7 @@ const schema = z.object({
   priceRub: z.number().int().nonnegative(),
   deliveryType: z.enum(["MANUAL", "AUTO_KEY"]),
   keyPoolText: z.string().optional(),
+  removeKeyIds: z.array(z.string()).optional(),
   isActive: z.boolean(),
   specs: z.array(
     z.object({
@@ -47,12 +48,21 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params
+  const user = await getCurrentUser()
   const product = await prisma.product.findUnique({
     where: { id },
     include: {
       specs: {
         orderBy: { sortOrder: "asc" },
       },
+      keys:
+        user?.role === "ADMIN"
+          ? {
+              where: { issuedAt: null },
+              orderBy: { createdAt: "desc" },
+              take: 200,
+            }
+          : false,
       _count: {
         select: {
           keys: {
@@ -77,6 +87,14 @@ export async function GET(
       deliveryType: product.deliveryType,
       isActive: product.isActive,
       availableKeyCount: product._count.keys,
+      editableKeys:
+        user?.role === "ADMIN"
+          ? product.keys.map((key) => ({
+              id: key.id,
+              value: key.value,
+              createdAt: key.createdAt.toISOString(),
+            }))
+          : undefined,
       specs: product.specs.map((spec) => ({
         label: spec.label,
         value: spec.value,
@@ -125,10 +143,22 @@ export async function PATCH(
         })
       }
 
-      if (payload.deliveryType === "AUTO_KEY" && keys.length > 0) {
-        await tx.productKey.createMany({
-          data: keys.map((value) => ({ productId: id, value })),
-        })
+      if (payload.deliveryType === "AUTO_KEY") {
+        if (payload.removeKeyIds?.length) {
+          await tx.productKey.deleteMany({
+            where: {
+              id: { in: payload.removeKeyIds },
+              productId: id,
+              issuedAt: null,
+            },
+          })
+        }
+
+        if (keys.length > 0) {
+          await tx.productKey.createMany({
+            data: keys.map((value) => ({ productId: id, value })),
+          })
+        }
       }
     })
 

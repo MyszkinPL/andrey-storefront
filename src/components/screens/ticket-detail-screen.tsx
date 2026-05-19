@@ -348,9 +348,11 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
           <section className="ui-card overflow-hidden">
             <div className="border-b border-[var(--color-border)] px-4 py-3 sm:px-5">
               <div className="flex flex-wrap items-center gap-2">
-                <StatusBadge kind={ticket.isPaid ? "paid" : "waiting"}>
-                  {paymentStateLabel}
-                </StatusBadge>
+                {!isSupportFlow ? (
+                  <StatusBadge kind={ticket.isPaid ? "paid" : "waiting"}>
+                    {paymentStateLabel}
+                  </StatusBadge>
+                ) : null}
                 <StatusBadge>{isSupportFlow ? "Поддержка" : statusLabel}</StatusBadge>
                 {ticket.paymentMethodTitle ? (
                   <StatusBadge>{ticket.paymentMethodTitle}</StatusBadge>
@@ -588,6 +590,46 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
 
         {!isSupportFlow ? (
           <aside className="order-1 grid content-start gap-4 xl:order-2 xl:sticky xl:top-4">
+            {adminToolsVisible ? (
+              <section className="ui-card p-4">
+                <p className="text-sm font-semibold text-[var(--color-text)]">Инфо по заказу</p>
+                <div className="mt-4 grid gap-3">
+                  <InfoRow label="Номер" value={`#${ticket.number}`} />
+                  <InfoRow label="Товар" value={ticket.productTitle || ticket.subject} />
+                  <InfoRow label="Категория" value={ticket.productCategory || "—"} />
+                  <InfoRow label="Создан" value={createdAtLabel} />
+                  <InfoRow
+                    label="Покупатель"
+                    value={
+                      ticket.createdBy
+                        ? [
+                            ticket.createdBy.firstName,
+                            ticket.createdBy.lastName || "",
+                          ]
+                            .join(" ")
+                            .trim()
+                        : "—"
+                    }
+                    hint={ticket.createdBy?.username ? `@${ticket.createdBy.username}` : undefined}
+                  />
+                  <InfoRow
+                    label="Ответственный"
+                    value={
+                      ticket.assignedTo
+                        ? [
+                            ticket.assignedTo.firstName,
+                            ticket.assignedTo.lastName || "",
+                          ]
+                            .join(" ")
+                            .trim()
+                        : "Не назначен"
+                    }
+                    hint={ticket.assignedTo?.username ? `@${ticket.assignedTo.username}` : undefined}
+                  />
+                </div>
+              </section>
+            ) : null}
+
             <section className="ui-card p-4">
               <p className="text-sm font-semibold text-[var(--color-text)]">Статус заказа</p>
               <div className="mt-4 grid gap-3">
@@ -919,6 +961,26 @@ function SenderAvatar({
           )}
         </div>
       ) : null}
+    </div>
+  )
+}
+
+function InfoRow({
+  label,
+  value,
+  hint,
+}: {
+  label: string
+  value: string
+  hint?: string
+}) {
+  return (
+    <div className="rounded-[18px] bg-[var(--color-bg)] px-3 py-3">
+      <p className="text-[11px] uppercase tracking-[0.14em] text-[var(--color-muted)]">
+        {label}
+      </p>
+      <p className="mt-1 text-sm font-medium text-[var(--color-text)]">{value}</p>
+      {hint ? <p className="mt-1 text-xs text-[var(--color-muted)]">{hint}</p> : null}
     </div>
   )
 }
