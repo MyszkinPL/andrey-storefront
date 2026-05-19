@@ -13,7 +13,7 @@ export function Screen({
     <main
       className={cn(
         "mx-auto flex min-h-dvh w-full max-w-6xl flex-col",
-        !noTabBar && "pb-[80px]",
+        !noTabBar && "pb-[92px]",
         className,
       )}
       style={{ paddingTop: "env(safe-area-inset-top, 0)" }}
@@ -33,20 +33,28 @@ export function ScreenHeader({
   trailing?: React.ReactNode
 }) {
   return (
-    <header className="flex items-center justify-between gap-2 px-4 pb-2 pt-3">
-      <div className="min-w-0 flex-1">
-        <h1 className="truncate text-lg font-semibold text-[var(--color-text)]">
-          {title}
-        </h1>
-        {subtitle ? (
-          <p className="truncate text-xs text-[var(--color-muted)]">
-            {subtitle}
-          </p>
-        ) : null}
+    <header className="px-4 pb-3 pt-3">
+      <div className="ui-card flex items-center justify-between gap-3 px-4 py-3">
+        <div className="min-w-0 flex-1">
+          <h1 className="truncate text-lg font-semibold text-[var(--color-text)]">{title}</h1>
+          {subtitle ? (
+            <p className="mt-0.5 truncate text-xs text-[var(--color-muted)]">{subtitle}</p>
+          ) : null}
+        </div>
+        {trailing}
       </div>
-      {trailing}
     </header>
   )
+}
+
+export function ScreenBody({
+  children,
+  className,
+}: {
+  children: React.ReactNode
+  className?: string
+}) {
+  return <div className={cn("grid gap-3 px-4 pb-4", className)}>{children}</div>
 }
 
 export function ScreenEmpty({
@@ -59,17 +67,14 @@ export function ScreenEmpty({
   subtitle?: string
 }) {
   return (
-    <div className="flex flex-1 flex-col items-center justify-center px-8 text-center">
-      <div
-        className="mb-4 flex size-20 items-center justify-center rounded-full"
-        style={{ background: "var(--color-surface)" }}
-      >
-        {icon}
+    <div className="flex flex-1 items-center justify-center px-4 pb-4">
+      <div className="ui-card flex w-full max-w-md flex-col items-center justify-center px-8 py-12 text-center">
+        <div className="mb-4 flex size-16 items-center justify-center rounded-full bg-[var(--color-surface-2)]">
+          {icon}
+        </div>
+        <p className="text-base font-medium text-[var(--color-text)]">{title}</p>
+        {subtitle ? <p className="mt-1 text-sm text-[var(--color-muted)]">{subtitle}</p> : null}
       </div>
-      <p className="text-base font-medium text-[var(--color-text)]">{title}</p>
-      {subtitle ? (
-        <p className="mt-1 text-sm text-[var(--color-muted)]">{subtitle}</p>
-      ) : null}
     </div>
   )
 }

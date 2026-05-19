@@ -8,7 +8,7 @@ import { ru } from "date-fns/locale"
 import { MessageSquarePlus } from "lucide-react"
 
 import { createTicket, getMe, getTickets } from "@/lib/api"
-import { Screen, ScreenEmpty, ScreenHeader } from "@/components/screen"
+import { Screen, ScreenBody, ScreenEmpty, ScreenHeader } from "@/components/screen"
 
 export function TicketsScreen() {
   const router = useRouter()
@@ -52,16 +52,16 @@ export function TicketsScreen() {
           subtitle="Открой товар и создай покупку или общий запрос."
         />
       ) : (
-        <div className="grid gap-3 px-4 pb-4">
+        <ScreenBody>
           {tickets.map((ticket, index) => (
             <Link
               key={ticket.id}
               href={`/tickets/${ticket.id}`}
-              className="enter-card rounded-[24px] bg-[var(--color-surface)] p-3"
+              className="ui-card enter-card p-3"
               style={{ ["--stagger" as string]: `${Math.min(index, 8) * 28}ms` }}
             >
               <div className="flex items-start gap-3">
-                <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-[var(--color-bg)] text-sm font-semibold text-[var(--color-text)]">
+                <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-[var(--color-surface-2)] text-sm font-semibold text-[var(--color-text)]">
                   {ticket.productTitle?.slice(0, 1).toUpperCase() || "#"}
                 </div>
                 <div className="min-w-0 flex-1">
@@ -77,10 +77,10 @@ export function TicketsScreen() {
                     </span>
                   </div>
                   <div className="mt-1 flex items-center gap-2">
-                    <span className="rounded-full bg-[var(--color-bg)] px-2 py-1 text-[10px] text-[var(--color-muted)]">
+                    <span className="ui-pill">
                       #{ticket.number}
                     </span>
-                    <span className="rounded-full bg-[var(--color-bg)] px-2 py-1 text-[10px] text-[var(--color-muted)]">
+                    <span className="ui-pill">
                       {renderStatus(ticket.status)}
                     </span>
                     {ticket.isPaid ? (
@@ -101,7 +101,7 @@ export function TicketsScreen() {
               </div>
             </Link>
           ))}
-        </div>
+        </ScreenBody>
       )}
     </Screen>
   )

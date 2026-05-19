@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
 import { createTicket, getPaymentMethods, getProduct } from "@/lib/api"
-import { Screen, ScreenHeader } from "@/components/screen"
+import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
 import { useBackButton, useHaptic, useMainButton } from "@/hooks/use-telegram"
 import { cn } from "@/lib/cn"
 
@@ -71,8 +71,8 @@ export function ProductScreen({ productId }: { productId: string }) {
     <Screen noTabBar className="pb-6">
       <ScreenHeader title={product.title} subtitle={summary.join(" · ")} />
 
-      <div className="grid gap-3 px-4 pb-4">
-        <section className="overflow-hidden rounded-[24px] bg-[var(--color-surface)]">
+      <ScreenBody className="gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
+        <section className="ui-card overflow-hidden xl:row-span-2">
           <div className="aspect-square bg-[var(--color-surface-2)]">
             {product.imageDataUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -88,10 +88,7 @@ export function ProductScreen({ productId }: { productId: string }) {
                 </p>
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {summary.map((item) => (
-                    <span
-                      key={item}
-                      className="rounded-full bg-[var(--color-surface-2)] px-2.5 py-1 text-[11px] text-[var(--color-muted)]"
-                    >
+                    <span key={item} className="ui-pill">
                       {item}
                     </span>
                   ))}
@@ -104,12 +101,12 @@ export function ProductScreen({ productId }: { productId: string }) {
         </section>
 
         {product.specs.length > 0 ? (
-          <section className="rounded-[24px] bg-[var(--color-surface)] p-3">
+          <section className="ui-card p-3">
             <div className="grid gap-2">
               {product.specs.map((spec) => (
                 <div
                   key={`${spec.label}-${spec.value}`}
-                  className="flex items-center justify-between gap-3 rounded-[18px] bg-[var(--color-surface-2)] px-3 py-3"
+                  className="ui-card-soft flex items-center justify-between gap-3 px-3 py-3"
                 >
                   <span className="text-sm text-[var(--color-muted)]">{spec.label}</span>
                   <span className="text-right text-sm font-medium text-[var(--color-text)]">{spec.value}</span>
@@ -119,7 +116,7 @@ export function ProductScreen({ productId }: { productId: string }) {
           </section>
         ) : null}
 
-        <section className="rounded-[24px] bg-[var(--color-surface)] p-3">
+        <section className="ui-card p-3">
           <div className="flex items-center justify-between gap-3 px-1 pb-2">
             <p className="text-sm font-semibold text-[var(--color-text)]">Оплата</p>
             <span className="text-[11px] text-[var(--color-muted)]">{methods.length} способ</span>
@@ -131,7 +128,7 @@ export function ProductScreen({ productId }: { productId: string }) {
                 key={method.id}
                 onClick={() => setPaymentMethodId(method.id)}
                 className={cn(
-                  "flex items-center gap-3 rounded-[18px] border px-3 py-3 text-left transition-colors",
+                  "flex items-center gap-3 rounded-[18px] border px-3 py-3 text-left transition-colors duration-150 active:scale-[0.99]",
                   selectedMethodId === method.id
                     ? "border-[var(--color-accent)] bg-[var(--color-surface-2)]"
                     : "border-transparent bg-[var(--color-surface-2)]",
@@ -158,7 +155,7 @@ export function ProductScreen({ productId }: { productId: string }) {
             ))}
           </div>
         </section>
-      </div>
+      </ScreenBody>
     </Screen>
   )
 }

@@ -32,7 +32,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ru">
-      <body className="min-h-dvh">
+      <body className="min-h-dvh bg-[var(--color-bg)]">
         <Script
           src="https://telegram.org/js/telegram-web-app.js"
           strategy="beforeInteractive"
