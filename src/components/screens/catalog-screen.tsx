@@ -42,16 +42,14 @@ export function CatalogScreen() {
       <ScreenHeader
         title={
           <div className="flex items-center gap-3">
-            <div className="flex size-11 items-center justify-center rounded-[16px] bg-[var(--color-bg)] p-2.5">
-              <Image
-                src="/logo.svg"
-                alt="snx.sell"
-                width={28}
-                height={28}
-                className="size-7 object-contain"
-                priority
-              />
-            </div>
+            <Image
+              src="/logo.svg"
+              alt="snx.sell"
+              width={40}
+              height={40}
+              className="size-10 shrink-0 object-contain"
+              priority
+            />
             <div className="min-w-0">
               <p className="truncate text-xl font-semibold tracking-[-0.02em] text-[var(--color-text)]">
                 snx.sell
@@ -60,11 +58,11 @@ export function CatalogScreen() {
           </div>
         }
         trailing={
-          <div className="flex items-center gap-2 rounded-full bg-[var(--color-bg)] p-1.5 pl-2.5">
+          <div className="shrink-0">
             {meData?.user.photoUrl ? (
-              <Avatar size={28} src={meData.user.photoUrl} alt={meData.user.firstName} />
+              <Avatar size={40} src={meData.user.photoUrl} alt={meData.user.firstName} />
             ) : (
-              <div className="flex size-7 items-center justify-center rounded-full bg-[var(--color-surface)] text-[10px] font-semibold text-[var(--color-text)]">
+              <div className="flex size-10 items-center justify-center rounded-full bg-[var(--color-surface-2)] text-[11px] font-semibold text-[var(--color-text)]">
                 {(meData?.user.firstName || "S").slice(0, 1).toUpperCase()}
               </div>
             )}
