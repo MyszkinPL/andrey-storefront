@@ -1,11 +1,15 @@
 "use client"
 
 import Link from "next/link"
+import { useMemo, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { Clock3, Headset, Receipt, ShieldCheck } from "lucide-react"
 
 import { getTickets } from "@/lib/api"
 import { Screen, ScreenBody, ScreenEmpty, ScreenHeader } from "@/components/screen"
+import { cn } from "@/lib/cn"
+
+type FilterKey = "all" | "waiting" | "work" | "support" | "closed"
 
 export function AdminTicketsScreen() {
   const { data } = useQuery({
@@ -13,20 +17,35 @@ export function AdminTicketsScreen() {
     queryFn: getTickets,
     refetchInterval: 10_000,
   })
+  const [filter, setFilter] = useState<FilterKey>("all")
 
-  const tickets = data?.tickets ?? []
-  const support = tickets.filter(isSupport)
-  const waitingPayment = tickets.filter(
-    (ticket) => !isSupport(ticket) && !ticket.isPaid && ticket.status !== "CLOSED",
-  )
-  const inProgress = tickets.filter(
-    (ticket) => !isSupport(ticket) && ticket.isPaid && ticket.status !== "CLOSED",
-  )
-  const closed = tickets.filter((ticket) => !isSupport(ticket) && ticket.status === "CLOSED")
+  const tickets = useMemo(() => data?.tickets ?? [], [data?.tickets])
+  const buckets = useMemo(() => {
+    const support = tickets.filter(isSupport)
+    const waiting = tickets.filter(
+      (ticket) => !isSupport(ticket) && !ticket.isPaid && ticket.status !== "CLOSED",
+    )
+    const work = tickets.filter(
+      (ticket) => !isSupport(ticket) && ticket.isPaid && ticket.status !== "CLOSED",
+    )
+    const closed = tickets.filter(
+      (ticket) => !isSupport(ticket) && ticket.status === "CLOSED",
+    )
+
+    return {
+      all: tickets,
+      waiting,
+      work,
+      support,
+      closed,
+    }
+  }, [tickets])
+
+  const visibleTickets = buckets[filter]
 
   return (
     <Screen>
-      <ScreenHeader title="Заказы" subtitle="Очередь оплаты, выдачи и поддержки" />
+      <ScreenHeader title="Заказы" subtitle="Одна очередь без пустых секций и мусора" />
 
       {tickets.length === 0 ? (
         <ScreenEmpty
@@ -36,102 +55,131 @@ export function AdminTicketsScreen() {
         />
       ) : (
         <ScreenBody className="gap-4">
-          <AdminTicketSection
-            title="Ждут оплаты"
-            subtitle="Сначала эти заказы."
-            items={waitingPayment}
-            icon={<Receipt size={16} />}
-          />
-          <AdminTicketSection
-            title="В работе"
-            subtitle="Оплачено, можно выдавать."
-            items={inProgress}
-            icon={<ShieldCheck size={16} />}
-          />
-          <AdminTicketSection
-            title="Поддержка"
-            subtitle="Отдельная линия обращений."
-            items={support}
-            icon={<Headset size={16} />}
-          />
-          <AdminTicketSection
-            title="Закрытые"
-            subtitle="История завершённых заказов."
-            items={closed}
-            icon={<Clock3 size={16} />}
-          />
+          <section className="ui-card p-3 sm:p-4">
+            <div className="flex flex-wrap gap-2">
+              {[
+                {
+                  key: "all" as const,
+                  label: "Все",
+                  count: buckets.all.length,
+                  icon: <Clock3 size={14} />,
+                },
+                {
+                  key: "waiting" as const,
+                  label: "Ждут оплату",
+                  count: buckets.waiting.length,
+                  icon: <Receipt size={14} />,
+                },
+                {
+                  key: "work" as const,
+                  label: "В работе",
+                  count: buckets.work.length,
+                  icon: <ShieldCheck size={14} />,
+                },
+                {
+                  key: "support" as const,
+                  label: "Поддержка",
+                  count: buckets.support.length,
+                  icon: <Headset size={14} />,
+                },
+                {
+                  key: "closed" as const,
+                  label: "Закрытые",
+                  count: buckets.closed.length,
+                  icon: <Clock3 size={14} />,
+                },
+              ].map((item) => {
+                const active = filter === item.key
+
+                return (
+                  <button
+                    key={item.key}
+                    onClick={() => setFilter(item.key)}
+                    className={cn(
+                      "inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm transition-colors",
+                      active
+                        ? "bg-[var(--color-accent)] text-[var(--color-accent-text)]"
+                        : "bg-[var(--color-bg)] text-[var(--color-muted)]",
+                    )}
+                  >
+                    {item.icon}
+                    {item.label}
+                    <span
+                      className={cn(
+                        "rounded-full px-1.5 py-0.5 text-[10px]",
+                        active
+                          ? "bg-[var(--color-accent-text)]/14 text-[var(--color-accent-text)]"
+                          : "bg-[var(--color-surface)] text-[var(--color-text)]",
+                      )}
+                    >
+                      {item.count}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          </section>
+
+          {visibleTickets.length === 0 ? (
+            <section className="ui-card px-4 py-10 text-center">
+              <p className="text-sm font-medium text-[var(--color-text)]">Пусто</p>
+              <p className="mt-1 text-sm text-[var(--color-muted)]">
+                Для этого фильтра сейчас ничего нет.
+              </p>
+            </section>
+          ) : (
+            <div className="grid gap-3">
+              {visibleTickets.map((ticket) => (
+                <Link key={ticket.id} href={`/tickets/${ticket.id}`} className="ui-card p-4">
+                  <div className="flex items-start gap-3">
+                    <div
+                      className={cn(
+                        "flex size-11 shrink-0 items-center justify-center rounded-full text-sm font-semibold",
+                        isSupport(ticket)
+                          ? "bg-[var(--color-bg)] text-[var(--color-text)]"
+                          : !ticket.isPaid
+                            ? "bg-[var(--color-bg)] text-[var(--color-text)]"
+                            : "bg-[var(--color-accent)]/16 text-[var(--color-accent)]",
+                      )}
+                    >
+                      {isSupport(ticket) ? (
+                        <Headset size={16} />
+                      ) : (
+                        ticket.productTitle?.slice(0, 1).toUpperCase() || "#"
+                      )}
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate text-base font-semibold text-[var(--color-text)]">
+                            {ticket.productTitle || ticket.subject}
+                          </p>
+                          <p className="mt-1 text-sm text-[var(--color-muted)]">
+                            #{ticket.number}
+                            {ticket.productCategory ? ` · ${ticket.productCategory}` : ""}
+                            {ticket.paymentMethodTitle ? ` · ${ticket.paymentMethodTitle}` : ""}
+                          </p>
+                        </div>
+
+                        <div className="flex flex-wrap justify-end gap-2">
+                          <StatusPill>{renderPrimaryState(ticket)}</StatusPill>
+                          <StatusPill>{renderStatus(ticket.status)}</StatusPill>
+                        </div>
+                      </div>
+
+                      <p className="mt-3 line-clamp-2 text-sm leading-6 text-[var(--color-muted)]">
+                        {ticket.lastMessage || "Без сообщений"}
+                      </p>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
         </ScreenBody>
       )}
     </Screen>
-  )
-}
-
-function AdminTicketSection({
-  title,
-  subtitle,
-  items,
-  icon,
-}: {
-  title: string
-  subtitle: string
-  items: Awaited<ReturnType<typeof getTickets>>["tickets"]
-  icon: React.ReactNode
-}) {
-  return (
-    <section className="grid gap-3">
-      <div className="flex items-center gap-3 px-1">
-        <div className="flex size-8 items-center justify-center rounded-full bg-[var(--color-surface)] text-[var(--color-muted)]">
-          {icon}
-        </div>
-        <div>
-          <p className="text-sm font-semibold text-[var(--color-text)]">{title}</p>
-          <p className="mt-1 text-xs text-[var(--color-muted)]">{subtitle}</p>
-        </div>
-      </div>
-
-      {items.length === 0 ? (
-        <div className="rounded-[22px] bg-[var(--color-surface)] px-4 py-4 text-sm text-[var(--color-muted)]">
-          Пусто
-        </div>
-      ) : (
-        items.map((ticket) => (
-          <Link
-            key={ticket.id}
-            href={`/tickets/${ticket.id}`}
-            className="ui-card p-4"
-          >
-            <div className="flex items-start gap-3">
-              <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-[var(--color-bg)] text-sm font-semibold text-[var(--color-text)]">
-                {ticket.productTitle?.slice(0, 1).toUpperCase() || "#"}
-              </div>
-
-              <div className="min-w-0 flex-1">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-[var(--color-text)]">
-                      {ticket.productTitle || ticket.subject}
-                    </p>
-                    <p className="mt-1 text-xs text-[var(--color-muted)]">
-                      #{ticket.number}
-                      {ticket.productCategory ? ` · ${ticket.productCategory}` : ""}
-                      {ticket.paymentMethodTitle ? ` · ${ticket.paymentMethodTitle}` : ""}
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap justify-end gap-2">
-                    <StatusPill>{renderStatus(ticket.status)}</StatusPill>
-                    <StatusPill>{ticket.isPaid ? "Оплачен" : "Без оплаты"}</StatusPill>
-                  </div>
-                </div>
-
-                <p className="mt-3 line-clamp-2 text-sm leading-6 text-[var(--color-muted)]">
-                  {ticket.lastMessage || "Без сообщений"}
-                </p>
-              </div>
-            </div>
-          </Link>
-        ))
-      )}
-    </section>
   )
 }
 
@@ -150,6 +198,15 @@ function renderStatus(status: string) {
     default:
       return status
   }
+}
+
+function renderPrimaryState(ticket: Awaited<ReturnType<typeof getTickets>>["tickets"][number]) {
+  if (isSupport(ticket)) return "Поддержка"
+  if (ticket.status === "CLOSED" && !ticket.isPaid) return "Не оплачен"
+  if (!ticket.isPaid) return "Ждёт оплату"
+  if (ticket.status === "IN_PROGRESS") return "Выдача"
+  if (ticket.status === "CLOSED") return "Завершён"
+  return "Оплачен"
 }
 
 function StatusPill({ children }: { children: React.ReactNode }) {
