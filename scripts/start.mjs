@@ -5,12 +5,17 @@ const appUrl = process.env.APP_URL
 const botToken = process.env.BOT_TOKEN
 const databaseUrl = process.env.DATABASE_URL?.trim()
 
-const dbPushArgs = ["prisma", "db", "push", "--accept-data-loss"]
+const prismaCli =
+  process.platform === "win32"
+    ? ["node.exe", ["./node_modules/prisma/build/index.js"]]
+    : ["node", ["./node_modules/prisma/build/index.js"]]
+
+const dbPushArgs = ["db", "push", "--accept-data-loss"]
 if (databaseUrl) {
   dbPushArgs.push("--url", databaseUrl)
 }
 
-await run("./node_modules/.bin/prisma", dbPushArgs.slice(1))
+await run(prismaCli[0], [...prismaCli[1], ...dbPushArgs])
 
 if (appUrl && botToken) {
   const webhookUrl = `${appUrl.replace(/\/$/, "")}/api/telegram/webhook`
