@@ -3,16 +3,16 @@ import { spawn } from "node:child_process"
 const port = process.env.PORT || "3001"
 const appUrl = process.env.APP_URL
 const botToken = process.env.BOT_TOKEN
+const databaseUrl = process.env.DATABASE_URL?.trim()
 
 await run("npx", ["prisma", "generate"])
-await run("npx", [
-  "prisma",
-  "db",
-  "push",
-  "--accept-data-loss",
-  "--url",
-  process.env.DATABASE_URL,
-])
+
+const dbPushArgs = ["prisma", "db", "push", "--accept-data-loss"]
+if (databaseUrl) {
+  dbPushArgs.push("--url", databaseUrl)
+}
+
+await run("npx", dbPushArgs)
 
 if (appUrl && botToken) {
   const webhookUrl = `${appUrl.replace(/\/$/, "")}/api/telegram/webhook`
