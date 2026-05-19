@@ -435,6 +435,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                         <div
                           className={cn(
                             "max-w-[min(820px,92%)]",
+                            entry.attachments.length > 0 && "w-[min(360px,72vw)] sm:w-[min(420px,52vw)]",
                             entry.isMine && "flex flex-col items-end",
                           )}
                         >
@@ -456,7 +457,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
 
                           <div
                             className={cn(
-                              "overflow-hidden rounded-[24px] px-3 py-3 shadow-[0_1px_0_color-mix(in_srgb,var(--color-text)_4%,transparent)_inset]",
+                              "overflow-hidden rounded-[24px] shadow-[0_1px_0_color-mix(in_srgb,var(--color-text)_4%,transparent)_inset]",
                               entry.isMine
                                 ? "rounded-br-md bg-[var(--color-accent)] text-[var(--color-accent-text)]"
                                 : "rounded-bl-md bg-[var(--color-surface-2)] text-[var(--color-text)]",
@@ -465,7 +466,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                             {entry.attachments.length > 0 ? (
                               <div
                                 className={cn(
-                                  "grid gap-2",
+                                  "grid gap-2 p-2",
                                   entry.attachments.length === 1
                                     ? "grid-cols-1"
                                     : "grid-cols-2",
@@ -477,15 +478,22 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                                     key={`${entry.id}-${index}`}
                                     type="button"
                                     onClick={() => setPreviewImage(attachment.url)}
-                                    className="group relative overflow-hidden rounded-[18px] bg-[color-mix(in_srgb,var(--color-bg)_72%,transparent)]"
+                                    className="group relative overflow-hidden rounded-[20px] bg-[color-mix(in_srgb,var(--color-bg)_72%,transparent)]"
                                   >
-                                    <div className="relative aspect-[4/3] w-full">
+                                    <div
+                                      className={cn(
+                                        "relative w-full",
+                                        entry.attachments.length === 1
+                                          ? "aspect-[1/1]"
+                                          : "aspect-[4/3]",
+                                      )}
+                                    >
                                       <Image
                                         src={attachment.url}
                                         alt=""
                                         fill
                                         unoptimized
-                                        sizes="(max-width: 768px) 72vw, 320px"
+                                        sizes="(max-width: 768px) 72vw, 420px"
                                         className="object-cover transition-transform duration-200 group-hover:scale-[1.02]"
                                       />
                                     </div>
@@ -495,14 +503,21 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                             ) : null}
 
                             {entry.body ? (
-                              <p className="whitespace-pre-wrap break-words text-sm leading-6">
+                              <p
+                                className={cn(
+                                  "whitespace-pre-wrap break-words px-3 pb-3 text-sm leading-6",
+                                  !entry.attachments.length && "pt-3",
+                                )}
+                              >
                                 {entry.body}
                               </p>
                             ) : null}
 
                             <div
                               className={cn(
-                                "mt-2 flex items-center justify-end gap-1 text-[11px]",
+                                "flex items-center justify-end gap-1 px-3 pb-3 text-[11px]",
+                                entry.body && "pt-0",
+                                !entry.body && entry.attachments.length > 0 && "pt-1",
                                 entry.isMine
                                   ? "text-[var(--color-accent-text)]/78"
                                   : "text-[var(--color-muted)]",

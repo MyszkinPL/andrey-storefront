@@ -28,7 +28,7 @@ export function ScreenHeader({
   subtitle,
   trailing,
 }: {
-  title: string
+  title: React.ReactNode
   subtitle?: React.ReactNode
   trailing?: React.ReactNode
 }) {
@@ -36,7 +36,7 @@ export function ScreenHeader({
     <header className="px-4 pb-3 pt-3">
       <div className="ui-card flex flex-wrap items-start justify-between gap-3 px-4 py-3">
         <div className="min-w-0 flex-1">
-          <h1 className="truncate text-lg font-semibold text-[var(--color-text)]">{title}</h1>
+          <div className="min-w-0 text-lg font-semibold text-[var(--color-text)]">{title}</div>
           {subtitle ? (
             <div className="mt-1 text-xs text-[var(--color-muted)]">{subtitle}</div>
           ) : null}

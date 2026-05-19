@@ -40,15 +40,31 @@ export function CatalogScreen() {
   return (
     <Screen>
       <ScreenHeader
-        title="snx.sell"
-        subtitle={meData?.settings.welcomeText || "Подписки, ключи и lifetime-доступы"}
+        title={
+          <div className="flex items-center gap-3">
+            <div className="flex size-11 items-center justify-center rounded-[16px] bg-[var(--color-bg)] p-2.5">
+              <Image
+                src="/logo.svg"
+                alt="snx.sell"
+                width={28}
+                height={28}
+                className="size-7 object-contain"
+                priority
+              />
+            </div>
+            <div className="min-w-0">
+              <p className="truncate text-xl font-semibold tracking-[-0.02em] text-[var(--color-text)]">
+                snx.sell
+              </p>
+            </div>
+          </div>
+        }
         trailing={
-          <div className="ui-pill">
-            <Image src="/logo.svg" alt="snx.sell" width={18} height={18} className="size-[18px]" />
+          <div className="flex items-center gap-2 rounded-full bg-[var(--color-bg)] p-1.5 pl-2.5">
             {meData?.user.photoUrl ? (
-              <Avatar size={24} src={meData.user.photoUrl} alt={meData.user.firstName} />
+              <Avatar size={28} src={meData.user.photoUrl} alt={meData.user.firstName} />
             ) : (
-              <div className="flex size-6 items-center justify-center rounded-full bg-[var(--color-bg)] text-[10px] font-semibold text-[var(--color-text)]">
+              <div className="flex size-7 items-center justify-center rounded-full bg-[var(--color-surface)] text-[10px] font-semibold text-[var(--color-text)]">
                 {(meData?.user.firstName || "S").slice(0, 1).toUpperCase()}
               </div>
             )}
