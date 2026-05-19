@@ -5,14 +5,12 @@ const appUrl = process.env.APP_URL
 const botToken = process.env.BOT_TOKEN
 const databaseUrl = process.env.DATABASE_URL?.trim()
 
-await run("npx", ["prisma", "generate"])
-
 const dbPushArgs = ["prisma", "db", "push", "--accept-data-loss"]
 if (databaseUrl) {
   dbPushArgs.push("--url", databaseUrl)
 }
 
-await run("npx", dbPushArgs)
+await run("./node_modules/.bin/prisma", dbPushArgs.slice(1))
 
 if (appUrl && botToken) {
   const webhookUrl = `${appUrl.replace(/\/$/, "")}/api/telegram/webhook`
