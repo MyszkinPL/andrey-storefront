@@ -20,9 +20,9 @@ type PaymentMethodForm = {
 }
 
 const emptyMethod: PaymentMethodForm = {
-  title: "",
+  title: "Новый способ",
   type: "MANUAL",
-  details: "",
+  details: "Укажи реквизиты и короткую инструкцию для покупателя.",
   iconDataUrl: "",
   cryptoAcceptedAssets: "",
   isActive: true,
@@ -204,12 +204,29 @@ export function AdminSettingsScreen() {
         <section className="rounded-[28px] bg-[var(--color-surface)] p-4">
           <div className="flex items-center justify-between gap-3">
             <p className="text-sm font-semibold text-[var(--color-text)]">Способы оплаты</p>
-            <button
-              onClick={() => setPaymentMethods((prev) => [...prev, emptyMethod])}
-              className="rounded-full bg-[var(--color-bg)] px-3 py-1.5 text-xs text-[var(--color-text)]"
-            >
-              <Plus size={12} className="inline-block" /> добавить
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() =>
+                  setPaymentMethods((prev) => [
+                    ...prev,
+                    {
+                      ...emptyMethod,
+                      title: "СБП / Т-Банк",
+                      details: "Оплата по номеру телефона: +7...\nПолучатель: ...\nПосле оплаты отправь чек в тикет.",
+                    },
+                  ])
+                }
+                className="rounded-full bg-[var(--color-bg)] px-3 py-1.5 text-xs text-[var(--color-muted)]"
+              >
+                шаблон
+              </button>
+              <button
+                onClick={() => setPaymentMethods((prev) => [...prev, emptyMethod])}
+                className="rounded-full bg-[var(--color-bg)] px-3 py-1.5 text-xs text-[var(--color-text)]"
+              >
+                <Plus size={12} className="inline-block" /> добавить
+              </button>
+            </div>
           </div>
 
           <div className="mt-3 grid gap-3">
@@ -243,6 +260,14 @@ export function AdminSettingsScreen() {
                     </label>
 
                     <div className="grid gap-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="rounded-full bg-[var(--color-surface)] px-2.5 py-1 text-[10px] text-[var(--color-muted)]">
+                          {method.isActive ? "Активен" : "Скрыт"}
+                        </span>
+                        <span className="rounded-full bg-[var(--color-surface)] px-2.5 py-1 text-[10px] text-[var(--color-muted)]">
+                          {method.type === "MANUAL" ? "Ручная оплата" : "Crypto Pay"}
+                        </span>
+                      </div>
                       <div className="flex items-center gap-2">
                         {(["MANUAL", "CRYPTO_PAY"] as const).map((type) => (
                           <button
@@ -301,7 +326,7 @@ export function AdminSettingsScreen() {
                               ),
                             )
                           }
-                          placeholder="Реквизиты и инструкция"
+                          placeholder="Реквизиты и инструкция. Например: банк, номер, имя получателя, что отправить после оплаты."
                           className="min-h-24 w-full rounded-2xl bg-[var(--color-surface)] px-4 py-3 text-sm text-[var(--color-text)] outline-none"
                         />
                       ) : (

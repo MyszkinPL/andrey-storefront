@@ -1,6 +1,7 @@
 "use client"
 
 import { Shield, ShoppingBag } from "lucide-react"
+import { usePathname, useRouter } from "next/navigation"
 
 import { useHaptic } from "@/hooks/use-telegram"
 import { useMode } from "@/components/mode-provider"
@@ -9,6 +10,8 @@ import { cn } from "@/lib/cn"
 export function ModeSwitcher() {
   const { mode, setMode, canSwitch } = useMode()
   const haptic = useHaptic()
+  const router = useRouter()
+  const pathname = usePathname()
 
   if (!canSwitch) return null
 
@@ -35,6 +38,7 @@ export function ModeSwitcher() {
                 if (mode !== item.key) {
                   haptic.select()
                   setMode(item.key)
+                  router.replace(resolveModePath(pathname, item.key))
                 }
               }}
               label={item.label}
@@ -45,6 +49,19 @@ export function ModeSwitcher() {
       </div>
     </div>
   )
+}
+
+function resolveModePath(pathname: string, nextMode: "buyer" | "admin") {
+  if (nextMode === "admin") {
+    if (pathname === "/tickets" || pathname.startsWith("/tickets/")) return "/admin/tickets"
+    if (pathname === "/profile") return "/admin/settings"
+    return "/admin"
+  }
+
+  if (pathname === "/admin/tickets") return "/tickets"
+  if (pathname === "/admin/settings") return "/profile"
+  if (pathname === "/admin/products") return "/catalog"
+  return "/catalog"
 }
 
 function PillButton({

@@ -1,15 +1,17 @@
 "use client"
 
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { formatDistanceToNow } from "date-fns"
 import { ru } from "date-fns/locale"
-import { MessageSquarePlus, Ticket } from "lucide-react"
+import { MessageSquarePlus } from "lucide-react"
 
 import { createTicket, getMe, getTickets } from "@/lib/api"
 import { Screen, ScreenEmpty, ScreenHeader } from "@/components/screen"
 
 export function TicketsScreen() {
+  const router = useRouter()
   const queryClient = useQueryClient()
   const { data: ticketsData } = useQuery({ queryKey: ["tickets"], queryFn: getTickets })
   const { data: meData } = useQuery({ queryKey: ["me"], queryFn: getMe })
@@ -22,7 +24,7 @@ export function TicketsScreen() {
       }),
     onSuccess: async ({ ticketId }) => {
       await queryClient.invalidateQueries({ queryKey: ["tickets"] })
-      window.location.href = `/tickets/${ticketId}`
+      router.push(`/tickets/${ticketId}`)
     },
   })
 
@@ -55,41 +57,47 @@ export function TicketsScreen() {
             <Link
               key={ticket.id}
               href={`/tickets/${ticket.id}`}
-              className="enter-card rounded-2xl bg-[var(--color-surface)] p-4"
+              className="enter-card rounded-[24px] bg-[var(--color-surface)] p-3"
               style={{ ["--stagger" as string]: `${Math.min(index, 8) * 28}ms` }}
             >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-[var(--color-text)]">
-                    #{ticket.number} · {ticket.subject}
-                  </p>
-                  <p className="mt-1 text-xs text-[var(--color-muted)]">
-                    {ticket.productTitle || "Общий запрос"}
-                    {ticket.paymentMethodTitle ? ` · ${ticket.paymentMethodTitle}` : ""}
-                  </p>
+              <div className="flex items-start gap-3">
+                <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-[var(--color-bg)] text-sm font-semibold text-[var(--color-text)]">
+                  {ticket.productTitle?.slice(0, 1).toUpperCase() || "#"}
                 </div>
-                <div className="shrink-0 rounded-full bg-[var(--color-bg)] px-2.5 py-1 text-[11px] text-[var(--color-muted)]">
-                  {renderStatus(ticket.status)}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="truncate text-sm font-semibold text-[var(--color-text)]">
+                      {ticket.productTitle || ticket.subject}
+                    </p>
+                    <span className="shrink-0 text-[11px] text-[var(--color-muted)]">
+                      {formatDistanceToNow(new Date(ticket.updatedAt), {
+                        addSuffix: true,
+                        locale: ru,
+                      })}
+                    </span>
+                  </div>
+                  <div className="mt-1 flex items-center gap-2">
+                    <span className="rounded-full bg-[var(--color-bg)] px-2 py-1 text-[10px] text-[var(--color-muted)]">
+                      #{ticket.number}
+                    </span>
+                    <span className="rounded-full bg-[var(--color-bg)] px-2 py-1 text-[10px] text-[var(--color-muted)]">
+                      {renderStatus(ticket.status)}
+                    </span>
+                    {ticket.isPaid ? (
+                      <span className="rounded-full bg-[var(--color-accent)]/14 px-2 py-1 text-[10px] text-[var(--color-accent)]">
+                        Оплачено
+                      </span>
+                    ) : null}
+                  </div>
+                  <p className="mt-2 line-clamp-2 text-sm leading-5 text-[var(--color-muted)]">
+                    {ticket.lastMessage || "Без сообщений"}
+                  </p>
+                  {(ticket.paymentMethodTitle || ticket.subject) && (
+                    <p className="mt-2 truncate text-[11px] text-[var(--color-muted)]">
+                      {ticket.paymentMethodTitle || ticket.subject}
+                    </p>
+                  )}
                 </div>
-              </div>
-              <p className="mt-3 line-clamp-2 text-sm leading-6 text-[var(--color-muted)]">
-                {ticket.lastMessage || "Без сообщений"}
-              </p>
-              <div className="mt-3 flex items-center justify-between text-xs text-[var(--color-muted)]">
-                <span>
-                  Обновлён{" "}
-                  {formatDistanceToNow(new Date(ticket.updatedAt), {
-                    addSuffix: true,
-                    locale: ru,
-                  })}
-                </span>
-                {ticket.isPaid ? (
-                  <span className="rounded-full bg-[var(--color-accent)]/12 px-2 py-1 text-[var(--color-accent)]">
-                    Оплачено
-                  </span>
-                ) : (
-                  <Ticket size={14} />
-                )}
               </div>
             </Link>
           ))}
