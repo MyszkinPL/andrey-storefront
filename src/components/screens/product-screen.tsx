@@ -4,7 +4,7 @@ import { useMemo, useState } from "react"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { Check, ChevronRight, Expand, KeyRound, PackageCheck, ShieldCheck, Sparkles, X } from "lucide-react"
+import { Check, ChevronRight, Expand, KeyRound, X } from "lucide-react"
 
 import { createTicket, getPaymentMethods, getProduct } from "@/lib/api"
 import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
@@ -120,45 +120,40 @@ export function ProductScreen({ productId }: { productId: string }) {
               ) : null}
             </div>
 
-              <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 p-4 sm:p-5">
-                <div className="inline-flex max-w-full items-center gap-2 rounded-full border border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-bg)_76%,transparent)] px-3 py-2 text-xs text-[var(--color-text)] backdrop-blur">
-                  <Sparkles size={12} className="text-[var(--color-accent)]" />
-                  Готово для покупки прямо в Telegram
+              {product.imageDataUrl ? (
+                <div className="absolute bottom-4 right-4 flex size-10 shrink-0 items-center justify-center rounded-full border border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-bg)_76%,transparent)] text-[var(--color-text)] backdrop-blur sm:bottom-5 sm:right-5">
+                  <Expand size={16} />
                 </div>
-                {product.imageDataUrl ? (
-                  <div className="flex size-10 shrink-0 items-center justify-center rounded-full border border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-bg)_76%,transparent)] text-[var(--color-text)] backdrop-blur">
-                    <Expand size={16} />
-                  </div>
-                ) : null}
-              </div>
+              ) : null}
             </button>
           </div>
 
           <div className="grid gap-5 p-4 sm:p-5">
-            <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-              <div>
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-wrap items-end justify-between gap-3">
                 <p className="text-[30px] font-semibold leading-none text-[var(--color-text)]">
                   {product.priceRub.toLocaleString("ru-RU")} ₽
                 </p>
-                <p className="mt-2 text-sm leading-6 text-[var(--color-muted)]">{deliveryHint}</p>
+                <div className="flex flex-wrap gap-2">
+                  <span className="ui-pill bg-[var(--color-bg)] text-[var(--color-text)]">
+                    {category}
+                  </span>
+                  <span className="ui-pill bg-[var(--color-bg)] text-[var(--color-text)]">
+                    {deliveryLabel}
+                  </span>
+                  {product.deliveryType === "AUTO_KEY" ? (
+                    <span className="ui-pill bg-[var(--color-bg)] text-[var(--color-text)]">
+                      <KeyRound size={12} />
+                      {product.availableKeyCount ?? 0} keys
+                    </span>
+                  ) : null}
+                </div>
               </div>
-
-              <div className="grid gap-2 sm:grid-cols-2 md:min-w-[300px]">
-                <QuickFact
-                  icon={<ShieldCheck size={15} />}
-                  label="Формат"
-                  value={product.deliveryType === "AUTO_KEY" ? "Мгновенная выдача" : "Через саппорт"}
-                />
-                <QuickFact
-                  icon={<PackageCheck size={15} />}
-                  label="Характеристик"
-                  value={String(product.specs.length)}
-                />
-              </div>
+              <p className="text-sm leading-6 text-[var(--color-muted)]">{deliveryHint}</p>
             </div>
 
             <div className="grid gap-3">
-              <SectionTitle title="Описание" subtitle="Кратко и по делу" />
+              <SectionTitle title="Описание" />
               <div className="ui-card-soft p-4 sm:p-5">
                 <p className="text-sm leading-7 text-[var(--color-text)]/92">{product.description}</p>
               </div>
@@ -171,7 +166,7 @@ export function ProductScreen({ productId }: { productId: string }) {
             <section className="ui-card p-3 sm:p-4">
               <SectionTitle
                 title="Характеристики"
-                subtitle="Без мусора, только важное"
+                subtitle={undefined}
                 trailing={
                   <span className="ui-pill bg-[var(--color-bg)] text-[var(--color-text)]">
                     {product.specs.length}
@@ -307,28 +302,6 @@ function SectionTitle({
         {subtitle ? <p className="mt-1 text-xs text-[var(--color-muted)]">{subtitle}</p> : null}
       </div>
       {trailing}
-    </div>
-  )
-}
-
-function QuickFact({
-  icon,
-  label,
-  value,
-}: {
-  icon: React.ReactNode
-  label: string
-  value: string
-}) {
-  return (
-    <div className="ui-card-soft flex items-center gap-3 px-3 py-3">
-      <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-[var(--color-bg)] text-[var(--color-accent)]">
-        {icon}
-      </div>
-      <div className="min-w-0">
-        <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--color-muted)]">{label}</p>
-        <p className="mt-1 truncate text-sm font-medium text-[var(--color-text)]">{value}</p>
-      </div>
     </div>
   )
 }
