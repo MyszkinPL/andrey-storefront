@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next"
 import Script from "next/script"
 
+import { AppShell } from "@/components/app-shell"
 import { AuthGate } from "@/components/auth-gate"
 import { BottomTabs } from "@/components/bottom-tabs"
 import { ModeProvider } from "@/components/mode-provider"
@@ -9,7 +10,7 @@ import "./globals.css"
 import { Providers } from "./providers"
 
 export const metadata: Metadata = {
-  title: "Andrey Store",
+  title: "snx.sell",
   description: "Telegram + desktop storefront for software subscriptions",
 }
 
@@ -37,9 +38,11 @@ export default function RootLayout({
         <Providers>
           <AuthGate>
             <ModeProvider>
-              <ModeSwitcher />
-              {children}
-              <BottomTabs />
+              <AppShell>
+                <ModeSwitcher />
+                {children}
+                <BottomTabs />
+              </AppShell>
             </ModeProvider>
           </AuthGate>
         </Providers>

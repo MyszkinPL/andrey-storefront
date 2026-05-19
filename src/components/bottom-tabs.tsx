@@ -1,8 +1,8 @@
 "use client"
 
-import { Tabbar } from "@telegram-apps/telegram-ui"
 import { Home, LifeBuoy, Settings, Shield, Store, Ticket } from "lucide-react"
-import { usePathname, useRouter } from "next/navigation"
+import Link from "next/link"
+import { usePathname } from "next/navigation"
 
 import { useHaptic } from "@/hooks/use-telegram"
 import { useMode } from "@/components/mode-provider"
@@ -24,7 +24,6 @@ const HIDDEN_PREFIXES = ["/product/", "/tickets/"]
 
 export function BottomTabs() {
   const pathname = usePathname()
-  const router = useRouter()
   const haptic = useHaptic()
   const { mode } = useMode()
 
@@ -32,28 +31,38 @@ export function BottomTabs() {
   const tabs = mode === "admin" ? ADMIN_TABS : BUYER_TABS
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-40" style={{ paddingBottom: "env(safe-area-inset-bottom, 0)" }}>
-      <Tabbar>
+    <nav
+      className="fixed inset-x-0 bottom-0 z-40"
+      style={{ paddingBottom: "env(safe-area-inset-bottom, 0)" }}
+    >
+      <div className="mx-auto w-full max-w-[1120px] px-4 pb-3 md:px-6">
+        <div className="flex items-stretch justify-around rounded-[1.6rem] border border-white/6 bg-[var(--color-panel)] px-2 py-2 shadow-[0_18px_48px_rgba(0,0,0,0.35)]">
         {tabs.map((tab) => {
           const active =
             pathname === tab.href ||
             (tab.href !== "/admin" && pathname.startsWith(`${tab.href}/`))
           const Icon = tab.icon
           return (
-            <Tabbar.Item
+            <Link
               key={tab.href}
-              selected={active}
-              text={tab.label}
+              href={tab.href}
               onClick={() => {
                 haptic.select()
-                router.push(tab.href)
               }}
+              className={[
+                "flex min-w-[76px] flex-1 flex-col items-center justify-center gap-1 rounded-2xl px-3 py-2.5 transition-all",
+                active
+                  ? "bg-[var(--color-soft)] text-white"
+                  : "text-[var(--color-muted)] hover:text-white",
+              ].join(" ")}
             >
               <Icon size={20} strokeWidth={active ? 2.4 : 2} />
-            </Tabbar.Item>
+              <span className="text-[11px] font-medium">{tab.label}</span>
+            </Link>
           )
         })}
-      </Tabbar>
-    </div>
+        </div>
+      </div>
+    </nav>
   )
 }

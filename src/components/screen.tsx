@@ -1,5 +1,3 @@
-import { List, Section, Subheadline, Title } from "@telegram-apps/telegram-ui"
-
 import { cn } from "@/lib/cn"
 
 export function Screen({
@@ -14,13 +12,13 @@ export function Screen({
   return (
     <main
       className={cn(
-        "mx-auto flex min-h-dvh w-full max-w-6xl flex-col",
-        !noTabBar && "pb-[88px]",
+        "mx-auto flex min-h-[calc(100dvh-96px)] w-full max-w-6xl flex-col px-4 md:px-6",
+        !noTabBar && "pb-[94px]",
         className,
       )}
       style={{ paddingTop: "env(safe-area-inset-top, 0)" }}
     >
-      <List>{children}</List>
+      {children}
     </main>
   )
 }
@@ -35,19 +33,20 @@ export function ScreenHeader({
   trailing?: React.ReactNode
 }) {
   return (
-    <Section
-      header={
-        <div className="flex min-w-0 flex-1 items-start justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            <Title level="2">{title}</Title>
-            {subtitle ? <Subheadline level="2">{subtitle}</Subheadline> : null}
-          </div>
-          {trailing}
+    <header className="px-1 pb-4 pt-2">
+      <div className="flex min-w-0 items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <h1 className="truncate text-[1.9rem] font-semibold tracking-[-0.05em] text-white">
+            {title}
+          </h1>
+          {subtitle ? (
+            <p className="mt-1 max-w-2xl text-sm leading-6 text-[var(--color-muted)]">
+              {subtitle}
+            </p>
+          ) : null}
         </div>
-      }
-      className="!bg-transparent"
-    >
-      <div />
-    </Section>
+        {trailing}
+      </div>
+    </header>
   )
 }
