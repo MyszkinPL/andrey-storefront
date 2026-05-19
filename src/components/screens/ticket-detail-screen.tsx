@@ -340,12 +340,12 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
 
       <div
         className={cn(
-          "grid gap-4 px-4 pb-4",
+          "grid gap-4 px-4 pb-4 xl:min-h-[calc(100vh-200px)]",
           !isSupportFlow && "xl:grid-cols-[minmax(0,1fr)_360px]",
         )}
       >
-        <div className="order-2 grid gap-4 xl:order-1">
-          <section className="ui-card overflow-hidden">
+        <div className="order-2 grid gap-4 xl:order-1 xl:min-h-0">
+          <section className="ui-card overflow-hidden xl:flex xl:min-h-[calc(100vh-220px)] xl:flex-col">
             <div className="border-b border-[var(--color-border)] px-4 py-3 sm:px-5">
               <div className="flex flex-wrap items-center gap-2">
                 {!isSupportFlow ? (
@@ -363,213 +363,215 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
               </div>
             </div>
 
-            {groupedMessages.length === 0 ? (
-              <div className="p-4 sm:p-5">
-                <ScreenEmpty
-                  title="Сообщений пока нет"
-                  subtitle={
-                    isSupportFlow
-                      ? "Начни диалог с продавцом."
-                      : "После оплаты здесь будет нормальный диалог по заказу."
-                  }
-                  icon={<CreditCard size={28} className="text-[var(--color-muted)]" />}
-                />
-              </div>
-            ) : (
-              <div className="grid gap-3 bg-[linear-gradient(180deg,color-mix(in_srgb,var(--color-bg)_78%,transparent),transparent_24%)] px-3 py-4 sm:px-4 sm:py-5">
-                {groupedMessages.map((entry) => {
-                  const isAdmin = entry.senderRole === "ADMIN"
-                  const senderRoleLabel = isAdmin ? "Админ" : "Покупатель"
+            <div className="xl:flex xl:min-h-0 xl:flex-1 xl:flex-col">
+              {groupedMessages.length === 0 ? (
+                <div className="p-4 sm:p-5 xl:flex xl:min-h-0 xl:flex-1 xl:items-center xl:justify-center">
+                  <ScreenEmpty
+                    title="Сообщений пока нет"
+                    subtitle={
+                      isSupportFlow
+                        ? "Начни диалог с продавцом."
+                        : "После оплаты здесь будет нормальный диалог по заказу."
+                    }
+                    icon={<CreditCard size={28} className="text-[var(--color-muted)]" />}
+                  />
+                </div>
+              ) : (
+                <div className="grid gap-3 bg-[linear-gradient(180deg,color-mix(in_srgb,var(--color-bg)_78%,transparent),transparent_24%)] px-3 py-4 sm:px-4 sm:py-5 xl:min-h-0 xl:flex-1 xl:content-start xl:overflow-y-auto">
+                  {groupedMessages.map((entry) => {
+                    const isAdmin = entry.senderRole === "ADMIN"
+                    const senderRoleLabel = isAdmin ? "Админ" : "Покупатель"
 
-                  return (
-                    <div
-                      key={entry.id}
-                      className={cn(
-                        "flex items-end gap-2",
-                        entry.isMine ? "justify-end" : "justify-start",
-                      )}
-                    >
-                      {!entry.isMine ? (
-                        <SenderAvatar isAdmin={isAdmin} visible={entry.showMeta} />
-                      ) : null}
-
+                    return (
                       <div
+                        key={entry.id}
                         className={cn(
-                          "max-w-[min(820px,92%)]",
-                          entry.isMine && "flex flex-col items-end",
+                          "flex items-end gap-2",
+                          entry.isMine ? "justify-end" : "justify-start",
                         )}
                       >
-                        {entry.showMeta ? (
-                          <div
-                            className={cn(
-                              "mb-1 flex items-center gap-2 px-1 text-[11px] text-[var(--color-muted)]",
-                              entry.isMine ? "justify-end" : "justify-start",
-                            )}
-                          >
-                            <span className="font-medium text-[var(--color-text)]">
-                              {entry.isMine ? "Ты" : entry.senderName}
-                            </span>
-                            <span className="rounded-full bg-[var(--color-surface)] px-2 py-0.5">
-                              {senderRoleLabel}
-                            </span>
-                          </div>
+                        {!entry.isMine ? (
+                          <SenderAvatar isAdmin={isAdmin} visible={entry.showMeta} />
                         ) : null}
 
                         <div
                           className={cn(
-                            "overflow-hidden rounded-[24px] px-3 py-3 shadow-[0_1px_0_color-mix(in_srgb,var(--color-text)_4%,transparent)_inset]",
-                            entry.isMine
-                              ? "rounded-br-md bg-[var(--color-accent)] text-[var(--color-accent-text)]"
-                              : "rounded-bl-md bg-[var(--color-surface-2)] text-[var(--color-text)]",
+                            "max-w-[min(820px,92%)]",
+                            entry.isMine && "flex flex-col items-end",
                           )}
                         >
-                          {entry.attachments.length > 0 ? (
+                          {entry.showMeta ? (
                             <div
                               className={cn(
-                                "grid gap-2",
-                                entry.attachments.length === 1
-                                  ? "grid-cols-1"
-                                  : "grid-cols-2",
-                                entry.body && "mb-3",
+                                "mb-1 flex items-center gap-2 px-1 text-[11px] text-[var(--color-muted)]",
+                                entry.isMine ? "justify-end" : "justify-start",
                               )}
                             >
-                              {entry.attachments.map((attachment, index) => (
-                                <button
-                                  key={`${entry.id}-${index}`}
-                                  type="button"
-                                  onClick={() => setPreviewImage(attachment.url)}
-                                  className="group relative overflow-hidden rounded-[18px] bg-[color-mix(in_srgb,var(--color-bg)_72%,transparent)]"
-                                >
-                                  <div className="relative aspect-[4/3] w-full">
-                                    <Image
-                                      src={attachment.url}
-                                      alt=""
-                                      fill
-                                      unoptimized
-                                      sizes="(max-width: 768px) 72vw, 320px"
-                                      className="object-cover transition-transform duration-200 group-hover:scale-[1.02]"
-                                    />
-                                  </div>
-                                </button>
-                              ))}
+                              <span className="font-medium text-[var(--color-text)]">
+                                {entry.isMine ? "Ты" : entry.senderName}
+                              </span>
+                              <span className="rounded-full bg-[var(--color-surface)] px-2 py-0.5">
+                                {senderRoleLabel}
+                              </span>
                             </div>
-                          ) : null}
-
-                          {entry.body ? (
-                            <p className="whitespace-pre-wrap break-words text-sm leading-6">
-                              {entry.body}
-                            </p>
                           ) : null}
 
                           <div
                             className={cn(
-                              "mt-2 flex items-center justify-end gap-1 text-[11px]",
+                              "overflow-hidden rounded-[24px] px-3 py-3 shadow-[0_1px_0_color-mix(in_srgb,var(--color-text)_4%,transparent)_inset]",
                               entry.isMine
-                                ? "text-[var(--color-accent-text)]/78"
-                                : "text-[var(--color-muted)]",
+                                ? "rounded-br-md bg-[var(--color-accent)] text-[var(--color-accent-text)]"
+                                : "rounded-bl-md bg-[var(--color-surface-2)] text-[var(--color-text)]",
                             )}
                           >
-                            <span>
-                              {format(new Date(entry.createdAt), "HH:mm", { locale: ru })}
-                            </span>
-                            {entry.isMine ? <CheckCheck size={12} /> : null}
+                            {entry.attachments.length > 0 ? (
+                              <div
+                                className={cn(
+                                  "grid gap-2",
+                                  entry.attachments.length === 1
+                                    ? "grid-cols-1"
+                                    : "grid-cols-2",
+                                  entry.body && "mb-3",
+                                )}
+                              >
+                                {entry.attachments.map((attachment, index) => (
+                                  <button
+                                    key={`${entry.id}-${index}`}
+                                    type="button"
+                                    onClick={() => setPreviewImage(attachment.url)}
+                                    className="group relative overflow-hidden rounded-[18px] bg-[color-mix(in_srgb,var(--color-bg)_72%,transparent)]"
+                                  >
+                                    <div className="relative aspect-[4/3] w-full">
+                                      <Image
+                                        src={attachment.url}
+                                        alt=""
+                                        fill
+                                        unoptimized
+                                        sizes="(max-width: 768px) 72vw, 320px"
+                                        className="object-cover transition-transform duration-200 group-hover:scale-[1.02]"
+                                      />
+                                    </div>
+                                  </button>
+                                ))}
+                              </div>
+                            ) : null}
+
+                            {entry.body ? (
+                              <p className="whitespace-pre-wrap break-words text-sm leading-6">
+                                {entry.body}
+                              </p>
+                            ) : null}
+
+                            <div
+                              className={cn(
+                                "mt-2 flex items-center justify-end gap-1 text-[11px]",
+                                entry.isMine
+                                  ? "text-[var(--color-accent-text)]/78"
+                                  : "text-[var(--color-muted)]",
+                              )}
+                            >
+                              <span>
+                                {format(new Date(entry.createdAt), "HH:mm", { locale: ru })}
+                              </span>
+                              {entry.isMine ? <CheckCheck size={12} /> : null}
+                            </div>
                           </div>
                         </div>
+
+                        {entry.isMine ? (
+                          <SenderAvatar isAdmin={isAdmin} visible={entry.showMeta} />
+                        ) : null}
                       </div>
+                    )
+                  })}
+                </div>
+              )}
 
-                      {entry.isMine ? (
-                        <SenderAvatar isAdmin={isAdmin} visible={entry.showMeta} />
-                      ) : null}
-                    </div>
-                  )
-                })}
-              </div>
-            )}
+              <div className="border-t border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-3 sm:px-4">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  onChange={handleFileChange}
+                />
 
-            <div className="border-t border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-3 sm:px-4">
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                multiple
-                className="hidden"
-                onChange={handleFileChange}
-              />
+                {attachments.length > 0 ? (
+                  <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
+                    {attachments.map((attachment, index) => (
+                      <div
+                        key={`${attachment.url}-${index}`}
+                        className="relative h-20 w-20 shrink-0 overflow-hidden rounded-[18px] border border-[var(--color-border)] bg-[var(--color-bg)]"
+                      >
+                        <Image
+                          src={attachment.url}
+                          alt=""
+                          fill
+                          unoptimized
+                          sizes="80px"
+                          className="object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setAttachments((current) =>
+                              current.filter((_, currentIndex) => currentIndex !== index),
+                            )
+                          }
+                          className="absolute right-1 top-1 flex size-6 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--color-bg)_82%,transparent)] text-[var(--color-text)]"
+                        >
+                          <X size={13} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
 
-              {attachments.length > 0 ? (
-                <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
-                  {attachments.map((attachment, index) => (
-                    <div
-                      key={`${attachment.url}-${index}`}
-                      className="relative h-20 w-20 shrink-0 overflow-hidden rounded-[18px] border border-[var(--color-border)] bg-[var(--color-bg)]"
-                    >
-                      <Image
-                        src={attachment.url}
-                        alt=""
-                        fill
-                        unoptimized
-                        sizes="80px"
-                        className="object-cover"
-                      />
+                <div className="flex items-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isClosed || isUploading || attachments.length >= MAX_ATTACHMENTS}
+                    className="flex size-11 shrink-0 items-center justify-center rounded-[18px] bg-[var(--color-bg)] text-[var(--color-text)] disabled:opacity-45"
+                  >
+                    <ImagePlus size={18} />
+                  </button>
+
+                  <div className="min-w-0 flex-1 rounded-[22px] bg-[var(--color-bg)] px-3 py-2">
+                    <textarea
+                      value={message}
+                      onChange={(event) => setMessage(event.target.value)}
+                      placeholder={
+                        isClosed
+                          ? "Заказ закрыт"
+                          : isSupportFlow
+                            ? "Напиши сообщение или прикрепи скрин"
+                            : "Сообщение по заказу или скрин"
+                      }
+                      disabled={isClosed}
+                      className="min-h-[54px] max-h-40 w-full resize-none bg-transparent py-1 text-sm leading-6 text-[var(--color-text)] outline-none placeholder:text-[var(--color-muted)]"
+                    />
+                    <div className="flex items-center justify-between gap-3 px-1 pt-1">
+                      <span className="text-[11px] text-[var(--color-muted)]">
+                        {isUploading
+                          ? "Обрабатываю изображения..."
+                          : `${attachments.length}/${MAX_ATTACHMENTS} вложений`}
+                      </span>
                       <button
                         type="button"
-                        onClick={() =>
-                          setAttachments((current) =>
-                            current.filter((_, currentIndex) => currentIndex !== index),
-                          )
-                        }
-                        className="absolute right-1 top-1 flex size-6 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--color-bg)_82%,transparent)] text-[var(--color-text)]"
+                        onClick={() => canSend && sendMutation.mutate()}
+                        disabled={!canSend}
+                        className={cn(
+                          "flex size-10 items-center justify-center rounded-full transition-colors",
+                          canSend
+                            ? "bg-[var(--color-accent)] text-[var(--color-accent-text)]"
+                            : "bg-[var(--color-surface-2)] text-[var(--color-muted)]",
+                        )}
                       >
-                        <X size={13} />
+                        <SendHorizontal size={16} />
                       </button>
                     </div>
-                  ))}
-                </div>
-              ) : null}
-
-              <div className="flex items-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={isClosed || isUploading || attachments.length >= MAX_ATTACHMENTS}
-                  className="flex size-11 shrink-0 items-center justify-center rounded-[18px] bg-[var(--color-bg)] text-[var(--color-text)] disabled:opacity-45"
-                >
-                  <ImagePlus size={18} />
-                </button>
-
-                <div className="min-w-0 flex-1 rounded-[22px] bg-[var(--color-bg)] px-3 py-2">
-                  <textarea
-                    value={message}
-                    onChange={(event) => setMessage(event.target.value)}
-                    placeholder={
-                      isClosed
-                        ? "Заказ закрыт"
-                        : isSupportFlow
-                          ? "Напиши сообщение или прикрепи скрин"
-                          : "Сообщение по заказу или скрин"
-                    }
-                    disabled={isClosed}
-                    className="min-h-[54px] max-h-40 w-full resize-none bg-transparent py-1 text-sm leading-6 text-[var(--color-text)] outline-none placeholder:text-[var(--color-muted)]"
-                  />
-                  <div className="flex items-center justify-between gap-3 px-1 pt-1">
-                    <span className="text-[11px] text-[var(--color-muted)]">
-                      {isUploading
-                        ? "Обрабатываю изображения..."
-                        : `${attachments.length}/${MAX_ATTACHMENTS} вложений`}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => canSend && sendMutation.mutate()}
-                      disabled={!canSend}
-                      className={cn(
-                        "flex size-10 items-center justify-center rounded-full transition-colors",
-                        canSend
-                          ? "bg-[var(--color-accent)] text-[var(--color-accent-text)]"
-                          : "bg-[var(--color-surface-2)] text-[var(--color-muted)]",
-                      )}
-                    >
-                      <SendHorizontal size={16} />
-                    </button>
                   </div>
                 </div>
               </div>
