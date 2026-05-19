@@ -1,6 +1,6 @@
 FROM node:22-alpine AS deps
 WORKDIR /app
-COPY package.json ./
+COPY package.json package-lock.json .npmrc ./
 RUN npm install
 
 FROM node:22-alpine AS builder
