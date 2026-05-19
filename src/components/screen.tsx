@@ -29,7 +29,7 @@ export function ScreenHeader({
   trailing,
 }: {
   title: string
-  subtitle?: string
+  subtitle?: React.ReactNode
   trailing?: React.ReactNode
 }) {
   return (
@@ -38,7 +38,7 @@ export function ScreenHeader({
         <div className="min-w-0 flex-1">
           <h1 className="truncate text-lg font-semibold text-[var(--color-text)]">{title}</h1>
           {subtitle ? (
-            <p className="mt-0.5 truncate text-xs text-[var(--color-muted)]">{subtitle}</p>
+            <div className="mt-1 text-xs text-[var(--color-muted)]">{subtitle}</div>
           ) : null}
         </div>
         {trailing}

@@ -181,7 +181,16 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
       <Screen noTabBar className="pb-6">
         <ScreenHeader
           title={ticket.productTitle || ticket.subject}
-          subtitle={`#${ticket.number} · ${paymentStateLabel}`}
+          subtitle={
+            <HeaderMetaRow
+              items={[
+                `#${ticket.number}`,
+                paymentStateLabel,
+                ticket.productCategory || null,
+                ticket.paymentMethodTitle || null,
+              ]}
+            />
+          }
         />
 
         <div className="grid gap-4 px-4 pb-4">
@@ -335,7 +344,16 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
     <Screen noTabBar className="h-dvh overflow-hidden">
       <ScreenHeader
         title={ticket.productTitle || ticket.subject}
-        subtitle={`#${ticket.number} · ${isSupportFlow ? "Обращение" : statusLabel}`}
+        subtitle={
+          <HeaderMetaRow
+            items={[
+              `#${ticket.number}`,
+              isSupportFlow ? "Обращение" : statusLabel,
+              ticket.productCategory || null,
+              ticket.paymentMethodTitle || null,
+            ]}
+          />
+        }
       />
 
       <div className="flex min-h-0 flex-1 flex-col px-4 pb-4">
@@ -989,6 +1007,22 @@ function InfoRow({
           {hint ? <p className="mt-0.5 truncate text-[11px] text-[var(--color-muted)]">{hint}</p> : null}
         </div>
       </div>
+    </div>
+  )
+}
+
+function HeaderMetaRow({
+  items,
+}: {
+  items: Array<string | null>
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+      {items.filter(Boolean).map((item) => (
+        <span key={item} className="whitespace-nowrap text-xs text-[var(--color-muted)]">
+          {item}
+        </span>
+      ))}
     </div>
   )
 }
