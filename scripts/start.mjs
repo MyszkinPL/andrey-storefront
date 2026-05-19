@@ -1,4 +1,7 @@
 import { spawn } from "node:child_process"
+import { PrismaPg } from "@prisma/adapter-pg"
+import { PrismaClient } from "@prisma/client"
+import pg from "pg"
 
 const port = process.env.PORT || "3000"
 const appUrl = process.env.APP_URL
@@ -16,6 +19,7 @@ if (databaseUrl) {
 }
 
 await run(prismaCli[0], [...prismaCli[1], ...dbPushArgs])
+await ensureBootstrapData()
 
 if (appUrl && botToken) {
   const webhookUrl = `${appUrl.replace(/\/$/, "")}/api/telegram/webhook`
@@ -76,4 +80,79 @@ function run(command, args) {
       else reject(new Error(`${command} ${args.join(" ")} failed with code ${code}`))
     })
   })
+}
+
+async function ensureBootstrapData() {
+  if (!databaseUrl) return
+
+  const pool = new pg.Pool({ connectionString: databaseUrl })
+  const prisma = new PrismaClient({
+    adapter: new PrismaPg(pool),
+    log: ["error"],
+  })
+
+  const description = `DRIP LITE — это мощный чит-клиент для Minecraft, разработанный для соревновательной игры. Он включает в себя широкий спектр боевых, транспортных и визуальных модулей, оптимизированных как для режима «Хэллоуин против Хэллоуина», так и для честной игры. Клиент регулярно обновляется и поддерживает все основные загрузчики модов.
+
+Характеристики
++ Support versions 1.8.9 - 1.21.4
++ Support clients: Fabric, Lunar, Feather, Labymod4, Forge, BLC
++ Advanced combat modules (KillAura, Velocity, Criticals)
++ Movement modules (Speed, Flight, Scaffold, Strafe)
++ Visual modules (ESP, Tracers, Nametags, Chams)
++ Built-in config system with cloud sync
++ Anti-cheat bypass (Intave, Vulcan, Grim, Matrix)
++ Lifetime updates included`
+
+  try {
+    await prisma.shopSettings.upsert({
+      where: { id: 1 },
+      update: {
+        shopName: "snx.sell",
+        welcomeText: "Лицензии, ключи и lifetime-доступы через Telegram.",
+        supportIntro:
+          "Выбери товар, открой тикет и получи реквизиты. После подтверждения оплаты продавец выдаст доступ или ключ.",
+      },
+      create: {
+        id: 1,
+        shopName: "snx.sell",
+        welcomeText: "Лицензии, ключи и lifetime-доступы через Telegram.",
+        supportIntro:
+          "Выбери товар, открой тикет и получи реквизиты. После подтверждения оплаты продавец выдаст доступ или ключ.",
+      },
+    })
+
+    const existing = await prisma.product.findFirst({
+      where: { title: "DRIP LITE LIFETIME" },
+    })
+
+    if (existing) {
+      await prisma.product.update({
+        where: { id: existing.id },
+        data: {
+          category: "майнкрафт",
+          description,
+          priceRub: 4990,
+          deliveryType: "MANUAL",
+          isActive: true,
+          sortOrder: 0,
+        },
+      })
+    } else {
+      await prisma.product.create({
+        data: {
+          slug: `drip-lite-lifetime-${Date.now().toString(36)}`,
+          title: "DRIP LITE LIFETIME",
+          category: "майнкрафт",
+          description,
+          priceRub: 4990,
+          deliveryType: "MANUAL",
+          isActive: true,
+          sortOrder: 0,
+        },
+      })
+    }
+  } finally {
+    await prisma.$disconnect()
+    await pool.end()
+  }
 }

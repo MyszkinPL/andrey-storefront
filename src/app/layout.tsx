@@ -11,6 +11,9 @@ import { Providers } from "./providers"
 export const metadata: Metadata = {
   title: "snx.sell",
   description: "Telegram + desktop storefront for software subscriptions",
+  icons: {
+    icon: [{ url: "/logo.svg", type: "image/svg+xml" }],
+  },
 }
 
 export const viewport: Viewport = {

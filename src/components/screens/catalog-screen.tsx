@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { useQuery } from "@tanstack/react-query"
 import { ChevronDown, PackageSearch } from "lucide-react"
 
@@ -41,8 +42,8 @@ export function CatalogScreen() {
         title="snx.sell"
         subtitle={meData?.settings.welcomeText || "Цифровые товары через Telegram"}
         trailing={
-          <div className="flex items-center gap-1 rounded-full bg-[var(--color-surface)] px-3 py-1.5 text-xs font-medium text-[var(--color-text)]">
-            market
+          <div className="flex items-center gap-2 rounded-full bg-[var(--color-surface)] px-2 py-1.5 text-xs font-medium text-[var(--color-text)]">
+            <Image src="/logo.svg" alt="snx.sell" width={20} height={20} className="size-5 object-contain" />
             <ChevronDown size={14} />
           </div>
         }
