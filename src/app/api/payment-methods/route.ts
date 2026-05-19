@@ -23,6 +23,7 @@ export async function GET() {
       title: "Crypto Bot",
       details: "Автоматическая оплата через invoice",
       acceptedAssets: settings?.cryptoPayDefaultAssets || null,
+      iconDataUrl: "/crypto-bot-logo.svg",
     },
   })
 }

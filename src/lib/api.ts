@@ -49,6 +49,12 @@ export type ShopSettingsPayload = {
   paymentMethods: PaymentMethodInput[]
 }
 
+export type CryptoPayCurrency = {
+  code: string
+  name: string
+  isFiat: boolean
+}
+
 async function api<T>(input: RequestInfo, init?: RequestInit): Promise<T> {
   const response = await fetch(input, {
     ...init,
@@ -268,6 +274,7 @@ export function getPaymentMethods() {
       title: string
       details: string
       acceptedAssets: string | null
+      iconDataUrl: string | null
     }
   }>("/api/payment-methods")
 }
@@ -312,6 +319,20 @@ export function updateAdminProduct(
 
 export function saveSettings(payload: ShopSettingsPayload) {
   return api<{ ok: true }>("/api/admin/settings", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  })
+}
+
+export function getCryptoPayCurrencies(payload: {
+  token?: string
+  useTestnet?: boolean
+}) {
+  return api<{
+    currencies: CryptoPayCurrency[]
+    assets: CryptoPayCurrency[]
+    fiats: CryptoPayCurrency[]
+  }>("/api/admin/crypto-pay-currencies", {
     method: "POST",
     body: JSON.stringify(payload),
   })

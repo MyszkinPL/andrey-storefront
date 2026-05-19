@@ -81,7 +81,10 @@ export function ProfileScreen() {
               ))}
               {hasCryptoPay ? (
                 <div className="ui-card-soft flex items-center gap-3 p-3">
-                  <PaymentMethodIcon iconDataUrl={null} title="CR" />
+                  <PaymentMethodIcon
+                    iconDataUrl={paymentData?.cryptoPay.iconDataUrl || null}
+                    title="CR"
+                  />
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-[var(--color-text)]">
                       {paymentData?.cryptoPay.title || "Crypto Bot"}

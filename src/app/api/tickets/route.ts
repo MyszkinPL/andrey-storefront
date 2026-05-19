@@ -92,7 +92,9 @@ export async function POST(request: Request) {
     const selectedPaymentDetails = isCryptoPay
       ? "Автоматическая оплата через invoice"
       : paymentMethod?.details
-    const selectedPaymentIcon = isCryptoPay ? null : paymentMethod?.iconDataUrl
+    const selectedPaymentIcon = isCryptoPay
+      ? "/crypto-bot-logo.svg"
+      : paymentMethod?.iconDataUrl
 
     const ticket = await prisma.ticket.create({
       data: {

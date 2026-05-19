@@ -51,7 +51,7 @@ export function ProductScreen({ productId }: { productId: string }) {
                 paymentData?.cryptoPay.acceptedAssets
                   ? `Автооплата · ${paymentData.cryptoPay.acceptedAssets}`
                   : "Автооплата через invoice",
-              iconDataUrl: null,
+              iconDataUrl: paymentData?.cryptoPay.iconDataUrl || null,
             },
           ]
         : []),

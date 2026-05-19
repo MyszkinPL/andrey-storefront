@@ -17,6 +17,12 @@ type CryptoInvoice = {
   expiresAt: Date | null
 }
 
+type CryptoCurrency = {
+  code: string
+  name: string
+  isFiat: boolean
+}
+
 export type CryptoPayInvoicePayload = {
   invoice_id: number | string
   status?: string
@@ -38,6 +44,8 @@ export type CryptoPayWebhookUpdate = {
 function getBaseUrl(useTestnet: boolean) {
   return useTestnet ? "https://testnet-pay.crypt.bot/api" : "https://pay.crypt.bot/api"
 }
+
+const currencyCache = new Map<string, { expiresAt: number; items: CryptoCurrency[] }>()
 
 async function cryptoPayFetch<T>(
   method: string,
@@ -141,6 +149,50 @@ export async function getCryptoInvoice(invoiceId: string) {
     amount: invoice.paid_amount || invoice.amount || null,
     expiresAt: invoice.expiration_date ? new Date(invoice.expiration_date) : null,
   }
+}
+
+export async function getCryptoPayCurrencies(options?: {
+  token?: string | null
+  useTestnet?: boolean
+}): Promise<CryptoCurrency[]> {
+  const settings = options?.token
+    ? null
+    : await prisma.shopSettings.findUnique({ where: { id: 1 } })
+  const token = options?.token || settings?.cryptoPayToken
+  const useTestnet = options?.useTestnet ?? settings?.cryptoPayUseTestnet ?? false
+
+  if (!token) return []
+
+  const cacheKey = `${useTestnet}:${token}`
+  const cached = currencyCache.get(cacheKey)
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.items
+  }
+
+  const result = await cryptoPayFetch<
+    Array<{
+      code?: string
+      name?: string
+      is_fiat?: boolean
+      isFiat?: boolean
+    }>
+  >("getCurrencies", { method: "GET" }, token, useTestnet)
+
+  const items = result
+    .map((currency) => ({
+      code: (currency.code || "").trim().toUpperCase(),
+      name: (currency.name || currency.code || "").trim(),
+      isFiat: Boolean(currency.is_fiat ?? currency.isFiat),
+    }))
+    .filter((currency) => currency.code.length > 0)
+    .sort((left, right) => left.code.localeCompare(right.code))
+
+  currencyCache.set(cacheKey, {
+    expiresAt: Date.now() + 5 * 60 * 1000,
+    items,
+  })
+
+  return items
 }
 
 export function mapCryptoInvoicePayload(invoice: CryptoPayInvoicePayload) {
