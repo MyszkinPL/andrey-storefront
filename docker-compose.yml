@@ -6,6 +6,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
+      HOSTNAME: 0.0.0.0
       APP_URL: ${APP_URL}
       BOT_TOKEN: ${BOT_TOKEN}
       DATABASE_URL: ${DATABASE_URL}

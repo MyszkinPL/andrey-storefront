@@ -46,6 +46,7 @@ const server = spawn(serverCommand[0], serverCommand[1], {
   env: {
     ...process.env,
     PORT: port,
+    HOSTNAME: process.env.HOSTNAME || "0.0.0.0",
   },
 })
 
