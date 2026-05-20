@@ -555,56 +555,76 @@ function ProductEditorModal({
                   </button>
                 </div>
 
-                <div className="mt-4 grid gap-2">
+                <div className="mt-4 grid gap-3">
                   {form.specs.map((spec, index) => (
                     <div
                       key={`${index}-${form.id || "new"}`}
-                      className="grid gap-2 sm:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)_44px]"
+                      className="rounded-[22px] bg-[var(--color-bg)] p-3"
                     >
-                      <input
-                        value={spec.label}
-                        onChange={(event) =>
-                          onChange((prev) => ({
-                            ...prev,
-                            specs: prev.specs.map((item, itemIndex) =>
-                              itemIndex === index
-                                ? { ...item, label: event.target.value }
-                                : item,
-                            ),
-                          }))
-                        }
-                        placeholder="Название"
-                        className="ui-input"
-                      />
-                      <input
-                        value={spec.value}
-                        onChange={(event) =>
-                          onChange((prev) => ({
-                            ...prev,
-                            specs: prev.specs.map((item, itemIndex) =>
-                              itemIndex === index
-                                ? { ...item, value: event.target.value }
-                                : item,
-                            ),
-                          }))
-                        }
-                        placeholder="Значение"
-                        className="ui-input"
-                      />
-                      <button
-                        onClick={() =>
-                          onChange((prev) => ({
-                            ...prev,
-                            specs:
-                              prev.specs.length === 1
-                                ? [{ label: "", value: "" }]
-                                : prev.specs.filter((_, itemIndex) => itemIndex !== index),
-                          }))
-                        }
-                        className="flex h-[44px] items-center justify-center rounded-2xl bg-[var(--color-bg)] text-[var(--color-muted)] sm:h-[50px]"
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                      <div className="mb-3 flex items-center justify-between gap-3">
+                        <p className="text-xs font-medium uppercase tracking-[0.14em] text-[var(--color-muted)]">
+                          Характеристика {index + 1}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            onChange((prev) => ({
+                              ...prev,
+                              specs:
+                                prev.specs.length === 1
+                                  ? [{ label: "", value: "" }]
+                                  : prev.specs.filter((_, itemIndex) => itemIndex !== index),
+                            }))
+                          }
+                          className="flex size-9 items-center justify-center rounded-full bg-[var(--color-surface)] text-[var(--color-muted)]"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <label className="grid gap-2">
+                          <span className="px-1 text-xs text-[var(--color-muted)]">
+                            Название
+                          </span>
+                          <input
+                            value={spec.label}
+                            onChange={(event) =>
+                              onChange((prev) => ({
+                                ...prev,
+                                specs: prev.specs.map((item, itemIndex) =>
+                                  itemIndex === index
+                                    ? { ...item, label: event.target.value }
+                                    : item,
+                                ),
+                              }))
+                            }
+                            placeholder="Например: Support versions"
+                            className="ui-input"
+                          />
+                        </label>
+
+                        <label className="grid gap-2">
+                          <span className="px-1 text-xs text-[var(--color-muted)]">
+                            Значение
+                          </span>
+                          <input
+                            value={spec.value}
+                            onChange={(event) =>
+                              onChange((prev) => ({
+                                ...prev,
+                                specs: prev.specs.map((item, itemIndex) =>
+                                  itemIndex === index
+                                    ? { ...item, value: event.target.value }
+                                    : item,
+                                ),
+                              }))
+                            }
+                            placeholder="Например: 1.8.9 - 1.21.4"
+                            className="ui-input"
+                          />
+                        </label>
+                      </div>
                     </div>
                   ))}
                 </div>
