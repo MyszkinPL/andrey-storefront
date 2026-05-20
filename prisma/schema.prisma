@@ -35,6 +35,9 @@ model User {
   lastName   String?
   photoUrl   String?
   role       Role            @default(USER)
+  isBanned   Boolean         @default(false)
+  bannedAt   DateTime?
+  banReason  String?
   createdAt  DateTime        @default(now())
   updatedAt  DateTime        @updatedAt
   tickets    Ticket[]        @relation("TicketAuthor")
@@ -103,6 +106,7 @@ model Ticket {
   cryptoInvoiceAmount String?
   cryptoInvoiceExpiresAt DateTime?
   paymentConfirmedAt DateTime?
+  manualPaymentRequestedAt DateTime?
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
   closedAt         DateTime?

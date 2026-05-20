@@ -43,6 +43,7 @@ export async function GET() {
       productCategory: ticket.product?.category || null,
       paymentMethodTitle: ticket.paymentMethodTitle || null,
       paymentMethodType: ticket.paymentMethodType || null,
+      manualPaymentRequestedAt: ticket.manualPaymentRequestedAt?.toISOString() || null,
       lastMessage: ticket.messages[0]?.body || null,
     })),
   })
@@ -52,6 +53,23 @@ export async function POST(request: Request) {
   try {
     const user = await requireUser()
     const payload = schema.parse(await request.json())
+
+    if (payload.productId && user.role !== "ADMIN") {
+      const activeOrdersCount = await prisma.ticket.count({
+        where: {
+          createdById: user.id,
+          productId: { not: null },
+          status: { not: "CLOSED" },
+        },
+      })
+
+      if (activeOrdersCount >= 2) {
+        return NextResponse.json(
+          { error: "Лимит: не больше 2 активных заказов на аккаунт." },
+          { status: 400 },
+        )
+      }
+    }
 
     const [product, paymentMethod, settings] = await Promise.all([
       payload.productId

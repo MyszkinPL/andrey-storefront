@@ -251,6 +251,13 @@ function renderStatus(status: string) {
 
 function renderPrimaryState(ticket: Awaited<ReturnType<typeof getTickets>>["tickets"][number]) {
   if (isSupport(ticket)) return "Поддержка"
+  if (
+    ticket.paymentMethodType === "MANUAL" &&
+    !ticket.isPaid &&
+    ticket.manualPaymentRequestedAt
+  ) {
+    return "На проверке"
+  }
   if (ticket.status === "CLOSED" && !ticket.isPaid) return "Не оплачен"
   if (!ticket.isPaid) return "Ждёт оплату"
   if (ticket.status === "IN_PROGRESS") return "Выдача"
@@ -260,6 +267,13 @@ function renderPrimaryState(ticket: Awaited<ReturnType<typeof getTickets>>["tick
 
 function renderPreview(ticket: Awaited<ReturnType<typeof getTickets>>["tickets"][number]) {
   if (isSupport(ticket)) return ticket.lastMessage || "Открой обращение"
+  if (
+    ticket.paymentMethodType === "MANUAL" &&
+    !ticket.isPaid &&
+    ticket.manualPaymentRequestedAt
+  ) {
+    return "Платёж отмечен. Ждёт проверки админа."
+  }
   if (!ticket.isPaid) {
     return ticket.paymentMethodTitle
       ? `Ожидает оплату через ${ticket.paymentMethodTitle}.`

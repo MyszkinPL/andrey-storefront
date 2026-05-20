@@ -7,6 +7,16 @@ import { prisma } from "@/lib/prisma"
 export async function GET() {
   const user = await getCurrentUser()
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  if (user.isBanned) {
+    return NextResponse.json(
+      {
+        error: user.banReason
+          ? `Аккаунт заблокирован: ${user.banReason}`
+          : "Аккаунт заблокирован",
+      },
+      { status: 403 },
+    )
+  }
   const env = getServerEnv()
 
   const settings =

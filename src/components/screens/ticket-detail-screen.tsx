@@ -21,8 +21,10 @@ import {
 import {
   confirmTicketPayment,
   getTicket,
+  markManualTicketPaid,
   refreshCryptoInvoice,
   sendTicketMessage,
+  updateAdminUserModeration,
   updateTicketStatus,
   type TicketMessageAttachment,
 } from "@/lib/api"
@@ -93,8 +95,24 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
     onSuccess: invalidate,
   })
 
+  const markManualPaidMutation = useMutation({
+    mutationFn: () => markManualTicketPaid(ticketId),
+    onSuccess: invalidate,
+  })
+
+  const moderationMutation = useMutation({
+    mutationFn: (payload: { userId: string; isBanned: boolean; banReason?: string }) =>
+      updateAdminUserModeration(payload.userId, {
+        isBanned: payload.isBanned,
+        banReason: payload.banReason,
+      }),
+    onSuccess: invalidate,
+  })
+
   const isClosed = data?.ticket.status === "CLOSED"
   const isAwaitingPayment = !data?.ticket?.isPaid
+  const isManualPayment = data?.ticket.paymentMethodType === "MANUAL"
+  const isManualPaymentRequested = Boolean(data?.ticket.manualPaymentRequestedAt)
   const hasDraftContent = message.trim().length > 0 || attachments.length > 0
   const canSend =
     hasDraftContent && !isClosed && !isUploading && !sendMutation.isPending
@@ -128,7 +146,11 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
   const isBuyerView = mode === "buyer"
   const adminToolsVisible = ticket.isAdmin && mode === "admin"
   const shouldLockBuyerChat =
-    !isSupportFlow && isBuyerView && isAwaitingPayment && !isClosed
+    !isSupportFlow &&
+    isBuyerView &&
+    isAwaitingPayment &&
+    !isClosed &&
+    (!isManualPayment || !isManualPaymentRequested)
   const showRawPaymentDetails = ticket.paymentMethodType === "MANUAL"
   const statusLabel = renderStatus(ticket.status)
   const createdAtLabel = format(new Date(ticket.createdAt), "dd MMMM · HH:mm", {
@@ -138,6 +160,8 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
     ? "Поддержка"
     : ticket.isPaid
       ? "Оплачено"
+      : ticket.paymentMethodType === "MANUAL" && ticket.manualPaymentRequestedAt
+        ? "На проверке"
       : "Ожидает оплату"
   const orderSteps = getOrderSteps(ticket)
   const headerActions = adminToolsVisible ? (
@@ -190,6 +214,27 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
       setIsUploading(false)
       event.target.value = ""
     }
+  }
+
+  function handleToggleBan() {
+    if (!ticket.createdBy) return
+
+    if (ticket.createdBy.isBanned) {
+      moderationMutation.mutate({
+        userId: ticket.createdBy.id,
+        isBanned: false,
+      })
+      return
+    }
+
+    const reason = window.prompt("Причина блокировки", ticket.createdBy.banReason || "")
+    if (reason === null) return
+
+    moderationMutation.mutate({
+      userId: ticket.createdBy.id,
+      isBanned: true,
+      banReason: reason.trim() || undefined,
+    })
   }
 
   if (shouldLockBuyerChat) {
@@ -343,10 +388,21 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                       </p>
                     </div>
                   ) : ticket.paymentMethodDetails && showRawPaymentDetails ? (
-                    <div className="mt-4 rounded-[18px] bg-[var(--color-surface)] p-4">
-                      <p className="whitespace-pre-wrap text-sm leading-6 text-[var(--color-text)]">
-                        {ticket.paymentMethodDetails}
-                      </p>
+                    <div className="mt-4 grid gap-3">
+                      <div className="rounded-[18px] bg-[var(--color-surface)] p-4">
+                        <p className="whitespace-pre-wrap text-sm leading-6 text-[var(--color-text)]">
+                          {ticket.paymentMethodDetails}
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => markManualPaidMutation.mutate()}
+                        disabled={markManualPaidMutation.isPending}
+                        className="flex items-center justify-center rounded-[18px] bg-[var(--color-accent)] px-4 py-3 text-sm font-semibold text-[var(--color-accent-text)] disabled:opacity-60"
+                      >
+                        {markManualPaidMutation.isPending ? "Отмечаю..." : "Я оплатил"}
+                      </button>
                     </div>
                   ) : null}
                 </section>
@@ -409,7 +465,9 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                     subtitle={
                       isSupportFlow
                         ? "Начни диалог с продавцом."
-                        : "После оплаты здесь будет нормальный диалог по заказу."
+                        : ticket.paymentMethodType === "MANUAL" && ticket.manualPaymentRequestedAt
+                          ? "Платёж отмечен. Можно уточнить детали у продавца."
+                          : "После оплаты здесь будет нормальный диалог по заказу."
                     }
                     icon={<CreditCard size={28} className="text-[var(--color-muted)]" />}
                   />
@@ -677,7 +735,33 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                     }
                     hint={ticket.assignedTo?.username ? `@${ticket.assignedTo.username}` : undefined}
                   />
+                  <InfoRow
+                    label="Аккаунт"
+                    value={ticket.createdBy?.isBanned ? "Заблокирован" : "Активен"}
+                    hint={ticket.createdBy?.isBanned ? ticket.createdBy.banReason || "Без причины" : undefined}
+                  />
                 </div>
+                {ticket.createdBy ? (
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={handleToggleBan}
+                      disabled={moderationMutation.isPending}
+                      className={cn(
+                        "rounded-full px-3 py-2 text-xs font-medium",
+                        ticket.createdBy.isBanned
+                          ? "bg-[var(--color-bg)] text-[var(--color-text)]"
+                          : "bg-[var(--color-destructive)]/14 text-[var(--color-destructive)]",
+                      )}
+                    >
+                      {moderationMutation.isPending
+                        ? "Сохраняю..."
+                        : ticket.createdBy.isBanned
+                          ? "Снять бан"
+                          : "Забанить"}
+                    </button>
+                  </div>
+                ) : null}
               </section>
             ) : null}
 
@@ -765,6 +849,17 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                   <div className="mt-4 rounded-[18px] bg-[var(--color-bg)] p-4">
                     <p className="whitespace-pre-wrap text-sm leading-6 text-[var(--color-text)]">
                       {ticket.paymentMethodDetails}
+                    </p>
+                  </div>
+                ) : null}
+
+                {ticket.paymentMethodType === "MANUAL" && ticket.manualPaymentRequestedAt && !ticket.isPaid ? (
+                  <div className="mt-4 rounded-[18px] bg-[var(--color-bg)] p-4">
+                    <p className="text-sm font-medium text-[var(--color-text)]">
+                      Платёж отправлен на проверку
+                    </p>
+                    <p className="mt-1 text-xs leading-5 text-[var(--color-muted)]">
+                      Админ проверит оплату и после подтверждения запустит выдачу.
                     </p>
                   </div>
                 ) : null}
@@ -884,6 +979,7 @@ function getOrderSteps(ticket: {
   cryptoInvoiceUrl: string | null
   cryptoInvoiceStatus: string | null
   deliveredKey: string | null
+  manualPaymentRequestedAt: string | null
 }) {
   const closedUnpaid = ticket.status === "CLOSED" && !ticket.isPaid
   const invoiceReady =
@@ -912,6 +1008,8 @@ function getOrderSteps(ticket: {
         ? "Заказ закрыт без оплаты"
         : paymentDone
           ? "Оплата подтверждена"
+          : ticket.paymentMethodType === "MANUAL" && ticket.manualPaymentRequestedAt
+            ? "Платёж на проверке"
           : "Ожидание оплаты",
       subtitle: closedUnpaid
         ? "Оплата не была подтверждена, заказ закрыт."
@@ -921,6 +1019,8 @@ function getOrderSteps(ticket: {
               ? "Crypto Pay получил оплату."
               : "Инвойс готов к оплате."
             : "Инвойс ещё создаётся или требует обновления."
+          : ticket.manualPaymentRequestedAt
+            ? "Покупатель отметил оплату. Нужна ручная проверка."
           : "Ожидается подтверждение по выбранным реквизитам.",
       state: stepStates[1],
     },

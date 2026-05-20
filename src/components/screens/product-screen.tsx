@@ -271,6 +271,12 @@ export function ProductScreen({ productId }: { productId: string }) {
                 )
               })}
             </div>
+
+            {ticketMutation.error ? (
+              <div className="mt-3 rounded-[18px] bg-[var(--color-bg)] px-4 py-3 text-sm text-[var(--color-destructive)]">
+                {ticketMutation.error.message}
+              </div>
+            ) : null}
           </section>
         </div>
       </ScreenBody>

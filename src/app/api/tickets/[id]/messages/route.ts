@@ -42,6 +42,21 @@ export async function POST(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
+    if (
+      user.role !== "ADMIN" &&
+      ticket.productId &&
+      !ticket.isPaid &&
+      (
+        ticket.paymentMethodType === "CRYPTO_PAY" ||
+        (ticket.paymentMethodType === "MANUAL" && !ticket.manualPaymentRequestedAt)
+      )
+    ) {
+      return NextResponse.json(
+        { error: "Чат откроется после отметки об оплате или подтверждения." },
+        { status: 400 },
+      )
+    }
+
     await prisma.ticketMessage.create({
       data: {
         ticketId: id,

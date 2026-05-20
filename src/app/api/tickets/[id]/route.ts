@@ -28,6 +28,7 @@ const schema = z.object({
   status: z.nativeEnum(TicketStatus).optional(),
   confirmPayment: z.boolean().optional(),
   refreshCryptoInvoice: z.boolean().optional(),
+  markManualPaid: z.boolean().optional(),
 })
 
 async function syncCryptoInvoice(ticketId: string) {
@@ -164,6 +165,7 @@ export async function GET(
       productTitle: ticket.product?.title || null,
       productCategory: ticket.product?.category || null,
       deliveredKey: ticket.deliveredKey?.value || null,
+      manualPaymentRequestedAt: ticket.manualPaymentRequestedAt?.toISOString() || null,
       isAdmin: user.role === "ADMIN",
       createdBy:
         user.role === "ADMIN"
@@ -173,6 +175,8 @@ export async function GET(
               lastName: ticket.createdBy.lastName,
               username: ticket.createdBy.username,
               photoUrl: ticket.createdBy.photoUrl,
+              isBanned: ticket.createdBy.isBanned,
+              banReason: ticket.createdBy.banReason,
             }
           : null,
       assignedTo:
@@ -232,6 +236,58 @@ export async function PATCH(
       }
 
       await syncCryptoInvoice(id)
+      return NextResponse.json({ ok: true })
+    }
+
+    if (payload.markManualPaid) {
+      if (user.role === "ADMIN" || ticket.createdById !== user.id) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+      }
+
+      const manualTicket = await prisma.ticket.findUnique({
+        where: { id },
+        select: {
+          id: true,
+          status: true,
+          isPaid: true,
+          paymentMethodType: true,
+          manualPaymentRequestedAt: true,
+        },
+      })
+
+      if (!manualTicket) {
+        return NextResponse.json({ error: "Not found" }, { status: 404 })
+      }
+
+      if (manualTicket.status === "CLOSED") {
+        return NextResponse.json({ error: "Заказ закрыт" }, { status: 400 })
+      }
+
+      if (manualTicket.paymentMethodType !== PaymentMethodType.MANUAL) {
+        return NextResponse.json({ error: "Этот заказ не требует ручной проверки" }, { status: 400 })
+      }
+
+      if (manualTicket.isPaid || manualTicket.manualPaymentRequestedAt) {
+        return NextResponse.json({ ok: true })
+      }
+
+      await prisma.$transaction(async (tx) => {
+        await tx.ticket.update({
+          where: { id },
+          data: {
+            manualPaymentRequestedAt: new Date(),
+          },
+        })
+
+        await tx.ticketMessage.create({
+          data: {
+            ticketId: id,
+            senderId: user.id,
+            body: "Покупатель отметил заказ как оплаченный. Нужна проверка.",
+          },
+        })
+      })
+
       return NextResponse.json({ ok: true })
     }
 

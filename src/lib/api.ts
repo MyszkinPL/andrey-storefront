@@ -90,6 +90,8 @@ export function getMe() {
       username: string | null
       photoUrl: string | null
       role: "USER" | "ADMIN"
+      isBanned?: boolean
+      banReason?: string | null
     }
     settings: {
       shopName: string
@@ -170,6 +172,7 @@ export function getTickets() {
       productCategory: string | null
       paymentMethodTitle: string | null
       paymentMethodType: PaymentMethodType | null
+      manualPaymentRequestedAt: string | null
       lastMessage: string | null
     }>
   }>("/api/tickets")
@@ -187,6 +190,7 @@ export function getTicket(id: string) {
       productTitle: string | null
       productCategory: string | null
       deliveredKey: string | null
+      manualPaymentRequestedAt: string | null
       isAdmin: boolean
       createdBy: {
         id: string
@@ -194,6 +198,8 @@ export function getTicket(id: string) {
         lastName: string | null
         username: string | null
         photoUrl: string | null
+        isBanned: boolean
+        banReason: string | null
       } | null
       assignedTo: {
         id: string
@@ -255,6 +261,23 @@ export function refreshCryptoInvoice(id: string) {
   return api<{ ok: true }>(`/api/tickets/${id}`, {
     method: "PATCH",
     body: JSON.stringify({ refreshCryptoInvoice: true }),
+  })
+}
+
+export function markManualTicketPaid(id: string) {
+  return api<{ ok: true }>(`/api/tickets/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ markManualPaid: true }),
+  })
+}
+
+export function updateAdminUserModeration(
+  id: string,
+  payload: { isBanned: boolean; banReason?: string },
+) {
+  return api<{ ok: true }>(`/api/admin/users/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
   })
 }
 

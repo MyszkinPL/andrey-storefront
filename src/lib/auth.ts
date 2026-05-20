@@ -58,6 +58,9 @@ export async function getCurrentUser() {
 export async function requireUser() {
   const user = await getCurrentUser()
   if (!user) throw new Error("Unauthorized")
+  if (user.isBanned) {
+    throw new Error(user.banReason ? `Аккаунт заблокирован: ${user.banReason}` : "Аккаунт заблокирован")
+  }
   return user
 }
 

@@ -14,9 +14,16 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!ready) return
 
-    fetch("/api/me", { credentials: "include" }).then((response) => {
+    fetch("/api/me", { credentials: "include" }).then(async (response) => {
       if (response.ok) {
         setState("ok")
+        return
+      }
+
+      if (response.status === 403) {
+        const body = (await response.json().catch(() => null)) as { error?: string } | null
+        setError(body?.error || "Доступ ограничен")
+        setState("error")
         return
       }
 
