@@ -1,6 +1,4 @@
 "use client"
-
-import Link from "next/link"
 import { useQuery } from "@tanstack/react-query"
 import { CreditCard, Package2, ShieldCheck, Ticket, Users } from "lucide-react"
 
@@ -61,13 +59,6 @@ export function AdminOverviewScreen() {
     },
   ]
 
-  const links = [
-    { href: "/admin/products", title: "Товары", subtitle: "Каталог, характеристики и ключи" },
-    { href: "/admin/tickets", title: "Заказы", subtitle: "Покупки, статусы, оплата и чат с клиентом" },
-    { href: "/admin/users", title: "Модерация", subtitle: "Баны, активные заказы и контроль покупателей" },
-    { href: "/admin/settings", title: "Настройки", subtitle: "Тексты магазина и способы оплаты" },
-  ]
-
   return (
     <Screen>
       <ScreenHeader title="Админка" subtitle="Управление магазином" />
@@ -104,19 +95,6 @@ export function AdminOverviewScreen() {
             })}
           </div>
         </section>
-
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          {links.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="ui-card p-4 transition-transform duration-150 active:scale-[0.99]"
-            >
-              <p className="text-sm font-semibold text-[var(--color-text)]">{item.title}</p>
-              <p className="mt-1 text-xs leading-5 text-[var(--color-muted)]">{item.subtitle}</p>
-            </Link>
-          ))}
-        </div>
       </ScreenBody>
     </Screen>
   )
