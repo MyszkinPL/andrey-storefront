@@ -27,21 +27,39 @@ export function ScreenHeader({
   title,
   subtitle,
   trailing,
+  inlineTrailingMobile = false,
 }: {
   title: React.ReactNode
   subtitle?: React.ReactNode
   trailing?: React.ReactNode
+  inlineTrailingMobile?: boolean
 }) {
   return (
     <header className="px-4 pb-3 pt-3">
-      <div className="ui-card flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-start sm:justify-between">
+      <div
+        className={cn(
+          "ui-card px-4 py-3",
+          inlineTrailingMobile
+            ? "flex items-start justify-between gap-3"
+            : "flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between",
+        )}
+      >
         <div className="min-w-0 flex-1">
           <div className="min-w-0 text-lg font-semibold text-[var(--color-text)]">{title}</div>
           {subtitle ? (
             <div className="mt-1 text-xs text-[var(--color-muted)]">{subtitle}</div>
           ) : null}
         </div>
-        {trailing ? <div className="w-full min-w-0 sm:w-auto sm:shrink-0">{trailing}</div> : null}
+        {trailing ? (
+          <div
+            className={cn(
+              "min-w-0 shrink-0",
+              inlineTrailingMobile ? "w-auto" : "w-full sm:w-auto",
+            )}
+          >
+            {trailing}
+          </div>
+        ) : null}
       </div>
     </header>
   )
