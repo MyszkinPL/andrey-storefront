@@ -34,14 +34,14 @@ export function ScreenHeader({
 }) {
   return (
     <header className="px-4 pb-3 pt-3">
-      <div className="ui-card flex flex-wrap items-start justify-between gap-3 px-4 py-3">
+      <div className="ui-card flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 flex-1">
           <div className="min-w-0 text-lg font-semibold text-[var(--color-text)]">{title}</div>
           {subtitle ? (
             <div className="mt-1 text-xs text-[var(--color-muted)]">{subtitle}</div>
           ) : null}
         </div>
-        {trailing ? <div className="shrink-0">{trailing}</div> : null}
+        {trailing ? <div className="w-full min-w-0 sm:w-auto sm:shrink-0">{trailing}</div> : null}
       </div>
     </header>
   )

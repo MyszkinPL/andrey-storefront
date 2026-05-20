@@ -194,12 +194,12 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
       : "Ожидает оплату"
   const orderSteps = getOrderSteps(ticket)
   const headerActions = adminToolsVisible ? (
-    <div className="flex flex-wrap justify-end gap-2">
+    <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-end">
       {!ticket.isPaid ? (
         <button
           onClick={() => paymentMutation.mutate()}
           disabled={ticket.status === "CANCELLED"}
-          className="rounded-full bg-[var(--color-accent)] px-3 py-1.5 text-xs font-semibold text-[var(--color-accent-text)]"
+          className="min-w-0 rounded-full bg-[var(--color-accent)] px-3 py-2 text-xs font-semibold text-[var(--color-accent-text)]"
         >
           Подтвердить оплату
         </button>
@@ -207,7 +207,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
       {ticket.status === "PAYMENT_REVIEW" ? (
         <button
           onClick={() => rejectManualPaymentMutation.mutate()}
-          className="rounded-full bg-[var(--color-bg)] px-3 py-1.5 text-xs font-medium text-[var(--color-text)]"
+          className="min-w-0 rounded-full bg-[var(--color-bg)] px-3 py-2 text-xs font-medium text-[var(--color-text)]"
         >
           Отклонить
         </button>
@@ -215,13 +215,13 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
       <button
         onClick={() => statusMutation.mutate("IN_PROGRESS")}
         disabled={ticket.status === "CANCELLED"}
-        className="rounded-full bg-[var(--color-bg)] px-3 py-1.5 text-xs font-medium text-[var(--color-text)]"
+        className="min-w-0 rounded-full bg-[var(--color-bg)] px-3 py-2 text-xs font-medium text-[var(--color-text)]"
       >
         В работу
       </button>
       <button
         onClick={() => statusMutation.mutate("CLOSED")}
-        className="rounded-full bg-[var(--color-bg)] px-3 py-1.5 text-xs font-medium text-[var(--color-text)]"
+        className="min-w-0 rounded-full bg-[var(--color-bg)] px-3 py-2 text-xs font-medium text-[var(--color-text)]"
       >
         Закрыть
       </button>
@@ -231,7 +231,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
           deleteTicketMutation.mutate()
         }}
         disabled={deleteTicketMutation.isPending}
-        className="inline-flex items-center gap-1 rounded-full bg-[var(--color-destructive)]/14 px-3 py-1.5 text-xs font-medium text-[var(--color-destructive)] disabled:opacity-60"
+        className="col-span-2 inline-flex min-w-0 items-center justify-center gap-1 rounded-full bg-[var(--color-destructive)]/14 px-3 py-2 text-xs font-medium text-[var(--color-destructive)] disabled:opacity-60 sm:col-auto"
       >
         <Trash2 size={12} />
         {deleteTicketMutation.isPending ? "Удаляю..." : "Удалить"}
@@ -524,24 +524,24 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
             ) : null}
 
             <section className="ui-card flex min-h-0 flex-col overflow-hidden">
-            <div className="border-b border-[var(--color-border)] px-4 py-3 sm:px-5">
-              <div className="flex flex-wrap items-center gap-2">
-                {!isSupportFlow ? (
-                  <StatusBadge kind={ticket.isPaid ? "paid" : "waiting"}>
-                    {paymentStateLabel}
-                  </StatusBadge>
-                ) : null}
-                <StatusBadge>{isSupportFlow ? "Поддержка" : statusLabel}</StatusBadge>
-                {ticket.paymentMethodTitle ? (
-                  <StatusBadge>{ticket.paymentMethodTitle}</StatusBadge>
-                ) : null}
-                <span className="ml-auto text-[11px] text-[var(--color-muted)]">
-                  {createdAtLabel}
-                </span>
+              <div className="border-b border-[var(--color-border)] px-4 py-3 sm:px-5">
+                <div className="flex flex-wrap items-center gap-2">
+                  {!isSupportFlow ? (
+                    <StatusBadge kind={ticket.isPaid ? "paid" : "waiting"}>
+                      {paymentStateLabel}
+                    </StatusBadge>
+                  ) : null}
+                  <StatusBadge>{isSupportFlow ? "Поддержка" : statusLabel}</StatusBadge>
+                  {ticket.paymentMethodTitle ? (
+                    <StatusBadge>{ticket.paymentMethodTitle}</StatusBadge>
+                  ) : null}
+                  <span className="ml-auto text-[11px] text-[var(--color-muted)]">
+                    {createdAtLabel}
+                  </span>
+                </div>
               </div>
-            </div>
 
-            <div className="flex min-h-0 flex-1 flex-col">
+              <div className="flex min-h-0 flex-1 flex-col">
               {groupedMessages.length === 0 ? (
                 <div className="flex min-h-0 flex-1 items-center justify-center p-4 sm:p-5">
                   <ScreenEmpty
@@ -557,7 +557,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                   />
                 </div>
               ) : (
-                <div className="grid min-h-0 flex-1 content-start gap-3 overflow-y-auto bg-[linear-gradient(180deg,color-mix(in_srgb,var(--color-bg)_78%,transparent),transparent_24%)] px-3 py-4 sm:px-4 sm:py-5">
+                <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain bg-[linear-gradient(180deg,color-mix(in_srgb,var(--color-bg)_78%,transparent),transparent_24%)] px-3 py-4 sm:px-4 sm:py-5">
                   {groupedMessages.map((entry) => {
                     const isAdmin = entry.senderRole === "ADMIN"
                     const senderRoleLabel = isAdmin ? "Админ" : "Покупатель"
@@ -576,7 +576,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
 
                         <div
                           className={cn(
-                            "max-w-[min(820px,92%)]",
+                            "max-w-[88%] sm:max-w-[76%]",
                             entry.attachments.length > 0 && "w-[min(360px,72vw)] sm:w-[min(420px,52vw)]",
                             entry.isMine && "flex flex-col items-end",
                           )}
@@ -673,9 +673,6 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                           </div>
                         </div>
 
-                        {entry.isMine ? (
-                          <SenderAvatar isAdmin={isAdmin} visible={entry.showMeta} />
-                        ) : null}
                       </div>
                     )
                   })}
@@ -770,8 +767,8 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                   </div>
                 </div>
               </div>
-            </div>
-          </section>
+              </div>
+            </section>
 
           {ticket.deliveredKey ? (
             <section className="ui-card shrink-0 p-4 sm:p-5">
