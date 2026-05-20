@@ -1,8 +1,9 @@
 "use client"
 
+import Link from "next/link"
 import { useMemo, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { Ban, Search, ShieldCheck, X } from "lucide-react"
+import { Ban, ChevronDown, History, Search, ShieldCheck, X } from "lucide-react"
 
 import { getAdminUsers, getMe, updateAdminUserModeration } from "@/lib/api"
 import { Screen, ScreenBody, ScreenEmpty, ScreenHeader } from "@/components/screen"
@@ -19,6 +20,7 @@ export function AdminUsersScreen() {
   const [search, setSearch] = useState("")
   const [filter, setFilter] = useState<"all" | "buyers" | "admins" | "banned">("all")
   const [banDraft, setBanDraft] = useState<null | { id: string; name: string }>(null)
+  const [expandedUserId, setExpandedUserId] = useState<string | null>(null)
 
   const moderationMutation = useMutation({
     mutationFn: (payload: { id: string; isBanned: boolean }) =>
@@ -168,6 +170,68 @@ export function AdminUsersScreen() {
                     }
                   />
                 </div>
+
+                {user.orders.length > 0 ? (
+                  <div className="mt-4">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setExpandedUserId((current) => (current === user.id ? null : user.id))
+                      }
+                      className="flex w-full items-center justify-between rounded-[18px] bg-[var(--color-bg)] px-4 py-3 text-left"
+                    >
+                      <div className="flex items-center gap-2">
+                        <History size={15} className="text-[var(--color-muted)]" />
+                        <span className="text-sm font-medium text-[var(--color-text)]">
+                          История заказов
+                        </span>
+                        <span className="text-xs text-[var(--color-muted)]">
+                          {user.orders.length}
+                        </span>
+                      </div>
+                      <ChevronDown
+                        size={16}
+                        className={cn(
+                          "text-[var(--color-muted)] transition-transform",
+                          expandedUserId === user.id && "rotate-180",
+                        )}
+                      />
+                    </button>
+
+                    {expandedUserId === user.id ? (
+                      <div className="mt-3 grid gap-2">
+                        {user.orders.map((order) => (
+                          <Link
+                            key={order.id}
+                            href={`/tickets/${order.id}`}
+                            className="rounded-[18px] bg-[var(--color-bg)] px-4 py-3 transition-colors hover:bg-[var(--color-surface)]"
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-medium text-[var(--color-text)]">
+                                  {order.productTitle || `Заказ #${order.number}`}
+                                </p>
+                                <p className="mt-1 text-xs text-[var(--color-muted)]">
+                                  #{order.number}
+                                  {order.productCategory ? ` · ${order.productCategory}` : ""}
+                                  {order.priceRub ? ` · ${order.priceRub.toLocaleString("ru-RU")} ₽` : ""}
+                                </p>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-xs font-medium text-[var(--color-text)]">
+                                  {renderOrderStatus(order.status, order.isPaid)}
+                                </p>
+                                <p className="mt-1 text-[11px] text-[var(--color-muted)]">
+                                  {new Date(order.updatedAt).toLocaleDateString("ru-RU")}
+                                </p>
+                              </div>
+                            </div>
+                          </Link>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
               </section>
             ))}
           </div>
@@ -242,4 +306,13 @@ function Metric({ label, value }: { label: string; value: string }) {
       <p className="mt-1 truncate text-sm font-medium text-[var(--color-text)]">{value}</p>
     </div>
   )
+}
+
+function renderOrderStatus(status: string, isPaid: boolean) {
+  if (status === "CANCELLED") return "Отменён"
+  if (status === "CLOSED") return isPaid ? "Завершён" : "Закрыт"
+  if (status === "PAYMENT_REVIEW") return "Проверка оплаты"
+  if (status === "IN_PROGRESS") return "В работе"
+  if (!isPaid) return "Ждёт оплату"
+  return "Оплачен"
 }

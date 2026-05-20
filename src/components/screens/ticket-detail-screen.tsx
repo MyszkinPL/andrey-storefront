@@ -16,6 +16,7 @@ import {
   RefreshCcw,
   SendHorizontal,
   Shield,
+  Trash2,
   User2,
   X,
 } from "lucide-react"
@@ -23,6 +24,7 @@ import {
 import {
   confirmTicketPayment,
   cancelOwnTicket,
+  deleteAdminTicket,
   getTicket,
   markManualTicketPaid,
   rejectManualTicketPayment,
@@ -107,6 +109,14 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
   const cancelOrderMutation = useMutation({
     mutationFn: () => cancelOwnTicket(ticketId),
     onSuccess: invalidate,
+  })
+
+  const deleteTicketMutation = useMutation({
+    mutationFn: () => deleteAdminTicket(ticketId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["tickets"] })
+      router.push("/admin/tickets")
+    },
   })
 
   const refreshMutation = useMutation({
@@ -214,6 +224,17 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
         className="rounded-full bg-[var(--color-bg)] px-3 py-1.5 text-xs font-medium text-[var(--color-text)]"
       >
         Закрыть
+      </button>
+      <button
+        onClick={() => {
+          if (!window.confirm("Удалить заказ из базы полностью?")) return
+          deleteTicketMutation.mutate()
+        }}
+        disabled={deleteTicketMutation.isPending}
+        className="inline-flex items-center gap-1 rounded-full bg-[var(--color-destructive)]/14 px-3 py-1.5 text-xs font-medium text-[var(--color-destructive)] disabled:opacity-60"
+      >
+        <Trash2 size={12} />
+        {deleteTicketMutation.isPending ? "Удаляю..." : "Удалить"}
       </button>
     </div>
   ) : null

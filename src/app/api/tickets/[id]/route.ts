@@ -428,3 +428,56 @@ export async function PATCH(
     )
   }
 }
+
+export async function DELETE(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    await requireUser().then((user) => {
+      if (user.role !== "ADMIN") throw new Error("Forbidden")
+      return user
+    })
+
+    const { id } = await params
+
+    const ticket = await prisma.ticket.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        deliveredKey: {
+          select: {
+            id: true,
+          },
+        },
+      },
+    })
+
+    if (!ticket) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 })
+    }
+
+    await prisma.$transaction(async (tx) => {
+      if (ticket.deliveredKey?.id) {
+        await tx.productKey.update({
+          where: { id: ticket.deliveredKey.id },
+          data: {
+            issuedAt: null,
+            issuedToTicketId: null,
+          },
+        })
+      }
+
+      await tx.ticket.delete({
+        where: { id },
+      })
+    })
+
+    return NextResponse.json({ ok: true })
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Ticket delete failed" },
+      { status: 400 },
+    )
+  }
+}

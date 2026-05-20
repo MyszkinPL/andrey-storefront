@@ -285,6 +285,12 @@ export function cancelOwnTicket(id: string) {
   })
 }
 
+export function deleteAdminTicket(id: string) {
+  return api<{ ok: true }>(`/api/tickets/${id}`, {
+    method: "DELETE",
+  })
+}
+
 export function updateAdminUserModeration(
   id: string,
   payload: { isBanned: boolean; banReason?: string },
@@ -310,6 +316,17 @@ export function getAdminUsers() {
       banReason: string | null
       activeOrderCount: number
       createdAt: string
+      orders: Array<{
+        id: string
+        number: number
+        status: TicketStatus
+        isPaid: boolean
+        createdAt: string
+        updatedAt: string
+        productTitle: string | null
+        productCategory: string | null
+        priceRub: number | null
+      }>
     }>
   }>("/api/admin/users")
 }
