@@ -57,10 +57,10 @@ export function AdminUsersScreen() {
 
   return (
     <Screen>
-      <ScreenHeader title="Модерация" subtitle="Баны, активность и контроль покупателей" />
+      <ScreenHeader title="Модерация" subtitle="Баны и доступ покупателей" />
 
-      <ScreenBody className="gap-4">
-        <section className="ui-card p-3 sm:p-4">
+      <ScreenBody className="gap-3">
+        <section className="ui-card p-3">
           <label className="ui-card-soft flex items-center gap-3 px-4 py-3">
             <Search size={16} className="text-[var(--color-muted)]" />
             <input
@@ -82,7 +82,7 @@ export function AdminUsersScreen() {
                 key={item.key}
                 onClick={() => setFilter(item.key)}
                 className={cn(
-                  "rounded-full px-4 py-2 text-sm transition-colors",
+                  "rounded-full px-4 py-2 text-xs sm:text-sm transition-colors",
                   filter === item.key
                     ? "bg-[var(--color-accent)] text-[var(--color-accent-text)]"
                     : "bg-[var(--color-bg)] text-[var(--color-muted)]",
@@ -144,7 +144,7 @@ export function AdminUsersScreen() {
                     }}
                     disabled={moderationMutation.isPending || user.role === "ADMIN"}
                     className={cn(
-                      "rounded-full px-3 py-2 text-xs font-medium",
+                      "rounded-full px-3 py-1.5 text-xs font-medium",
                       user.role === "ADMIN"
                         ? "bg-[var(--color-bg)] text-[var(--color-muted)]"
                         : user.isBanned
@@ -156,9 +156,8 @@ export function AdminUsersScreen() {
                   </button>
                 </div>
 
-                <div className="mt-4 grid gap-2 sm:grid-cols-3">
-                  <Metric label="Активных заказов" value={String(user.activeOrderCount)} />
-                  <Metric label="Telegram ID" value={user.telegramId} />
+                <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                  <Metric label="Активные заказы" value={String(user.activeOrderCount)} />
                   <Metric
                     label="Доступ"
                     value={
@@ -169,6 +168,7 @@ export function AdminUsersScreen() {
                           : "Активен"
                     }
                   />
+                  <Metric label="Telegram ID" value={user.telegramId} className="sm:col-span-2" />
                 </div>
 
                 {user.orders.length > 0 ? (
@@ -299,9 +299,17 @@ export function AdminUsersScreen() {
   )
 }
 
-function Metric({ label, value }: { label: string; value: string }) {
+function Metric({
+  label,
+  value,
+  className,
+}: {
+  label: string
+  value: string
+  className?: string
+}) {
   return (
-    <div className="rounded-[16px] bg-[var(--color-bg)] px-3 py-3">
+    <div className={cn("rounded-[16px] bg-[var(--color-bg)] px-3 py-3", className)}>
       <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-muted)]">{label}</p>
       <p className="mt-1 truncate text-sm font-medium text-[var(--color-text)]">{value}</p>
     </div>

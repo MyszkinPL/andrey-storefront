@@ -76,7 +76,9 @@ export function TicketsScreen() {
   return (
     <Screen>
       <ScreenHeader
+        inlineTrailingMobile
         title="Заказы"
+        subtitle={`${buckets.active.length} активных · ${buckets.waiting.length} ждут оплату`}
         trailing={
           <button
             onClick={() => quickSupport.mutate()}
@@ -96,7 +98,7 @@ export function TicketsScreen() {
         />
       ) : (
         <ScreenBody className="gap-4">
-          <section className="ui-card p-3 sm:p-4">
+          <section className="ui-card p-3">
             <div className="flex flex-wrap gap-2">
               {[
                 {
@@ -143,7 +145,7 @@ export function TicketsScreen() {
                     key={item.key}
                     onClick={() => setFilter(item.key)}
                     className={cn(
-                      "inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm transition-colors duration-150 active:scale-[0.97]",
+                      "inline-flex items-center gap-2 rounded-full px-3 py-2 text-xs sm:text-sm transition-colors duration-150 active:scale-[0.97]",
                       active
                         ? "bg-[var(--color-accent)] text-[var(--color-accent-text)]"
                         : "bg-[var(--color-bg)] text-[var(--color-muted)]",

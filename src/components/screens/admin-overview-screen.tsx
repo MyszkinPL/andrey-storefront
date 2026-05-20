@@ -70,32 +70,39 @@ export function AdminOverviewScreen() {
 
   return (
     <Screen>
-      <ScreenHeader title="Админка" subtitle="snx.sell control panel" />
+      <ScreenHeader title="Админка" subtitle="Товары, заказы, ключи и модерация" />
 
-      <ScreenBody className="gap-4">
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+      <ScreenBody className="gap-3">
+        <div className="grid grid-cols-2 gap-3 xl:grid-cols-5">
           {stats.map((item) => {
             const Icon = item.icon
             return (
               <div key={item.label} className="ui-card p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex size-10 items-center justify-center rounded-2xl bg-[var(--color-surface-2)] text-[var(--color-muted)]">
+                <div className="flex items-center gap-3">
+                  <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-[var(--color-surface-2)] text-[var(--color-muted)]">
                     <Icon size={18} />
                   </div>
-                  <span className="ui-pill">live</span>
+                  <div className="min-w-0">
+                    <p className="text-[11px] text-[var(--color-muted)]">{item.label}</p>
+                    <p className="mt-1 text-3xl font-semibold leading-none text-[var(--color-text)]">
+                      {item.value}
+                    </p>
+                  </div>
                 </div>
-                <p className="mt-4 text-xs text-[var(--color-muted)]">{item.label}</p>
-                <p className="mt-1 text-3xl font-semibold text-[var(--color-text)]">{item.value}</p>
               </div>
             )
           })}
         </div>
 
-        <div className="grid gap-3 xl:grid-cols-4">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           {links.map((item) => (
-            <Link key={item.href} href={item.href} className="ui-card p-4 transition-transform duration-150 active:scale-[0.99]">
+            <Link
+              key={item.href}
+              href={item.href}
+              className="ui-card p-4 transition-transform duration-150 active:scale-[0.99]"
+            >
               <p className="text-sm font-semibold text-[var(--color-text)]">{item.title}</p>
-              <p className="mt-1 text-sm leading-6 text-[var(--color-muted)]">{item.subtitle}</p>
+              <p className="mt-1 text-xs leading-5 text-[var(--color-muted)]">{item.subtitle}</p>
             </Link>
           ))}
         </div>

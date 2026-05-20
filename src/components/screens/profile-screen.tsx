@@ -20,42 +20,43 @@ export function ProfileScreen() {
   return (
     <Screen>
       <ScreenHeader
-        title={meData?.user.firstName || "Профиль"}
-        subtitle={meData?.user.username ? `@${meData.user.username}` : "Telegram customer"}
+        inlineTrailingMobile
+        title={
+          <div>
+            <p>{meData?.user.firstName || "Профиль"}</p>
+            <p className="mt-1 text-xs font-normal text-[var(--color-muted)]">
+              {meData?.user.role === "ADMIN" ? "Администратор" : "Покупатель"}
+            </p>
+          </div>
+        }
+        subtitle={meData?.user.username ? `@${meData.user.username}` : "Telegram"}
+        trailing={
+          meData?.user.photoUrl ? (
+            <Avatar size={44} src={meData.user.photoUrl} alt={meData.user.firstName} />
+          ) : (
+            <div className="flex size-11 items-center justify-center rounded-full bg-[var(--color-surface-2)] text-sm font-semibold text-[var(--color-text)]">
+              {(meData?.user.firstName || "S").slice(0, 1).toUpperCase()}
+            </div>
+          )
+        }
       />
 
-      <ScreenBody className="xl:grid-cols-[minmax(0,320px)_minmax(0,1fr)]">
-        <section className="ui-card p-4">
-          <div className="flex items-center gap-3">
-            {meData?.user.photoUrl ? (
-              <Avatar size={48} src={meData.user.photoUrl} alt={meData.user.firstName} />
-            ) : (
-              <div className="flex size-12 items-center justify-center rounded-full bg-[var(--color-surface-2)] text-base font-semibold text-[var(--color-text)]">
-                {(meData?.user.firstName || "S").slice(0, 1).toUpperCase()}
-              </div>
-            )}
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-[var(--color-text)]">
-                {meData?.user.firstName || "Покупатель"}
+      <ScreenBody className="gap-3 xl:grid-cols-[minmax(0,320px)_minmax(0,1fr)]">
+        <section className="ui-card p-4 xl:col-span-2">
+          <div className="flex items-start gap-2">
+            <BadgeInfo size={16} className="text-[var(--color-muted)]" />
+            <div>
+              <p className="text-sm font-semibold text-[var(--color-text)]">Поддержка</p>
+              <p className="mt-2 text-sm leading-6 text-[var(--color-muted)]">
+                {meData?.settings.supportIntro || "Связь с продавцом по заказам внутри магазина."}
               </p>
-              <p className="mt-1 text-xs text-[var(--color-muted)]">
-                {meData?.user.role === "ADMIN" ? "Администратор" : "Покупатель"}
-              </p>
+              {meData?.settings.supportUsername ? (
+                <p className="mt-2 text-sm text-[var(--color-text)]">
+                  @{meData.settings.supportUsername}
+                </p>
+              ) : null}
             </div>
           </div>
-        </section>
-
-        <section className="ui-card p-4">
-          <div className="mb-3 flex items-center gap-2">
-            <BadgeInfo size={16} className="text-[var(--color-muted)]" />
-            <p className="text-sm font-semibold text-[var(--color-text)]">Поддержка</p>
-          </div>
-          <p className="text-sm leading-6 text-[var(--color-muted)]">
-            {meData?.settings.supportIntro || "Связь с продавцом по заказам внутри магазина."}
-          </p>
-          {meData?.settings.supportUsername ? (
-            <p className="mt-3 text-sm text-[var(--color-text)]">@{meData.settings.supportUsername}</p>
-          ) : null}
         </section>
 
         {methods.length === 0 && !hasCryptoPay ? (
@@ -73,7 +74,7 @@ export function ProfileScreen() {
                   <PaymentMethodIcon iconDataUrl={method.iconDataUrl} title={method.title} />
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-[var(--color-text)]">{method.title}</p>
-                    <p className="mt-1 whitespace-pre-wrap text-xs leading-5 text-[var(--color-muted)]">
+                    <p className="mt-1 line-clamp-2 whitespace-pre-wrap text-xs leading-5 text-[var(--color-muted)]">
                       {method.details}
                     </p>
                   </div>
