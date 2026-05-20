@@ -8,6 +8,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { format } from "date-fns"
 import { ru } from "date-fns/locale"
 import {
+  ChevronDown,
   CheckCheck,
   CircleDashed,
   CreditCard,
@@ -65,6 +66,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
   const [isUploading, setIsUploading] = useState(false)
   const [previewImage, setPreviewImage] = useState<string | null>(null)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [isMobileDetailsOpen, setIsMobileDetailsOpen] = useState(false)
   const { data } = useQuery({
     queryKey: ["ticket", ticketId],
     queryFn: () => getTicket(ticketId),
@@ -520,6 +522,28 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
       ) : null}
 
       <div className="flex flex-1 flex-col px-4 pb-4 xl:min-h-0">
+        {!isSupportFlow ? (
+          <button
+            type="button"
+            onClick={() => setIsMobileDetailsOpen((current) => !current)}
+            className="ui-card mb-4 flex items-center justify-between px-4 py-3 text-left xl:hidden"
+          >
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-[var(--color-text)]">Детали заказа</p>
+              <p className="mt-1 text-xs text-[var(--color-muted)]">
+                {paymentStateLabel} · {ticket.paymentMethodTitle || "Без способа оплаты"}
+              </p>
+            </div>
+            <ChevronDown
+              size={16}
+              className={cn(
+                "shrink-0 text-[var(--color-muted)] transition-transform",
+                isMobileDetailsOpen && "rotate-180",
+              )}
+            />
+          </button>
+        ) : null}
+
         <div
           className={cn(
             "grid gap-4 xl:min-h-0 xl:flex-1",
@@ -805,7 +829,12 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
         </div>
 
           {!isSupportFlow ? (
-            <aside className="order-2 grid content-start gap-4 xl:order-2 xl:min-h-0 xl:overflow-y-auto">
+            <aside
+              className={cn(
+                "order-2 content-start gap-4 xl:order-2 xl:min-h-0 xl:overflow-y-auto",
+                isMobileDetailsOpen ? "grid" : "hidden xl:grid",
+              )}
+            >
             <section className="ui-card shrink-0 p-4">
               <p className="text-sm font-semibold text-[var(--color-text)]">Статус заказа</p>
               <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
