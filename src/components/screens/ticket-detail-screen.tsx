@@ -1,6 +1,7 @@
 "use client"
 
 import Image from "next/image"
+import Link from "next/link"
 import { useMemo, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
@@ -8,6 +9,7 @@ import { format } from "date-fns"
 import { ru } from "date-fns/locale"
 import {
   CheckCheck,
+  CircleDashed,
   CreditCard,
   ExternalLink,
   ImagePlus,
@@ -20,11 +22,12 @@ import {
 
 import {
   confirmTicketPayment,
+  cancelOwnTicket,
   getTicket,
   markManualTicketPaid,
+  rejectManualTicketPayment,
   refreshCryptoInvoice,
   sendTicketMessage,
-  updateAdminUserModeration,
   updateTicketStatus,
   type TicketMessageAttachment,
 } from "@/lib/api"
@@ -39,6 +42,12 @@ const HIDDEN_SYSTEM_PREFIXES = [
   "Crypto invoice создан.",
   "Не удалось автоматически создать crypto invoice.",
   "Оплата подтверждена. Начинаю выдачу.",
+  "Покупатель отметил заказ как оплаченный.",
+  "Проверка оплаты отклонена.",
+  "Покупатель отменил заказ.",
+  "Заказ отменён: аккаунт пользователя заблокирован.",
+  "Автовыдача ключа:",
+  "Оплата подтверждена, но свободных ключей сейчас нет.",
 ]
 
 const MAX_ATTACHMENTS = 6
@@ -90,6 +99,16 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
     onSuccess: invalidate,
   })
 
+  const rejectManualPaymentMutation = useMutation({
+    mutationFn: () => rejectManualTicketPayment(ticketId),
+    onSuccess: invalidate,
+  })
+
+  const cancelOrderMutation = useMutation({
+    mutationFn: () => cancelOwnTicket(ticketId),
+    onSuccess: invalidate,
+  })
+
   const refreshMutation = useMutation({
     mutationFn: () => refreshCryptoInvoice(ticketId),
     onSuccess: invalidate,
@@ -100,16 +119,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
     onSuccess: invalidate,
   })
 
-  const moderationMutation = useMutation({
-    mutationFn: (payload: { userId: string; isBanned: boolean; banReason?: string }) =>
-      updateAdminUserModeration(payload.userId, {
-        isBanned: payload.isBanned,
-        banReason: payload.banReason,
-      }),
-    onSuccess: invalidate,
-  })
-
-  const isClosed = data?.ticket.status === "CLOSED"
+  const isClosed = ["CLOSED", "CANCELLED"].includes(data?.ticket.status || "")
   const isAwaitingPayment = !data?.ticket?.isPaid
   const isManualPayment = data?.ticket.paymentMethodType === "MANUAL"
   const isManualPaymentRequested = Boolean(data?.ticket.manualPaymentRequestedAt)
@@ -136,6 +146,13 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
         messages[index - 1]?.senderRole !== entry.senderRole,
     }))
   }, [visibleMessages])
+  const systemMessages = useMemo(
+    () =>
+      (data?.ticket?.messages ?? []).filter((entry) =>
+        HIDDEN_SYSTEM_PREFIXES.some((prefix) => entry.body.startsWith(prefix)),
+      ),
+    [data?.ticket?.messages],
+  )
 
   useBackButton(() => router.back())
 
@@ -160,8 +177,10 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
     ? "Поддержка"
     : ticket.isPaid
       ? "Оплачено"
-      : ticket.paymentMethodType === "MANUAL" && ticket.manualPaymentRequestedAt
+      : ticket.status === "PAYMENT_REVIEW"
         ? "На проверке"
+        : ticket.status === "CANCELLED"
+          ? "Отменён"
       : "Ожидает оплату"
   const orderSteps = getOrderSteps(ticket)
   const headerActions = adminToolsVisible ? (
@@ -169,13 +188,23 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
       {!ticket.isPaid ? (
         <button
           onClick={() => paymentMutation.mutate()}
+          disabled={ticket.status === "CANCELLED"}
           className="rounded-full bg-[var(--color-accent)] px-3 py-1.5 text-xs font-semibold text-[var(--color-accent-text)]"
         >
           Подтвердить оплату
         </button>
       ) : null}
+      {ticket.status === "PAYMENT_REVIEW" ? (
+        <button
+          onClick={() => rejectManualPaymentMutation.mutate()}
+          className="rounded-full bg-[var(--color-bg)] px-3 py-1.5 text-xs font-medium text-[var(--color-text)]"
+        >
+          Отклонить
+        </button>
+      ) : null}
       <button
         onClick={() => statusMutation.mutate("IN_PROGRESS")}
+        disabled={ticket.status === "CANCELLED"}
         className="rounded-full bg-[var(--color-bg)] px-3 py-1.5 text-xs font-medium text-[var(--color-text)]"
       >
         В работу
@@ -216,27 +245,6 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
     }
   }
 
-  function handleToggleBan() {
-    if (!ticket.createdBy) return
-
-    if (ticket.createdBy.isBanned) {
-      moderationMutation.mutate({
-        userId: ticket.createdBy.id,
-        isBanned: false,
-      })
-      return
-    }
-
-    const reason = window.prompt("Причина блокировки", ticket.createdBy.banReason || "")
-    if (reason === null) return
-
-    moderationMutation.mutate({
-      userId: ticket.createdBy.id,
-      isBanned: true,
-      banReason: reason.trim() || undefined,
-    })
-  }
-
   if (shouldLockBuyerChat) {
     return (
       <Screen noTabBar className="pb-6">
@@ -275,7 +283,10 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                   {
                     title: "Подтверждение",
                     subtitle: "Авто / вручную",
-                    state: "upcoming" as const,
+                    state:
+                      ticket.status === "PAYMENT_REVIEW"
+                        ? ("current" as const)
+                        : ("upcoming" as const),
                   },
                   {
                     title: "Выдача",
@@ -323,7 +334,9 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                       <p className="mt-1 text-xs text-[var(--color-muted)]">
                         {ticket.paymentMethodType === "CRYPTO_PAY"
                           ? "Оплата через Crypto Bot"
-                          : "Реквизиты для оплаты"}
+                          : ticket.status === "PAYMENT_REVIEW"
+                            ? "Платёж отмечен, ждём проверку"
+                            : "Реквизиты для оплаты"}
                       </p>
                     </div>
                     {ticket.paymentMethodType === "CRYPTO_PAY" ? (
@@ -398,17 +411,48 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                       <button
                         type="button"
                         onClick={() => markManualPaidMutation.mutate()}
-                        disabled={markManualPaidMutation.isPending}
+                        disabled={markManualPaidMutation.isPending || Boolean(ticket.manualPaymentRequestedAt)}
                         className="flex items-center justify-center rounded-[18px] bg-[var(--color-accent)] px-4 py-3 text-sm font-semibold text-[var(--color-accent-text)] disabled:opacity-60"
                       >
-                        {markManualPaidMutation.isPending ? "Отмечаю..." : "Я оплатил"}
+                        {markManualPaidMutation.isPending
+                          ? "Отмечаю..."
+                          : ticket.manualPaymentRequestedAt
+                            ? "Платёж отправлен на проверку"
+                            : "Я оплатил"}
                       </button>
                     </div>
                   ) : null}
                 </section>
               ) : null}
+
+              {!ticket.isPaid && ticket.status !== "CANCELLED" ? (
+                <button
+                  type="button"
+                  onClick={() => cancelOrderMutation.mutate()}
+                  disabled={cancelOrderMutation.isPending}
+                  className="rounded-[18px] bg-[var(--color-surface)] px-4 py-3 text-sm font-medium text-[var(--color-destructive)] disabled:opacity-60"
+                >
+                  {cancelOrderMutation.isPending ? "Отменяю..." : "Отменить заказ"}
+                </button>
+              ) : null}
             </div>
           </section>
+
+          {systemMessages.length > 0 ? (
+            <section className="ui-card p-4 sm:p-5">
+              <p className="text-sm font-semibold text-[var(--color-text)]">История заказа</p>
+              <div className="mt-4 grid gap-2">
+                {systemMessages.map((entry) => (
+                  <div key={entry.id} className="rounded-[18px] bg-[var(--color-bg)] px-4 py-3">
+                    <p className="text-sm text-[var(--color-text)]">{entry.body}</p>
+                    <p className="mt-1 text-[11px] text-[var(--color-muted)]">
+                      {format(new Date(entry.createdAt), "dd MMM · HH:mm", { locale: ru })}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </section>
+          ) : null}
         </div>
       </Screen>
     )
@@ -439,6 +483,25 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
           )}
         >
           <div className="order-2 grid min-h-0 gap-4 xl:order-1">
+            {systemMessages.length > 0 ? (
+              <section className="ui-card p-4">
+                <div className="flex items-center gap-2">
+                  <CircleDashed size={16} className="text-[var(--color-muted)]" />
+                  <p className="text-sm font-semibold text-[var(--color-text)]">Системные события</p>
+                </div>
+                <div className="mt-3 grid gap-2">
+                  {systemMessages.map((entry) => (
+                    <div key={entry.id} className="rounded-[18px] bg-[var(--color-bg)] px-4 py-3">
+                      <p className="text-sm text-[var(--color-text)]">{entry.body}</p>
+                      <p className="mt-1 text-[11px] text-[var(--color-muted)]">
+                        {format(new Date(entry.createdAt), "dd MMM · HH:mm", { locale: ru })}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ) : null}
+
             <section className="ui-card flex min-h-0 flex-col overflow-hidden">
             <div className="border-b border-[var(--color-border)] px-4 py-3 sm:px-5">
               <div className="flex flex-wrap items-center gap-2">
@@ -743,23 +806,12 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                 </div>
                 {ticket.createdBy ? (
                   <div className="mt-4 flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={handleToggleBan}
-                      disabled={moderationMutation.isPending}
-                      className={cn(
-                        "rounded-full px-3 py-2 text-xs font-medium",
-                        ticket.createdBy.isBanned
-                          ? "bg-[var(--color-bg)] text-[var(--color-text)]"
-                          : "bg-[var(--color-destructive)]/14 text-[var(--color-destructive)]",
-                      )}
+                    <Link
+                      href="/admin/users"
+                      className="rounded-full bg-[var(--color-bg)] px-3 py-2 text-xs font-medium text-[var(--color-text)]"
                     >
-                      {moderationMutation.isPending
-                        ? "Сохраняю..."
-                        : ticket.createdBy.isBanned
-                          ? "Снять бан"
-                          : "Забанить"}
-                    </button>
+                      Открыть модерацию
+                    </Link>
                   </div>
                 ) : null}
               </section>
@@ -945,6 +997,17 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                     </p>
                   </div>
                 ) : null}
+
+                {isBuyerView && !ticket.isPaid && !["CLOSED", "CANCELLED"].includes(ticket.status) ? (
+                  <button
+                    type="button"
+                    onClick={() => cancelOrderMutation.mutate()}
+                    disabled={cancelOrderMutation.isPending}
+                    className="mt-4 w-full rounded-[18px] bg-[var(--color-surface)] px-4 py-3 text-sm font-medium text-[var(--color-destructive)] disabled:opacity-60"
+                  >
+                    {cancelOrderMutation.isPending ? "Отменяю..." : "Отменить заказ"}
+                  </button>
+                ) : null}
               </section>
             ) : null}
           </aside>
@@ -963,10 +1026,14 @@ function renderStatus(status: string) {
   switch (status) {
     case "OPEN":
       return "Открыт"
+    case "PAYMENT_REVIEW":
+      return "Проверка оплаты"
     case "IN_PROGRESS":
       return "В работе"
     case "CLOSED":
       return "Закрыт"
+    case "CANCELLED":
+      return "Отменён"
     default:
       return status
   }
@@ -982,13 +1049,16 @@ function getOrderSteps(ticket: {
   manualPaymentRequestedAt: string | null
 }) {
   const closedUnpaid = ticket.status === "CLOSED" && !ticket.isPaid
+  const cancelled = ticket.status === "CANCELLED"
   const invoiceReady =
     ticket.paymentMethodType === "CRYPTO_PAY" ? Boolean(ticket.cryptoInvoiceUrl) : true
   const paymentDone = ticket.isPaid
   const workStarted = ticket.status === "IN_PROGRESS" || ticket.status === "CLOSED"
   const fulfilled = Boolean(ticket.deliveredKey) || ticket.status === "CLOSED"
 
-  const stepStates = closedUnpaid
+  const stepStates = cancelled
+    ? (["done", "upcoming", "upcoming", "done"] as const)
+    : closedUnpaid
     ? (["done", "current", "upcoming", "upcoming"] as const)
     : ([
         "done",
@@ -1004,14 +1074,18 @@ function getOrderSteps(ticket: {
       state: stepStates[0],
     },
     {
-      title: closedUnpaid
+      title: cancelled
+        ? "Оплата отменена"
+        : closedUnpaid
         ? "Заказ закрыт без оплаты"
         : paymentDone
           ? "Оплата подтверждена"
           : ticket.paymentMethodType === "MANUAL" && ticket.manualPaymentRequestedAt
             ? "Платёж на проверке"
           : "Ожидание оплаты",
-      subtitle: closedUnpaid
+      subtitle: cancelled
+        ? "Заказ отменён до подтверждения оплаты."
+        : closedUnpaid
         ? "Оплата не была подтверждена, заказ закрыт."
         : ticket.paymentMethodType === "CRYPTO_PAY"
           ? invoiceReady
@@ -1025,12 +1099,16 @@ function getOrderSteps(ticket: {
       state: stepStates[1],
     },
     {
-      title: closedUnpaid
+      title: cancelled
+        ? "Обработка остановлена"
+        : closedUnpaid
         ? "Обработка не начата"
         : workStarted
           ? "Заказ в работе"
           : "Ожидает обработки",
-      subtitle: closedUnpaid
+      subtitle: cancelled
+        ? "Заказ отменён, выдача не начнётся."
+        : closedUnpaid
         ? "Этот этап не начался, потому что оплаты не было."
         : fulfilled
           ? "Продавец завершил выдачу."
@@ -1040,12 +1118,16 @@ function getOrderSteps(ticket: {
       state: stepStates[2],
     },
     {
-      title: closedUnpaid
+      title: cancelled
+        ? "Заказ отменён"
+        : closedUnpaid
         ? "Выдача отменена"
         : fulfilled
           ? "Заказ завершён"
           : "Выдача / закрытие",
-      subtitle: closedUnpaid
+      subtitle: cancelled
+        ? "Этот заказ больше не активен."
+        : closedUnpaid
         ? "Товар не выдавался, потому что заказ закрыт без оплаты."
         : ticket.deliveredKey
           ? "Ключ уже выдан в этом заказе."

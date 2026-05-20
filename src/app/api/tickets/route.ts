@@ -59,7 +59,7 @@ export async function POST(request: Request) {
         where: {
           createdById: user.id,
           productId: { not: null },
-          status: { not: "CLOSED" },
+          status: { notIn: ["CLOSED", "CANCELLED"] },
         },
       })
 

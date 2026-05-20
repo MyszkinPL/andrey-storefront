@@ -3,13 +3,13 @@
 import Link from "next/link"
 import { useMemo, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
-import { Clock3, Headset, Receipt, ShieldCheck } from "lucide-react"
+import { CircleDashed, Clock3, Headset, Receipt, ShieldCheck } from "lucide-react"
 
 import { getTickets } from "@/lib/api"
 import { Screen, ScreenBody, ScreenEmpty, ScreenHeader } from "@/components/screen"
 import { cn } from "@/lib/cn"
 
-type FilterKey = "all" | "waiting" | "work" | "support" | "closed"
+type FilterKey = "all" | "waiting" | "review" | "work" | "support" | "closed"
 
 export function AdminTicketsScreen() {
   const { data } = useQuery({
@@ -23,18 +23,27 @@ export function AdminTicketsScreen() {
   const buckets = useMemo(() => {
     const support = tickets.filter(isSupport)
     const waiting = tickets.filter(
-      (ticket) => !isSupport(ticket) && !ticket.isPaid && ticket.status !== "CLOSED",
+      (ticket) =>
+        !isSupport(ticket) &&
+        !ticket.isPaid &&
+        ticket.status !== "CLOSED" &&
+        ticket.status !== "CANCELLED" &&
+        ticket.status !== "PAYMENT_REVIEW",
+    )
+    const review = tickets.filter(
+      (ticket) => !isSupport(ticket) && ticket.status === "PAYMENT_REVIEW",
     )
     const work = tickets.filter(
       (ticket) => !isSupport(ticket) && ticket.isPaid && ticket.status !== "CLOSED",
     )
     const closed = tickets.filter(
-      (ticket) => !isSupport(ticket) && ticket.status === "CLOSED",
+      (ticket) => !isSupport(ticket) && ["CLOSED", "CANCELLED"].includes(ticket.status),
     )
 
     return {
       all: tickets,
       waiting,
+      review,
       work,
       support,
       closed,
@@ -69,6 +78,12 @@ export function AdminTicketsScreen() {
                   label: "Ждут оплату",
                   count: buckets.waiting.length,
                   icon: <Receipt size={14} />,
+                },
+                {
+                  key: "review" as const,
+                  label: "На проверке",
+                  count: buckets.review.length,
+                  icon: <CircleDashed size={14} />,
                 },
                 {
                   key: "work" as const,
@@ -195,6 +210,10 @@ function renderStatus(status: string) {
       return "В работе"
     case "CLOSED":
       return "Закрыт"
+    case "PAYMENT_REVIEW":
+      return "Проверка оплаты"
+    case "CANCELLED":
+      return "Отменён"
     default:
       return status
   }
@@ -202,13 +221,10 @@ function renderStatus(status: string) {
 
 function renderPrimaryState(ticket: Awaited<ReturnType<typeof getTickets>>["tickets"][number]) {
   if (isSupport(ticket)) return "Поддержка"
-  if (
-    ticket.paymentMethodType === "MANUAL" &&
-    !ticket.isPaid &&
-    ticket.manualPaymentRequestedAt
-  ) {
+  if (ticket.status === "PAYMENT_REVIEW") {
     return "На проверке"
   }
+  if (ticket.status === "CANCELLED") return "Отменён"
   if (ticket.status === "CLOSED" && !ticket.isPaid) return "Не оплачен"
   if (!ticket.isPaid) return "Ждёт оплату"
   if (ticket.status === "IN_PROGRESS") return "Выдача"

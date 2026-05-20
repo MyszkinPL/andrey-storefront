@@ -2,9 +2,9 @@
 
 import Link from "next/link"
 import { useQuery } from "@tanstack/react-query"
-import { CreditCard, Package2, ShieldCheck, Ticket } from "lucide-react"
+import { CreditCard, Package2, ShieldCheck, Ticket, Users } from "lucide-react"
 
-import { getMe, getPaymentMethods, getProducts, getTickets } from "@/lib/api"
+import { getAdminUsers, getMe, getPaymentMethods, getProducts, getTickets } from "@/lib/api"
 import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
 
 export function AdminOverviewScreen() {
@@ -14,6 +14,10 @@ export function AdminOverviewScreen() {
   const { data: paymentData } = useQuery({
     queryKey: ["payment-methods"],
     queryFn: getPaymentMethods,
+  })
+  const { data: usersData } = useQuery({
+    queryKey: ["admin-users"],
+    queryFn: getAdminUsers,
   })
 
   if (meData?.user.role !== "ADMIN") {
@@ -32,7 +36,8 @@ export function AdminOverviewScreen() {
     },
     {
       label: "Активные заказы",
-      value: ticketsData?.tickets.filter((item) => item.status !== "CLOSED").length || 0,
+      value:
+        ticketsData?.tickets.filter((item) => !["CLOSED", "CANCELLED"].includes(item.status)).length || 0,
       icon: Ticket,
     },
     {
@@ -49,11 +54,17 @@ export function AdminOverviewScreen() {
       value: paymentData?.paymentMethods.length || 0,
       icon: CreditCard,
     },
+    {
+      label: "Забаненные",
+      value: usersData?.users.filter((item) => item.isBanned).length || 0,
+      icon: Users,
+    },
   ]
 
   const links = [
     { href: "/admin/products", title: "Товары", subtitle: "Каталог, характеристики и ключи" },
     { href: "/admin/tickets", title: "Заказы", subtitle: "Покупки, статусы, оплата и чат с клиентом" },
+    { href: "/admin/users", title: "Модерация", subtitle: "Баны, активные заказы и контроль покупателей" },
     { href: "/admin/settings", title: "Настройки", subtitle: "Тексты магазина и способы оплаты" },
   ]
 
@@ -62,7 +73,7 @@ export function AdminOverviewScreen() {
       <ScreenHeader title="Админка" subtitle="snx.sell control panel" />
 
       <ScreenBody className="gap-4">
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
           {stats.map((item) => {
             const Icon = item.icon
             return (
@@ -80,7 +91,7 @@ export function AdminOverviewScreen() {
           })}
         </div>
 
-        <div className="grid gap-3 xl:grid-cols-3">
+        <div className="grid gap-3 xl:grid-cols-4">
           {links.map((item) => (
             <Link key={item.href} href={item.href} className="ui-card p-4 transition-transform duration-150 active:scale-[0.99]">
               <p className="text-sm font-semibold text-[var(--color-text)]">{item.title}</p>

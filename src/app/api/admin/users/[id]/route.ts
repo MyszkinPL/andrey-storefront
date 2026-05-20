@@ -15,7 +15,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    await requireAdmin()
+    const admin = await requireAdmin()
     const { id } = await params
     const payload = schema.parse(await request.json())
 
@@ -43,6 +43,41 @@ export async function PATCH(
         banReason: payload.isBanned ? payload.banReason || null : null,
       },
     })
+
+    if (payload.isBanned) {
+      const activeTickets = await prisma.ticket.findMany({
+        where: {
+          createdById: id,
+          status: { notIn: ["CLOSED", "CANCELLED"] },
+        },
+        select: {
+          id: true,
+        },
+      })
+
+      if (activeTickets.length > 0) {
+        await prisma.$transaction(async (tx) => {
+          await tx.ticket.updateMany({
+            where: {
+              createdById: id,
+              status: { notIn: ["CLOSED", "CANCELLED"] },
+            },
+            data: {
+              status: "CANCELLED",
+              closedAt: new Date(),
+            },
+          })
+
+          await tx.ticketMessage.createMany({
+            data: activeTickets.map((ticket) => ({
+              ticketId: ticket.id,
+              senderId: admin.id,
+              body: "Заказ отменён: аккаунт пользователя заблокирован.",
+            })),
+          })
+        })
+      }
+    }
 
     return NextResponse.json({ ok: true })
   } catch (error) {

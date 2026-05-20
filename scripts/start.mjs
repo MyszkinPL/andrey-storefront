@@ -110,7 +110,7 @@ async function ensureBootstrapData() {
         shopName: "snx.sell",
         welcomeText: "Лицензии, ключи и lifetime-доступы через Telegram.",
         supportIntro:
-          "Выбери товар, открой тикет и получи реквизиты. После подтверждения оплаты продавец выдаст доступ или ключ.",
+          "Выбери товар, открой заказ и получи оплату или инвойс. После подтверждения продавец выдаст доступ или ключ.",
         cryptoPayFiat: "RUB",
       },
       create: {
@@ -118,7 +118,7 @@ async function ensureBootstrapData() {
         shopName: "snx.sell",
         welcomeText: "Лицензии, ключи и lifetime-доступы через Telegram.",
         supportIntro:
-          "Выбери товар, открой тикет и получи реквизиты. После подтверждения оплаты продавец выдаст доступ или ключ.",
+          "Выбери товар, открой заказ и получи оплату или инвойс. После подтверждения продавец выдаст доступ или ключ.",
         cryptoPayFiat: "RUB",
       },
     })
@@ -133,14 +133,6 @@ async function ensureBootstrapData() {
             details: "Добавь реквизиты в админке.",
             isActive: true,
             sortOrder: 0,
-          },
-          {
-            title: "Crypto Pay",
-            type: "CRYPTO_PAY",
-            details: "Включи API token в админке, чтобы создавать инвойсы автоматически.",
-            cryptoAcceptedAssets: "USDT,TON",
-            isActive: false,
-            sortOrder: 1,
           },
         ],
       })

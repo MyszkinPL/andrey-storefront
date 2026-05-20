@@ -42,14 +42,17 @@ export function TicketsScreen() {
   const tickets = useMemo(() => ticketsData?.tickets ?? [], [ticketsData?.tickets])
   const buckets = useMemo(() => {
     const waiting = tickets.filter(
-      (ticket) => !isSupport(ticket) && !ticket.isPaid && ticket.status !== "CLOSED",
+      (ticket) =>
+        !isSupport(ticket) &&
+        !ticket.isPaid &&
+        !["CLOSED", "CANCELLED", "PAYMENT_REVIEW"].includes(ticket.status),
     )
     const active = tickets.filter(
       (ticket) => !isSupport(ticket) && ticket.isPaid && ticket.status !== "CLOSED",
     )
     const support = tickets.filter(isSupport)
     const closed = tickets.filter(
-      (ticket) => !isSupport(ticket) && ticket.status === "CLOSED",
+      (ticket) => !isSupport(ticket) && ["CLOSED", "CANCELLED"].includes(ticket.status),
     )
 
     return {
@@ -240,10 +243,14 @@ function renderStatus(status: string) {
   switch (status) {
     case "OPEN":
       return "Открыт"
+    case "PAYMENT_REVIEW":
+      return "Проверка оплаты"
     case "IN_PROGRESS":
       return "В работе"
     case "CLOSED":
       return "Закрыт"
+    case "CANCELLED":
+      return "Отменён"
     default:
       return status
   }
@@ -251,13 +258,10 @@ function renderStatus(status: string) {
 
 function renderPrimaryState(ticket: Awaited<ReturnType<typeof getTickets>>["tickets"][number]) {
   if (isSupport(ticket)) return "Поддержка"
-  if (
-    ticket.paymentMethodType === "MANUAL" &&
-    !ticket.isPaid &&
-    ticket.manualPaymentRequestedAt
-  ) {
+  if (ticket.status === "PAYMENT_REVIEW") {
     return "На проверке"
   }
+  if (ticket.status === "CANCELLED") return "Отменён"
   if (ticket.status === "CLOSED" && !ticket.isPaid) return "Не оплачен"
   if (!ticket.isPaid) return "Ждёт оплату"
   if (ticket.status === "IN_PROGRESS") return "Выдача"
@@ -267,13 +271,10 @@ function renderPrimaryState(ticket: Awaited<ReturnType<typeof getTickets>>["tick
 
 function renderPreview(ticket: Awaited<ReturnType<typeof getTickets>>["tickets"][number]) {
   if (isSupport(ticket)) return ticket.lastMessage || "Открой обращение"
-  if (
-    ticket.paymentMethodType === "MANUAL" &&
-    !ticket.isPaid &&
-    ticket.manualPaymentRequestedAt
-  ) {
+  if (ticket.status === "PAYMENT_REVIEW") {
     return "Платёж отмечен. Ждёт проверки админа."
   }
+  if (ticket.status === "CANCELLED") return "Заказ отменён."
   if (!ticket.isPaid) {
     return ticket.paymentMethodTitle
       ? `Ожидает оплату через ${ticket.paymentMethodTitle}.`

@@ -13,8 +13,10 @@ enum Role {
 
 enum TicketStatus {
   OPEN
+  PAYMENT_REVIEW
   IN_PROGRESS
   CLOSED
+  CANCELLED
 }
 
 enum DeliveryType {

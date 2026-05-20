@@ -71,9 +71,17 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   }
 
   if (state === "error") {
+    const banned = error.toLowerCase().includes("заблок")
     return (
       <div className="flex min-h-dvh items-center justify-center px-6 text-center">
-        <p className="text-base font-medium text-[var(--color-destructive)]">{error}</p>
+        {banned ? (
+          <Placeholder
+            header="Доступ ограничен"
+            description={error}
+          />
+        ) : (
+          <p className="text-base font-medium text-[var(--color-destructive)]">{error}</p>
+        )}
       </div>
     )
   }

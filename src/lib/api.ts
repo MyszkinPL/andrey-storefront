@@ -271,6 +271,20 @@ export function markManualTicketPaid(id: string) {
   })
 }
 
+export function rejectManualTicketPayment(id: string) {
+  return api<{ ok: true }>(`/api/tickets/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ rejectManualPayment: true }),
+  })
+}
+
+export function cancelOwnTicket(id: string) {
+  return api<{ ok: true }>(`/api/tickets/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ cancelByUser: true }),
+  })
+}
+
 export function updateAdminUserModeration(
   id: string,
   payload: { isBanned: boolean; banReason?: string },
@@ -279,6 +293,25 @@ export function updateAdminUserModeration(
     method: "PATCH",
     body: JSON.stringify(payload),
   })
+}
+
+export function getAdminUsers() {
+  return api<{
+    users: Array<{
+      id: string
+      telegramId: string
+      firstName: string
+      lastName: string | null
+      username: string | null
+      photoUrl: string | null
+      role: "USER" | "ADMIN"
+      isBanned: boolean
+      bannedAt: string | null
+      banReason: string | null
+      activeOrderCount: number
+      createdAt: string
+    }>
+  }>("/api/admin/users")
 }
 
 export function getPaymentMethods() {

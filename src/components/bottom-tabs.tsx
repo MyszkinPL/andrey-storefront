@@ -1,6 +1,6 @@
 "use client"
 
-import { Home, LifeBuoy, Settings, Shield, Store, Ticket } from "lucide-react"
+import { Home, LifeBuoy, Settings, Shield, Store, Ticket, Users } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
@@ -18,6 +18,7 @@ const ADMIN_TABS = [
   { href: "/admin", label: "Обзор", icon: Home },
   { href: "/admin/products", label: "Товары", icon: Store },
   { href: "/admin/tickets", label: "Заказы", icon: Shield },
+  { href: "/admin/users", label: "Юзеры", icon: Users },
   { href: "/admin/settings", label: "Настройки", icon: Settings },
 ]
 

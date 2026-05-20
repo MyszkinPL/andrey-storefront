@@ -29,6 +29,8 @@ const schema = z.object({
   confirmPayment: z.boolean().optional(),
   refreshCryptoInvoice: z.boolean().optional(),
   markManualPaid: z.boolean().optional(),
+  rejectManualPayment: z.boolean().optional(),
+  cancelByUser: z.boolean().optional(),
 })
 
 async function syncCryptoInvoice(ticketId: string) {
@@ -275,6 +277,7 @@ export async function PATCH(
         await tx.ticket.update({
           where: { id },
           data: {
+            status: TicketStatus.PAYMENT_REVIEW,
             manualPaymentRequestedAt: new Date(),
           },
         })
@@ -291,6 +294,53 @@ export async function PATCH(
       return NextResponse.json({ ok: true })
     }
 
+    if (payload.cancelByUser) {
+      if (user.role === "ADMIN" || ticket.createdById !== user.id) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+      }
+
+      const ownTicket = await prisma.ticket.findUnique({
+        where: { id },
+        select: {
+          id: true,
+          status: true,
+          isPaid: true,
+        },
+      })
+
+      if (!ownTicket) {
+        return NextResponse.json({ error: "Not found" }, { status: 404 })
+      }
+
+      if (ownTicket.isPaid) {
+        return NextResponse.json({ error: "Оплаченный заказ нельзя отменить самостоятельно" }, { status: 400 })
+      }
+
+      if (ownTicket.status === TicketStatus.CLOSED || ownTicket.status === TicketStatus.CANCELLED) {
+        return NextResponse.json({ ok: true })
+      }
+
+      await prisma.$transaction(async (tx) => {
+        await tx.ticket.update({
+          where: { id },
+          data: {
+            status: TicketStatus.CANCELLED,
+            closedAt: new Date(),
+          },
+        })
+
+        await tx.ticketMessage.create({
+          data: {
+            ticketId: id,
+            senderId: user.id,
+            body: "Покупатель отменил заказ.",
+          },
+        })
+      })
+
+      return NextResponse.json({ ok: true })
+    }
+
     if (user.role !== "ADMIN") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
@@ -300,12 +350,33 @@ export async function PATCH(
         await confirmTicketPaymentFlow(tx, id, user.id)
       }
 
+      if (payload.rejectManualPayment) {
+        await tx.ticket.update({
+          where: { id },
+          data: {
+            status: TicketStatus.OPEN,
+            manualPaymentRequestedAt: null,
+          },
+        })
+
+        await tx.ticketMessage.create({
+          data: {
+            ticketId: id,
+            senderId: user.id,
+            body: "Проверка оплаты отклонена. Проверь реквизиты и отправь корректный платёж.",
+          },
+        })
+      }
+
       if (payload.status) {
         await tx.ticket.update({
           where: { id },
           data: {
             status: payload.status,
-            closedAt: payload.status === "CLOSED" ? new Date() : null,
+            closedAt:
+              payload.status === "CLOSED" || payload.status === "CANCELLED"
+                ? new Date()
+                : null,
             assignedToId: payload.status === "IN_PROGRESS" ? user.id : undefined,
           },
         })
