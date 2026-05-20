@@ -70,29 +70,40 @@ export function AdminOverviewScreen() {
 
   return (
     <Screen>
-      <ScreenHeader title="Админка" subtitle="Товары, заказы, ключи и модерация" />
+      <ScreenHeader title="Админка" subtitle="Управление магазином" />
 
       <ScreenBody className="gap-3">
-        <div className="grid grid-cols-2 gap-3 xl:grid-cols-5">
-          {stats.map((item) => {
-            const Icon = item.icon
-            return (
-              <div key={item.label} className="ui-card p-4">
-                <div className="flex items-center gap-3">
-                  <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-[var(--color-surface-2)] text-[var(--color-muted)]">
-                    <Icon size={18} />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-[11px] text-[var(--color-muted)]">{item.label}</p>
-                    <p className="mt-1 text-3xl font-semibold leading-none text-[var(--color-text)]">
-                      {item.value}
+        <section className="ui-card p-3">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-[var(--color-text)]">Сводка</p>
+              <p className="mt-1 text-xs text-[var(--color-muted)]">
+                Главное по магазину без лишнего воздуха
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 xl:grid-cols-5">
+            {stats.map((item) => {
+              const Icon = item.icon
+              return (
+                <div key={item.label} className="rounded-[20px] bg-[var(--color-bg)] px-3 py-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="min-w-0 text-[11px] leading-4 text-[var(--color-muted)]">
+                      {item.label}
                     </p>
+                    <div className="flex size-8 shrink-0 items-center justify-center rounded-2xl bg-[var(--color-surface)] text-[var(--color-muted)]">
+                      <Icon size={15} />
+                    </div>
                   </div>
+                  <p className="mt-3 text-2xl font-semibold leading-none text-[var(--color-text)]">
+                    {item.value}
+                  </p>
                 </div>
-              </div>
-            )
-          })}
-        </div>
+              )
+            })}
+          </div>
+        </section>
 
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           {links.map((item) => (
