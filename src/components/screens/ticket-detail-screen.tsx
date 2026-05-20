@@ -194,12 +194,12 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
       : "Ожидает оплату"
   const orderSteps = getOrderSteps(ticket)
   const headerActions = adminToolsVisible ? (
-    <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-end">
+    <div className="flex w-full gap-2 overflow-x-auto pb-1 sm:w-auto sm:flex-wrap sm:justify-end sm:overflow-visible sm:pb-0">
       {!ticket.isPaid ? (
         <button
           onClick={() => paymentMutation.mutate()}
           disabled={ticket.status === "CANCELLED"}
-          className="min-w-0 rounded-full bg-[var(--color-accent)] px-3 py-2 text-xs font-semibold text-[var(--color-accent-text)]"
+          className="shrink-0 rounded-full bg-[var(--color-accent)] px-3 py-2 text-xs font-semibold text-[var(--color-accent-text)]"
         >
           Подтвердить оплату
         </button>
@@ -207,7 +207,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
       {ticket.status === "PAYMENT_REVIEW" ? (
         <button
           onClick={() => rejectManualPaymentMutation.mutate()}
-          className="min-w-0 rounded-full bg-[var(--color-bg)] px-3 py-2 text-xs font-medium text-[var(--color-text)]"
+          className="shrink-0 rounded-full bg-[var(--color-bg)] px-3 py-2 text-xs font-medium text-[var(--color-text)]"
         >
           Отклонить
         </button>
@@ -215,13 +215,13 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
       <button
         onClick={() => statusMutation.mutate("IN_PROGRESS")}
         disabled={ticket.status === "CANCELLED"}
-        className="min-w-0 rounded-full bg-[var(--color-bg)] px-3 py-2 text-xs font-medium text-[var(--color-text)]"
+        className="shrink-0 rounded-full bg-[var(--color-bg)] px-3 py-2 text-xs font-medium text-[var(--color-text)]"
       >
         В работу
       </button>
       <button
         onClick={() => statusMutation.mutate("CLOSED")}
-        className="min-w-0 rounded-full bg-[var(--color-bg)] px-3 py-2 text-xs font-medium text-[var(--color-text)]"
+        className="shrink-0 rounded-full bg-[var(--color-bg)] px-3 py-2 text-xs font-medium text-[var(--color-text)]"
       >
         Закрыть
       </button>
@@ -231,7 +231,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
           deleteTicketMutation.mutate()
         }}
         disabled={deleteTicketMutation.isPending}
-        className="col-span-2 inline-flex min-w-0 items-center justify-center gap-1 rounded-full bg-[var(--color-destructive)]/14 px-3 py-2 text-xs font-medium text-[var(--color-destructive)] disabled:opacity-60 sm:col-auto"
+        className="inline-flex shrink-0 items-center justify-center gap-1 rounded-full bg-[var(--color-destructive)]/14 px-3 py-2 text-xs font-medium text-[var(--color-destructive)] disabled:opacity-60"
       >
         <Trash2 size={12} />
         {deleteTicketMutation.isPending ? "Удаляю..." : "Удалить"}
@@ -557,7 +557,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                   />
                 </div>
               ) : (
-                <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain bg-[linear-gradient(180deg,color-mix(in_srgb,var(--color-bg)_78%,transparent),transparent_24%)] px-3 py-4 sm:px-4 sm:py-5">
+                <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto overscroll-contain bg-[linear-gradient(180deg,color-mix(in_srgb,var(--color-bg)_78%,transparent),transparent_24%)] px-3 py-3 sm:px-4 sm:py-4">
                   {groupedMessages.map((entry) => {
                     const isAdmin = entry.senderRole === "ADMIN"
                     const senderRoleLabel = isAdmin ? "Админ" : "Покупатель"
@@ -576,7 +576,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
 
                         <div
                           className={cn(
-                            "max-w-[88%] sm:max-w-[76%]",
+                            "max-w-[82%] sm:max-w-[74%]",
                             entry.attachments.length > 0 && "w-[min(360px,72vw)] sm:w-[min(420px,52vw)]",
                             entry.isMine && "flex flex-col items-end",
                           )}
@@ -599,7 +599,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
 
                           <div
                             className={cn(
-                              "overflow-hidden rounded-[24px] shadow-[0_1px_0_color-mix(in_srgb,var(--color-text)_4%,transparent)_inset]",
+                                "overflow-hidden rounded-[22px] shadow-[0_1px_0_color-mix(in_srgb,var(--color-text)_4%,transparent)_inset]",
                               entry.isMine
                                 ? "rounded-br-md bg-[var(--color-accent)] text-[var(--color-accent-text)]"
                                 : "rounded-bl-md bg-[var(--color-surface-2)] text-[var(--color-text)]",
@@ -647,8 +647,8 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                             {entry.body ? (
                               <p
                                 className={cn(
-                                  "whitespace-pre-wrap break-words px-3 pb-3 text-sm leading-6",
-                                  !entry.attachments.length && "pt-3",
+                                  "whitespace-pre-wrap break-words px-3 pb-2.5 text-sm leading-[1.35rem]",
+                                  !entry.attachments.length && "pt-2.5",
                                 )}
                               >
                                 {entry.body}
@@ -657,7 +657,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
 
                             <div
                               className={cn(
-                                "flex items-center justify-end gap-1 px-3 pb-3 text-[11px]",
+                                "flex items-center justify-end gap-1 px-3 pb-2.5 text-[10px]",
                                 entry.body && "pt-0",
                                 !entry.body && entry.attachments.length > 0 && "pt-1",
                                 entry.isMine
@@ -679,7 +679,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                 </div>
               )}
 
-              <div className="shrink-0 border-t border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-3 sm:px-4">
+              <div className="shrink-0 border-t border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2.5 sm:px-4">
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -690,7 +690,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                 />
 
                 {attachments.length > 0 ? (
-                  <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
+                  <div className="mb-2.5 flex gap-2 overflow-x-auto pb-1">
                     {attachments.map((attachment, index) => (
                       <div
                         key={`${attachment.url}-${index}`}
@@ -725,12 +725,12 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
                     disabled={isClosed || isUploading || attachments.length >= MAX_ATTACHMENTS}
-                    className="flex size-11 shrink-0 items-center justify-center rounded-[18px] bg-[var(--color-bg)] text-[var(--color-text)] disabled:opacity-45"
+                    className="flex size-10 shrink-0 items-center justify-center rounded-[16px] bg-[var(--color-bg)] text-[var(--color-text)] disabled:opacity-45"
                   >
                     <ImagePlus size={18} />
                   </button>
 
-                  <div className="min-w-0 flex-1 rounded-[22px] bg-[var(--color-bg)] px-3 py-2">
+                  <div className="min-w-0 flex-1 rounded-[20px] bg-[var(--color-bg)] px-3 py-2">
                     <textarea
                       value={message}
                       onChange={(event) => setMessage(event.target.value)}
@@ -742,20 +742,22 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                             : "Сообщение по заказу или скрин"
                       }
                       disabled={isClosed}
-                      className="min-h-[54px] max-h-40 w-full resize-none bg-transparent py-1 text-sm leading-6 text-[var(--color-text)] outline-none placeholder:text-[var(--color-muted)]"
+                      className="min-h-[44px] max-h-32 w-full resize-none bg-transparent py-0.5 text-sm leading-5 text-[var(--color-text)] outline-none placeholder:text-[var(--color-muted)]"
                     />
-                    <div className="flex items-center justify-between gap-3 px-1 pt-1">
+                    <div className="flex items-center justify-between gap-2 px-1 pt-1">
                       <span className="text-[11px] text-[var(--color-muted)]">
                         {isUploading
                           ? "Обрабатываю изображения..."
-                          : `${attachments.length}/${MAX_ATTACHMENTS} вложений`}
+                          : attachments.length > 0
+                            ? `${attachments.length}/${MAX_ATTACHMENTS} вложений`
+                            : "Сообщение"}
                       </span>
                       <button
                         type="button"
                         onClick={() => canSend && sendMutation.mutate()}
                         disabled={!canSend}
                         className={cn(
-                          "flex size-10 items-center justify-center rounded-full transition-colors",
+                          "flex size-9 items-center justify-center rounded-full transition-colors",
                           canSend
                             ? "bg-[var(--color-accent)] text-[var(--color-accent-text)]"
                             : "bg-[var(--color-surface-2)] text-[var(--color-muted)]",
