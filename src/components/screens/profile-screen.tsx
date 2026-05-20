@@ -32,7 +32,7 @@ export function ProfileScreen() {
         subtitle={meData?.user.username ? `@${meData.user.username}` : "Telegram"}
         trailing={
           meData?.user.photoUrl ? (
-            <Avatar size={44} src={meData.user.photoUrl} alt={meData.user.firstName} />
+            <Avatar size={40} src={meData.user.photoUrl} alt={meData.user.firstName} />
           ) : (
             <div className="flex size-11 items-center justify-center rounded-full bg-[var(--color-surface-2)] text-sm font-semibold text-[var(--color-text)]">
               {(meData?.user.firstName || "S").slice(0, 1).toUpperCase()}
