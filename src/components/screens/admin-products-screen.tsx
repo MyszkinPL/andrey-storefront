@@ -402,19 +402,48 @@ function ProductEditorModal({
               <div className="ui-card-soft p-4">
                 <p className="text-sm font-medium text-[var(--color-text)]">Превью</p>
                 <div className="mt-3 rounded-[22px] bg-[var(--color-surface)] p-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-[var(--color-text)]">
-                        {form.title || "Название товара"}
-                      </p>
-                      <p className="mt-1 text-xs text-[var(--color-muted)]">
-                        {form.category || "Категория"} ·{" "}
-                        {Number(form.priceRub || 0).toLocaleString("ru-RU")} ₽
-                      </p>
+                  <div className="flex items-center gap-3">
+                    <div className="relative size-14 shrink-0 overflow-hidden rounded-[16px] bg-[var(--color-bg)]">
+                      {form.imageDataUrl ? (
+                        <Image
+                          src={form.imageDataUrl}
+                          alt=""
+                          fill
+                          unoptimized
+                          sizes="56px"
+                          className="object-cover"
+                        />
+                      ) : (
+                        <div className="flex size-full items-center justify-center text-[var(--color-muted)]">
+                          <ImagePlus size={18} />
+                        </div>
+                      )}
                     </div>
-                    <span className="rounded-full bg-[var(--color-bg)] px-2.5 py-1 text-[10px] text-[var(--color-muted)]">
-                      {form.deliveryType === "AUTO_KEY" ? "Автовыдача" : "Ручная"}
-                    </span>
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-[var(--color-text)]">
+                            {form.title || "Название товара"}
+                          </p>
+                          <p className="mt-1 truncate text-xs text-[var(--color-muted)]">
+                            {form.category || "Категория"}
+                          </p>
+                        </div>
+                        <span className="shrink-0 rounded-full bg-[var(--color-bg)] px-2.5 py-1 text-[10px] text-[var(--color-muted)]">
+                          {form.deliveryType === "AUTO_KEY" ? "Авто" : "Ручная"}
+                        </span>
+                      </div>
+
+                      <div className="mt-3 flex items-center justify-between gap-3">
+                        <span className="text-sm font-semibold text-[var(--color-text)]">
+                          {Number(form.priceRub || 0).toLocaleString("ru-RU")} ₽
+                        </span>
+                        <span className="text-[11px] text-[var(--color-muted)]">
+                          {form.isActive ? "В магазине" : "Скрыт"}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
