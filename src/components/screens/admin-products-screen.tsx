@@ -346,27 +346,27 @@ function ProductEditorModal({
     !saving
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-[var(--color-overlay)] p-3 md:items-center md:p-6">
-      <div className="ui-card flex h-[min(92vh,1040px)] w-full max-w-5xl flex-col overflow-hidden">
-        <div className="flex items-start justify-between gap-4 border-b border-[var(--color-border)] px-4 py-4 sm:px-5">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-[var(--color-overlay)] p-0 sm:p-3 md:items-center md:p-6">
+      <div className="ui-card flex h-[min(100dvh,1040px)] w-full max-w-5xl flex-col overflow-hidden rounded-b-none rounded-t-[28px] sm:h-[min(92vh,1040px)] sm:rounded-[32px]">
+        <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 sm:px-5 sm:py-4">
           <div>
             <p className="text-base font-semibold text-[var(--color-text)]">
               {form.id ? "Редактирование товара" : "Новый товар"}
             </p>
-            <p className="mt-1 text-sm text-[var(--color-muted)]">
-              Отдельное окно для карточки, чтобы не смешивать список и форму.
+            <p className="mt-1 text-xs text-[var(--color-muted)] sm:text-sm">
+              Настройки карточки товара
             </p>
           </div>
 
           <button
             onClick={onClose}
-            className="flex size-10 items-center justify-center rounded-full bg-[var(--color-bg)] text-[var(--color-muted)]"
+            className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[var(--color-bg)] text-[var(--color-muted)] sm:size-10"
           >
             <X size={16} />
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-5">
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3 pb-4 sm:px-5 sm:py-4">
           <div className="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
             <section className="grid content-start gap-4">
               <label className="block">
@@ -559,7 +559,7 @@ function ProductEditorModal({
                   {form.specs.map((spec, index) => (
                     <div
                       key={`${index}-${form.id || "new"}`}
-                      className="grid gap-2 md:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)_48px]"
+                      className="grid gap-2 sm:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)_44px]"
                     >
                       <input
                         value={spec.label}
@@ -601,7 +601,7 @@ function ProductEditorModal({
                                 : prev.specs.filter((_, itemIndex) => itemIndex !== index),
                           }))
                         }
-                        className="flex h-[50px] items-center justify-center rounded-2xl bg-[var(--color-bg)] text-[var(--color-muted)]"
+                        className="flex h-[44px] items-center justify-center rounded-2xl bg-[var(--color-bg)] text-[var(--color-muted)] sm:h-[50px]"
                       >
                         <Trash2 size={16} />
                       </button>
@@ -706,11 +706,11 @@ function ProductEditorModal({
           </div>
         </div>
 
-        <div className="border-t border-[var(--color-border)] px-4 py-4 sm:px-5">
+        <div className="sticky bottom-0 z-10 border-t border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 pb-[calc(env(safe-area-inset-bottom,0px)+12px)] sm:px-5 sm:py-4">
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <button
               onClick={onClose}
-              className="rounded-[18px] bg-[var(--color-bg)] px-4 py-3 text-sm font-medium text-[var(--color-text)]"
+              className="rounded-[18px] bg-[var(--color-bg)] px-4 py-2.5 text-sm font-medium text-[var(--color-text)]"
             >
               Отмена
             </button>
@@ -718,7 +718,7 @@ function ProductEditorModal({
               onClick={onSave}
               disabled={!canSave}
               className={cn(
-                "rounded-[18px] px-4 py-3 text-sm font-semibold",
+                "rounded-[18px] px-4 py-2.5 text-sm font-semibold",
                 canSave
                   ? "bg-[var(--color-accent)] text-[var(--color-accent-text)]"
                   : "bg-[var(--color-bg)] text-[var(--color-muted)]",
