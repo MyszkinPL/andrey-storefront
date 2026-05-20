@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { useMemo, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { Ban, ChevronDown, History, Search, ShieldCheck, X } from "lucide-react"
+import { Ban, History, Search, ShieldCheck, X } from "lucide-react"
 
 import { getAdminUsers, getMe, updateAdminUserModeration } from "@/lib/api"
 import { Screen, ScreenBody, ScreenEmpty, ScreenHeader } from "@/components/screen"
@@ -20,7 +20,7 @@ export function AdminUsersScreen() {
   const [search, setSearch] = useState("")
   const [filter, setFilter] = useState<"all" | "buyers" | "admins" | "banned">("all")
   const [banDraft, setBanDraft] = useState<null | { id: string; name: string }>(null)
-  const [expandedUserId, setExpandedUserId] = useState<string | null>(null)
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
 
   const moderationMutation = useMutation({
     mutationFn: (payload: { id: string; isBanned: boolean }) =>
@@ -46,6 +46,7 @@ export function AdminUsersScreen() {
         .includes(query)
     })
   }, [data?.users, filter, search])
+  const selectedUser = users.find((user) => user.id === selectedUserId) ?? null
 
   if (meData && meData.user.role !== "ADMIN") {
     return (
@@ -103,7 +104,11 @@ export function AdminUsersScreen() {
         ) : (
           <div className="grid gap-3">
             {users.map((user) => (
-              <section key={user.id} className="ui-card p-4">
+              <section
+                key={user.id}
+                onClick={() => setSelectedUserId(user.id)}
+                className="ui-card cursor-pointer p-4 text-left transition-transform duration-150 active:scale-[0.99]"
+              >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
@@ -145,97 +150,39 @@ export function AdminUsersScreen() {
 
                   <button
                     type="button"
-                    onClick={() => {
-                      if (user.role === "ADMIN") return
-                      if (user.isBanned) {
-                        moderationMutation.mutate({ id: user.id, isBanned: false })
-                      } else {
-                        setBanDraft({
-                          id: user.id,
-                          name: [user.firstName, user.lastName || ""].join(" ").trim(),
-                        })
-                      }
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      setSelectedUserId(user.id)
                     }}
-                    disabled={moderationMutation.isPending || user.role === "ADMIN"}
-                    className={cn(
-                      "rounded-full px-3 py-1.5 text-xs font-medium",
-                      user.role === "ADMIN"
-                        ? "bg-[var(--color-bg)] text-[var(--color-muted)]"
-                        : user.isBanned
-                        ? "bg-[var(--color-bg)] text-[var(--color-text)]"
-                        : "bg-[var(--color-destructive)]/14 text-[var(--color-destructive)]",
-                    )}
+                    className="rounded-full bg-[var(--color-bg)] px-3 py-1.5 text-xs font-medium text-[var(--color-text)]"
                   >
-                    {user.role === "ADMIN" ? "Недоступно" : user.isBanned ? "Снять бан" : "Забанить"}
+                    Открыть
                   </button>
                 </div>
-
-                {user.orders.length > 0 ? (
-                  <div className="mt-4">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setExpandedUserId((current) => (current === user.id ? null : user.id))
-                      }
-                      className="flex w-full items-center justify-between rounded-[18px] bg-[var(--color-bg)] px-4 py-3 text-left"
-                    >
-                      <div className="flex items-center gap-2">
-                        <History size={15} className="text-[var(--color-muted)]" />
-                        <span className="text-sm font-medium text-[var(--color-text)]">
-                          История заказов
-                        </span>
-                        <span className="text-xs text-[var(--color-muted)]">
-                          {user.orders.length}
-                        </span>
-                      </div>
-                      <ChevronDown
-                        size={16}
-                        className={cn(
-                          "text-[var(--color-muted)] transition-transform",
-                          expandedUserId === user.id && "rotate-180",
-                        )}
-                      />
-                    </button>
-
-                    {expandedUserId === user.id ? (
-                      <div className="mt-3 grid gap-2">
-                        {user.orders.map((order) => (
-                          <Link
-                            key={order.id}
-                            href={`/tickets/${order.id}`}
-                            className="rounded-[18px] bg-[var(--color-bg)] px-4 py-3 transition-colors hover:bg-[var(--color-surface)]"
-                          >
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="min-w-0">
-                                <p className="truncate text-sm font-medium text-[var(--color-text)]">
-                                  {order.productTitle || `Заказ #${order.number}`}
-                                </p>
-                                <p className="mt-1 text-xs text-[var(--color-muted)]">
-                                  #{order.number}
-                                  {order.productCategory ? ` · ${order.productCategory}` : ""}
-                                  {order.priceRub ? ` · ${order.priceRub.toLocaleString("ru-RU")} ₽` : ""}
-                                </p>
-                              </div>
-                              <div className="text-right">
-                                <p className="text-xs font-medium text-[var(--color-text)]">
-                                  {renderOrderStatus(order.status, order.isPaid)}
-                                </p>
-                                <p className="mt-1 text-[11px] text-[var(--color-muted)]">
-                                  {new Date(order.updatedAt).toLocaleDateString("ru-RU")}
-                                </p>
-                              </div>
-                            </div>
-                          </Link>
-                        ))}
-                      </div>
-                    ) : null}
-                  </div>
-                ) : null}
               </section>
             ))}
           </div>
         )}
       </ScreenBody>
+
+      {selectedUser ? (
+        <UserDetailsSheet
+          user={selectedUser}
+          moderationPending={moderationMutation.isPending}
+          onClose={() => setSelectedUserId(null)}
+          onToggleBan={() => {
+            if (selectedUser.role === "ADMIN") return
+            if (selectedUser.isBanned) {
+              moderationMutation.mutate({ id: selectedUser.id, isBanned: false })
+            } else {
+              setBanDraft({
+                id: selectedUser.id,
+                name: [selectedUser.firstName, selectedUser.lastName || ""].join(" ").trim(),
+              })
+            }
+          }}
+        />
+      ) : null}
 
       {banDraft ? (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-[var(--color-overlay)] p-3 md:items-center">
@@ -295,6 +242,186 @@ export function AdminUsersScreen() {
         </div>
       ) : null}
     </Screen>
+  )
+}
+
+function UserDetailsSheet({
+  user,
+  moderationPending,
+  onClose,
+  onToggleBan,
+}: {
+  user: Awaited<ReturnType<typeof getAdminUsers>>["users"][number]
+  moderationPending: boolean
+  onClose: () => void
+  onToggleBan: () => void
+}) {
+  const [ordersOpen, setOrdersOpen] = useState(true)
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-[var(--color-overlay)] p-0 sm:p-3 md:items-center md:p-6"
+      onClick={onClose}
+    >
+      <div
+        className="ui-card flex h-[min(100dvh,920px)] w-full max-w-2xl flex-col overflow-hidden rounded-b-none rounded-t-[28px] sm:h-[min(92vh,920px)] sm:rounded-[32px]"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="sticky top-0 z-10 border-b border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 sm:px-5 sm:py-4">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="truncate text-base font-semibold text-[var(--color-text)]">
+                  {[user.firstName, user.lastName || ""].join(" ").trim()}
+                </p>
+                <span className="rounded-full bg-[var(--color-bg)] px-2.5 py-1 text-[10px] text-[var(--color-muted)]">
+                  {user.role === "ADMIN" ? "Админ" : "Покупатель"}
+                </span>
+                <span
+                  className={cn(
+                    "rounded-full px-2.5 py-1 text-[10px]",
+                    user.isBanned
+                      ? "bg-[var(--color-destructive)]/14 text-[var(--color-destructive)]"
+                      : "bg-[var(--color-bg)] text-[var(--color-muted)]",
+                  )}
+                >
+                  {user.isBanned ? "Забанен" : "Активен"}
+                </span>
+              </div>
+              <p className="mt-1 text-sm text-[var(--color-muted)]">
+                {user.username ? `@${user.username}` : `tg:${user.telegramId}`}
+              </p>
+            </div>
+
+            <button
+              onClick={onClose}
+              className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[var(--color-bg)] text-[var(--color-muted)]"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3 sm:px-5 sm:py-4">
+          <div className="grid gap-3">
+            <section className="ui-card-soft p-4">
+              <div className="grid gap-2 sm:grid-cols-3">
+                <DetailMetric label="Активные заказы" value={String(user.activeOrderCount)} />
+                <DetailMetric
+                  label="Доступ"
+                  value={
+                    user.role === "ADMIN" ? "Админ" : user.isBanned ? "Заблокирован" : "Активен"
+                  }
+                />
+                <DetailMetric label="Telegram ID" value={user.telegramId} />
+              </div>
+            </section>
+
+            <section className="ui-card-soft p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <History size={15} className="text-[var(--color-muted)]" />
+                  <p className="text-sm font-semibold text-[var(--color-text)]">История заказов</p>
+                  <span className="text-xs text-[var(--color-muted)]">{user.orders.length}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setOrdersOpen((current) => !current)}
+                  className="rounded-full bg-[var(--color-bg)] px-3 py-1.5 text-xs text-[var(--color-text)]"
+                >
+                  {ordersOpen ? "Скрыть" : "Показать"}
+                </button>
+              </div>
+
+              {ordersOpen ? (
+                user.orders.length > 0 ? (
+                  <div className="mt-3 grid gap-2">
+                    {user.orders.map((order) => (
+                      <Link
+                        key={order.id}
+                        href={`/tickets/${order.id}`}
+                        className="rounded-[18px] bg-[var(--color-bg)] px-4 py-3 transition-colors hover:bg-[var(--color-surface)]"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-medium text-[var(--color-text)]">
+                              {order.productTitle || `Заказ #${order.number}`}
+                            </p>
+                            <p className="mt-1 text-xs text-[var(--color-muted)]">
+                              #{order.number}
+                              {order.productCategory ? ` · ${order.productCategory}` : ""}
+                              {order.priceRub ? ` · ${order.priceRub.toLocaleString("ru-RU")} ₽` : ""}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xs font-medium text-[var(--color-text)]">
+                              {renderOrderStatus(order.status, order.isPaid)}
+                            </p>
+                            <p className="mt-1 text-[11px] text-[var(--color-muted)]">
+                              {new Date(order.updatedAt).toLocaleDateString("ru-RU")}
+                            </p>
+                          </div>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="mt-3 rounded-[18px] bg-[var(--color-bg)] px-4 py-4 text-sm text-[var(--color-muted)]">
+                    Заказов пока нет.
+                  </div>
+                )
+              ) : null}
+            </section>
+          </div>
+        </div>
+
+        <div className="sticky bottom-0 z-10 border-t border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 pb-[calc(env(safe-area-inset-bottom,0px)+12px)] sm:px-5">
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-[18px] bg-[var(--color-bg)] px-4 py-2.5 text-sm font-medium text-[var(--color-text)]"
+            >
+              Закрыть
+            </button>
+            <button
+              type="button"
+              onClick={onToggleBan}
+              disabled={moderationPending || user.role === "ADMIN"}
+              className={cn(
+                "rounded-[18px] px-4 py-2.5 text-sm font-medium",
+                user.role === "ADMIN"
+                  ? "bg-[var(--color-bg)] text-[var(--color-muted)]"
+                  : user.isBanned
+                    ? "bg-[var(--color-bg)] text-[var(--color-text)]"
+                    : "bg-[var(--color-destructive)] text-white",
+              )}
+            >
+              {user.role === "ADMIN"
+                ? "Админ не модерируется"
+                : user.isBanned
+                  ? "Снять бан"
+                  : "Забанить пользователя"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function DetailMetric({
+  label,
+  value,
+}: {
+  label: string
+  value: string
+}) {
+  return (
+    <div className="rounded-[16px] bg-[var(--color-bg)] px-3 py-3">
+      <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-muted)]">{label}</p>
+      <p className="mt-1 truncate text-sm font-medium text-[var(--color-text)]">{value}</p>
+    </div>
   )
 }
 
