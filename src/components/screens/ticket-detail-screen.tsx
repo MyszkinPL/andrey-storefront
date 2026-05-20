@@ -478,7 +478,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
   }
 
   return (
-    <Screen noTabBar className="h-dvh overflow-hidden">
+    <Screen noTabBar className="xl:h-dvh xl:overflow-hidden">
       <ScreenHeader
         title={ticket.productTitle || ticket.subject}
         subtitle={
@@ -519,14 +519,14 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
         </div>
       ) : null}
 
-      <div className="flex min-h-0 flex-1 flex-col px-4 pb-4">
+      <div className="flex flex-1 flex-col px-4 pb-4 xl:min-h-0">
         <div
           className={cn(
-            "grid min-h-0 flex-1 gap-4",
+            "grid gap-4 xl:min-h-0 xl:flex-1",
             !isSupportFlow && "xl:grid-cols-[minmax(0,1fr)_360px]",
           )}
         >
-          <div className="order-2 grid min-h-0 gap-4 xl:order-1">
+          <div className="order-2 grid gap-4 xl:order-1 xl:min-h-0">
             {systemMessages.length > 0 ? (
               <section className="ui-card p-4">
                 <div className="flex items-center gap-2">
@@ -546,7 +546,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
               </section>
             ) : null}
 
-            <section className="ui-card flex min-h-0 flex-col overflow-hidden">
+            <section className="ui-card flex flex-col overflow-hidden xl:min-h-0">
               <div className="border-b border-[var(--color-border)] px-4 py-3 sm:px-5">
                 <div className="flex flex-wrap items-center gap-2">
                   {!isSupportFlow ? (
@@ -564,9 +564,9 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                 </div>
               </div>
 
-              <div className="flex min-h-0 flex-1 flex-col">
+              <div className="flex flex-1 flex-col xl:min-h-0">
               {groupedMessages.length === 0 ? (
-                <div className="flex min-h-0 flex-1 items-center justify-center p-4 sm:p-5">
+                <div className="flex flex-1 items-center justify-center p-4 sm:p-5 xl:min-h-0">
                   <ScreenEmpty
                     title="Сообщений пока нет"
                     subtitle={
@@ -580,7 +580,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                   />
                 </div>
               ) : (
-                <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto overscroll-contain bg-[linear-gradient(180deg,color-mix(in_srgb,var(--color-bg)_78%,transparent),transparent_24%)] px-3 py-3 sm:px-4 sm:py-4">
+                <div className="flex flex-1 flex-col gap-2.5 bg-[linear-gradient(180deg,color-mix(in_srgb,var(--color-bg)_78%,transparent),transparent_24%)] px-3 py-3 sm:px-4 sm:py-4 xl:min-h-0 xl:overflow-y-auto xl:overscroll-contain">
                   {groupedMessages.map((entry) => {
                     const isAdmin = entry.senderRole === "ADMIN"
                     const senderRoleLabel = isAdmin ? "Админ" : "Покупатель"
@@ -808,7 +808,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
         </div>
 
           {!isSupportFlow ? (
-            <aside className="order-1 grid min-h-0 content-start gap-4 overflow-y-auto xl:order-2">
+            <aside className="order-1 grid content-start gap-4 xl:order-2 xl:min-h-0 xl:overflow-y-auto">
             <section className="ui-card shrink-0 p-4">
               <p className="text-sm font-semibold text-[var(--color-text)]">Статус заказа</p>
               <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
