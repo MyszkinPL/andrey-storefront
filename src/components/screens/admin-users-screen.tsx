@@ -127,6 +127,20 @@ export function AdminUsersScreen() {
                     <p className="mt-1 text-sm text-[var(--color-muted)]">
                       {user.username ? `@${user.username}` : `tg:${user.telegramId}`}
                     </p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <InlineMeta label="Заказы" value={String(user.activeOrderCount)} />
+                      <InlineMeta
+                        label="Доступ"
+                        value={
+                          user.role === "ADMIN"
+                            ? "Админ"
+                            : user.isBanned
+                              ? "Блок"
+                              : "Активен"
+                        }
+                      />
+                      <InlineMeta label="ID" value={user.telegramId} truncate />
+                    </div>
                   </div>
 
                   <button
@@ -154,21 +168,6 @@ export function AdminUsersScreen() {
                   >
                     {user.role === "ADMIN" ? "Недоступно" : user.isBanned ? "Снять бан" : "Забанить"}
                   </button>
-                </div>
-
-                <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                  <Metric label="Активные заказы" value={String(user.activeOrderCount)} />
-                  <Metric
-                    label="Доступ"
-                    value={
-                      user.role === "ADMIN"
-                        ? "Админ"
-                        : user.isBanned
-                          ? "Заблокирован"
-                          : "Активен"
-                    }
-                  />
-                  <Metric label="Telegram ID" value={user.telegramId} className="sm:col-span-2" />
                 </div>
 
                 {user.orders.length > 0 ? (
@@ -299,19 +298,28 @@ export function AdminUsersScreen() {
   )
 }
 
-function Metric({
+function InlineMeta({
   label,
   value,
-  className,
+  truncate = false,
 }: {
   label: string
   value: string
-  className?: string
+  truncate?: boolean
 }) {
   return (
-    <div className={cn("rounded-[16px] bg-[var(--color-bg)] px-3 py-3", className)}>
-      <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-muted)]">{label}</p>
-      <p className="mt-1 truncate text-sm font-medium text-[var(--color-text)]">{value}</p>
+    <div className="inline-flex min-w-0 items-center gap-2 rounded-full bg-[var(--color-bg)] px-3 py-1.5">
+      <span className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-muted)]">
+        {label}
+      </span>
+      <span
+        className={cn(
+          "text-xs font-medium text-[var(--color-text)]",
+          truncate && "max-w-[112px] truncate",
+        )}
+      >
+        {value}
+      </span>
     </div>
   )
 }
