@@ -526,7 +526,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
             !isSupportFlow && "xl:grid-cols-[minmax(0,1fr)_360px]",
           )}
         >
-          <div className="order-2 grid gap-4 xl:order-1 xl:min-h-0">
+          <div className="order-1 grid gap-4 xl:order-1 xl:min-h-0">
             {systemMessages.length > 0 ? (
               <section className="ui-card p-4">
                 <div className="flex items-center gap-2">
@@ -547,7 +547,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
             ) : null}
 
             <section className="ui-card flex flex-col overflow-hidden xl:min-h-0">
-              <div className="border-b border-[var(--color-border)] px-4 py-3 sm:px-5">
+              <div className="hidden border-b border-[var(--color-border)] px-4 py-3 sm:px-5 xl:block">
                 <div className="flex flex-wrap items-center gap-2">
                   {!isSupportFlow ? (
                     <StatusBadge kind={ticket.isPaid ? "paid" : "waiting"}>
@@ -702,7 +702,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                 </div>
               )}
 
-              <div className="shrink-0 border-t border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2.5 sm:px-4">
+              <div className="shrink-0 border-t border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 sm:px-4">
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -748,12 +748,12 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
                     disabled={isClosed || isUploading || attachments.length >= MAX_ATTACHMENTS}
-                    className="flex size-10 shrink-0 items-center justify-center rounded-[16px] bg-[var(--color-bg)] text-[var(--color-text)] disabled:opacity-45"
+                    className="flex size-10 shrink-0 items-center justify-center rounded-[15px] bg-[var(--color-bg)] text-[var(--color-text)] disabled:opacity-45"
                   >
                     <ImagePlus size={18} />
                   </button>
 
-                  <div className="min-w-0 flex-1 rounded-[20px] bg-[var(--color-bg)] px-3 py-2">
+                  <div className="min-w-0 flex-1 rounded-[18px] bg-[var(--color-bg)] px-3 py-2">
                     <textarea
                       value={message}
                       onChange={(event) => setMessage(event.target.value)}
@@ -765,22 +765,22 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                             : "Сообщение по заказу или скрин"
                       }
                       disabled={isClosed}
-                      className="min-h-[44px] max-h-32 w-full resize-none bg-transparent py-0.5 text-sm leading-5 text-[var(--color-text)] outline-none placeholder:text-[var(--color-muted)]"
+                      className="min-h-[38px] max-h-28 w-full resize-none bg-transparent py-0.5 text-sm leading-5 text-[var(--color-text)] outline-none placeholder:text-[var(--color-muted)]"
                     />
                     <div className="flex items-center justify-between gap-2 px-1 pt-1">
                       <span className="text-[11px] text-[var(--color-muted)]">
                         {isUploading
-                          ? "Обрабатываю изображения..."
+                          ? "Обработка..."
                           : attachments.length > 0
                             ? `${attachments.length}/${MAX_ATTACHMENTS} вложений`
-                            : "Сообщение"}
+                            : ""}
                       </span>
                       <button
                         type="button"
                         onClick={() => canSend && sendMutation.mutate()}
                         disabled={!canSend}
                         className={cn(
-                          "flex size-9 items-center justify-center rounded-full transition-colors",
+                          "flex size-8 items-center justify-center rounded-full transition-colors",
                           canSend
                             ? "bg-[var(--color-accent)] text-[var(--color-accent-text)]"
                             : "bg-[var(--color-surface-2)] text-[var(--color-muted)]",
@@ -808,7 +808,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
         </div>
 
           {!isSupportFlow ? (
-            <aside className="order-1 grid content-start gap-4 xl:order-2 xl:min-h-0 xl:overflow-y-auto">
+            <aside className="order-2 grid content-start gap-4 xl:order-2 xl:min-h-0 xl:overflow-y-auto">
             <section className="ui-card shrink-0 p-4">
               <p className="text-sm font-semibold text-[var(--color-text)]">Статус заказа</p>
               <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
