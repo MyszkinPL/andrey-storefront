@@ -546,7 +546,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
               </section>
             ) : null}
 
-            <section className="ui-card flex flex-col overflow-hidden xl:min-h-0">
+            <section className="ui-card flex min-h-[56dvh] max-h-[72dvh] flex-col overflow-hidden xl:min-h-0 xl:max-h-none">
               <div className="hidden border-b border-[var(--color-border)] px-4 py-3 sm:px-5 xl:block">
                 <div className="flex flex-wrap items-center gap-2">
                   {!isSupportFlow ? (
@@ -580,7 +580,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                   />
                 </div>
               ) : (
-                <div className="flex flex-1 flex-col gap-2.5 bg-[linear-gradient(180deg,color-mix(in_srgb,var(--color-bg)_78%,transparent),transparent_24%)] px-3 py-3 sm:px-4 sm:py-4 xl:min-h-0 xl:overflow-y-auto xl:overscroll-contain">
+                <div className="flex flex-1 flex-col gap-2.5 overflow-y-auto overscroll-contain bg-[linear-gradient(180deg,color-mix(in_srgb,var(--color-bg)_78%,transparent),transparent_24%)] px-3 py-3 sm:px-4 sm:py-4 xl:min-h-0">
                   {groupedMessages.map((entry) => {
                     const isAdmin = entry.senderRole === "ADMIN"
                     const senderRoleLabel = isAdmin ? "Админ" : "Покупатель"
@@ -604,16 +604,13 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                             entry.isMine && "flex flex-col items-end",
                           )}
                         >
-                          {entry.showMeta ? (
+                          {entry.showMeta && !entry.isMine ? (
                             <div
                               className={cn(
-                                "mb-1 flex items-center gap-2 px-1 text-[11px] text-[var(--color-muted)]",
-                                entry.isMine ? "justify-end" : "justify-start",
+                                "mb-1 flex items-center gap-2 px-1 text-[11px] text-[var(--color-muted)] justify-start",
                               )}
                             >
-                              <span className="font-medium text-[var(--color-text)]">
-                                {entry.isMine ? "Ты" : entry.senderName}
-                              </span>
+                              <span className="font-medium text-[var(--color-text)]">{entry.senderName}</span>
                               <span className="rounded-full bg-[var(--color-surface)] px-2 py-0.5">
                                 {senderRoleLabel}
                               </span>
