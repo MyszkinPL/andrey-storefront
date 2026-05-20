@@ -4,41 +4,39 @@ import { useMemo, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Ban, Search, ShieldCheck, X } from "lucide-react"
 
-import { getAdminUsers, updateAdminUserModeration } from "@/lib/api"
+import { getAdminUsers, getMe, updateAdminUserModeration } from "@/lib/api"
 import { Screen, ScreenBody, ScreenEmpty, ScreenHeader } from "@/components/screen"
 import { cn } from "@/lib/cn"
 
 export function AdminUsersScreen() {
   const queryClient = useQueryClient()
+  const { data: meData } = useQuery({ queryKey: ["me"], queryFn: getMe })
   const { data } = useQuery({
     queryKey: ["admin-users"],
     queryFn: getAdminUsers,
     refetchInterval: 10_000,
   })
   const [search, setSearch] = useState("")
-  const [filter, setFilter] = useState<"all" | "active" | "banned">("all")
+  const [filter, setFilter] = useState<"all" | "buyers" | "admins" | "banned">("all")
   const [banDraft, setBanDraft] = useState<null | { id: string; name: string }>(null)
-  const [banReason, setBanReason] = useState("")
 
   const moderationMutation = useMutation({
-    mutationFn: (payload: { id: string; isBanned: boolean; banReason?: string }) =>
+    mutationFn: (payload: { id: string; isBanned: boolean }) =>
       updateAdminUserModeration(payload.id, {
         isBanned: payload.isBanned,
-        banReason: payload.banReason,
       }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["admin-users"] })
       await queryClient.invalidateQueries({ queryKey: ["tickets"] })
       setBanDraft(null)
-      setBanReason("")
     },
   })
 
   const users = useMemo(() => {
     const query = search.trim().toLowerCase()
     return (data?.users ?? []).filter((user) => {
-      if (user.role === "ADMIN") return false
-      if (filter === "active" && user.isBanned) return false
+      if (filter === "buyers" && user.role !== "USER") return false
+      if (filter === "admins" && user.role !== "ADMIN") return false
       if (filter === "banned" && !user.isBanned) return false
       if (!query) return true
       return `${user.firstName} ${user.lastName || ""} ${user.username || ""} ${user.telegramId}`
@@ -46,6 +44,14 @@ export function AdminUsersScreen() {
         .includes(query)
     })
   }, [data?.users, filter, search])
+
+  if (meData && meData.user.role !== "ADMIN") {
+    return (
+      <Screen>
+        <ScreenHeader title="Доступ закрыт" subtitle="Модерация доступна только админу." />
+      </Screen>
+    )
+  }
 
   return (
     <Screen>
@@ -66,7 +72,8 @@ export function AdminUsersScreen() {
           <div className="mt-3 flex flex-wrap gap-2">
             {[
               { key: "all" as const, label: "Все" },
-              { key: "active" as const, label: "Активные" },
+              { key: "buyers" as const, label: "Покупатели" },
+              { key: "admins" as const, label: "Админы" },
               { key: "banned" as const, label: "Забаненные" },
             ].map((item) => (
               <button
@@ -101,6 +108,9 @@ export function AdminUsersScreen() {
                       <p className="truncate text-base font-semibold text-[var(--color-text)]">
                         {[user.firstName, user.lastName || ""].join(" ").trim()}
                       </p>
+                      <span className="rounded-full bg-[var(--color-bg)] px-2.5 py-1 text-[10px] text-[var(--color-muted)]">
+                        {user.role === "ADMIN" ? "Админ" : "Покупатель"}
+                      </span>
                       <span
                         className={cn(
                           "rounded-full px-2.5 py-1 text-[10px]",
@@ -120,6 +130,7 @@ export function AdminUsersScreen() {
                   <button
                     type="button"
                     onClick={() => {
+                      if (user.role === "ADMIN") return
                       if (user.isBanned) {
                         moderationMutation.mutate({ id: user.id, isBanned: false })
                       } else {
@@ -127,32 +138,36 @@ export function AdminUsersScreen() {
                           id: user.id,
                           name: [user.firstName, user.lastName || ""].join(" ").trim(),
                         })
-                        setBanReason(user.banReason || "")
                       }
                     }}
-                    disabled={moderationMutation.isPending}
+                    disabled={moderationMutation.isPending || user.role === "ADMIN"}
                     className={cn(
                       "rounded-full px-3 py-2 text-xs font-medium",
-                      user.isBanned
+                      user.role === "ADMIN"
+                        ? "bg-[var(--color-bg)] text-[var(--color-muted)]"
+                        : user.isBanned
                         ? "bg-[var(--color-bg)] text-[var(--color-text)]"
                         : "bg-[var(--color-destructive)]/14 text-[var(--color-destructive)]",
                     )}
                   >
-                    {user.isBanned ? "Снять бан" : "Забанить"}
+                    {user.role === "ADMIN" ? "Недоступно" : user.isBanned ? "Снять бан" : "Забанить"}
                   </button>
                 </div>
 
                 <div className="mt-4 grid gap-2 sm:grid-cols-3">
                   <Metric label="Активных заказов" value={String(user.activeOrderCount)} />
                   <Metric label="Telegram ID" value={user.telegramId} />
-                  <Metric label="Статус" value={user.isBanned ? "Заблокирован" : "В порядке"} />
+                  <Metric
+                    label="Доступ"
+                    value={
+                      user.role === "ADMIN"
+                        ? "Админ"
+                        : user.isBanned
+                          ? "Заблокирован"
+                          : "Активен"
+                    }
+                  />
                 </div>
-
-                {user.banReason ? (
-                  <div className="mt-3 rounded-[18px] bg-[var(--color-bg)] px-4 py-3 text-sm text-[var(--color-muted)]">
-                    {user.banReason}
-                  </div>
-                ) : null}
               </section>
             ))}
           </div>
@@ -172,7 +187,6 @@ export function AdminUsersScreen() {
               <button
                 onClick={() => {
                   setBanDraft(null)
-                  setBanReason("")
                 }}
                 className="flex size-10 items-center justify-center rounded-full bg-[var(--color-bg)] text-[var(--color-muted)]"
               >
@@ -189,25 +203,14 @@ export function AdminUsersScreen() {
                   <p className="text-sm font-medium text-[var(--color-text)]">
                     Все активные заказы будут автоматически отменены.
                   </p>
-                  <p className="mt-1 text-xs leading-5 text-[var(--color-muted)]">
-                    Причина будет показана пользователю на экране блокировки.
-                  </p>
                 </div>
               </div>
             </div>
-
-            <textarea
-              value={banReason}
-              onChange={(event) => setBanReason(event.target.value)}
-              placeholder="Причина блокировки"
-              className="ui-input mt-4 min-h-28"
-            />
 
             <div className="mt-5 flex flex-wrap justify-end gap-2">
               <button
                 onClick={() => {
                   setBanDraft(null)
-                  setBanReason("")
                 }}
                 className="rounded-full bg-[var(--color-bg)] px-4 py-2 text-sm text-[var(--color-text)]"
               >
@@ -218,7 +221,6 @@ export function AdminUsersScreen() {
                   moderationMutation.mutate({
                     id: banDraft.id,
                     isBanned: true,
-                    banReason: banReason.trim() || undefined,
                   })
                 }
                 className="rounded-full bg-[var(--color-destructive)] px-4 py-2 text-sm font-medium text-white"

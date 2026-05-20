@@ -19,7 +19,10 @@ export async function confirmTicketPaymentFlow(
     data: {
       isPaid: true,
       paymentConfirmedAt: new Date(),
-      status: ticket.status === "OPEN" ? TicketStatus.IN_PROGRESS : ticket.status,
+      status:
+        ticket.status === "OPEN" || ticket.status === "PAYMENT_REVIEW"
+          ? TicketStatus.IN_PROGRESS
+          : ticket.status,
       assignedToId: adminUserId,
     },
   })

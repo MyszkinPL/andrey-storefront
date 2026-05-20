@@ -227,6 +227,9 @@ export async function PATCH(
       select: {
         id: true,
         createdById: true,
+        status: true,
+        isPaid: true,
+        paymentMethodType: true,
       },
     })
 
@@ -263,6 +266,10 @@ export async function PATCH(
 
       if (manualTicket.status === "CLOSED") {
         return NextResponse.json({ error: "Заказ закрыт" }, { status: 400 })
+      }
+
+      if (manualTicket.status === TicketStatus.CANCELLED) {
+        return NextResponse.json({ error: "Заказ отменён" }, { status: 400 })
       }
 
       if (manualTicket.paymentMethodType !== PaymentMethodType.MANUAL) {
@@ -347,10 +354,32 @@ export async function PATCH(
 
     await prisma.$transaction(async (tx) => {
       if (payload.confirmPayment) {
+        if (
+          ticket.paymentMethodType === PaymentMethodType.MANUAL &&
+          ticket.status !== TicketStatus.PAYMENT_REVIEW
+        ) {
+          throw new Error("Ручную оплату можно подтвердить только после отметки покупателя")
+        }
+
+        if (
+          ticket.status === TicketStatus.CLOSED ||
+          ticket.status === TicketStatus.CANCELLED
+        ) {
+          throw new Error("Закрытый заказ нельзя подтверждать")
+        }
+
         await confirmTicketPaymentFlow(tx, id, user.id)
       }
 
       if (payload.rejectManualPayment) {
+        if (ticket.paymentMethodType !== PaymentMethodType.MANUAL) {
+          throw new Error("Этот заказ не требует ручной проверки")
+        }
+
+        if (ticket.status !== TicketStatus.PAYMENT_REVIEW) {
+          throw new Error("Заказ сейчас не находится на проверке оплаты")
+        }
+
         await tx.ticket.update({
           where: { id },
           data: {
@@ -369,6 +398,14 @@ export async function PATCH(
       }
 
       if (payload.status) {
+        if (
+          (ticket.status === TicketStatus.CLOSED ||
+            ticket.status === TicketStatus.CANCELLED) &&
+          payload.status !== ticket.status
+        ) {
+          throw new Error("Закрытый заказ нельзя перевести в другой статус")
+        }
+
         await tx.ticket.update({
           where: { id },
           data: {

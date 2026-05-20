@@ -19,7 +19,7 @@ import { createTicket, getTickets } from "@/lib/api"
 import { Screen, ScreenBody, ScreenEmpty, ScreenHeader } from "@/components/screen"
 import { cn } from "@/lib/cn"
 
-type FilterKey = "all" | "waiting" | "active" | "support" | "closed"
+type FilterKey = "all" | "waiting" | "review" | "active" | "support" | "closed"
 
 export function TicketsScreen() {
   const router = useRouter()
@@ -48,7 +48,13 @@ export function TicketsScreen() {
         !["CLOSED", "CANCELLED", "PAYMENT_REVIEW"].includes(ticket.status),
     )
     const active = tickets.filter(
-      (ticket) => !isSupport(ticket) && ticket.isPaid && ticket.status !== "CLOSED",
+      (ticket) =>
+        !isSupport(ticket) &&
+        ticket.isPaid &&
+        !["CLOSED", "CANCELLED"].includes(ticket.status),
+    )
+    const review = tickets.filter(
+      (ticket) => !isSupport(ticket) && ticket.status === "PAYMENT_REVIEW",
     )
     const support = tickets.filter(isSupport)
     const closed = tickets.filter(
@@ -56,8 +62,9 @@ export function TicketsScreen() {
     )
 
     return {
-      all: [...waiting, ...active, ...support, ...closed],
+      all: [...waiting, ...review, ...active, ...support, ...closed],
       waiting,
+      review,
       active,
       support,
       closed,
@@ -102,6 +109,12 @@ export function TicketsScreen() {
                   key: "waiting" as const,
                   label: "Ждут оплату",
                   count: buckets.waiting.length,
+                  icon: <Receipt size={14} />,
+                },
+                {
+                  key: "review" as const,
+                  label: "Проверка",
+                  count: buckets.review.length,
                   icon: <Receipt size={14} />,
                 },
                 {

@@ -15,7 +15,7 @@ import {
   X,
 } from "lucide-react"
 
-import { getProduct, getProducts, saveAdminProduct, updateAdminProduct } from "@/lib/api"
+import { getMe, getProduct, getProducts, saveAdminProduct, updateAdminProduct } from "@/lib/api"
 import { optimizeSquareImage } from "@/lib/image"
 import { Screen, ScreenHeader } from "@/components/screen"
 import { cn } from "@/lib/cn"
@@ -55,6 +55,7 @@ const emptyForm: ProductForm = {
 
 export function AdminProductsScreen() {
   const queryClient = useQueryClient()
+  const { data: meData } = useQuery({ queryKey: ["me"], queryFn: getMe })
   const { data } = useQuery({ queryKey: ["products"], queryFn: getProducts })
   const [form, setForm] = useState<ProductForm>(emptyForm)
   const [isEditorOpen, setIsEditorOpen] = useState(false)
@@ -149,6 +150,14 @@ export function AdminProductsScreen() {
     } finally {
       setUploading(false)
     }
+  }
+
+  if (meData && meData.user.role !== "ADMIN") {
+    return (
+      <Screen>
+        <ScreenHeader title="Доступ закрыт" subtitle="Каталог продавца доступен только админу." />
+      </Screen>
+    )
   }
 
   return (

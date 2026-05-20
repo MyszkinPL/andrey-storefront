@@ -5,13 +5,14 @@ import { useMemo, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { CircleDashed, Clock3, Headset, Receipt, ShieldCheck } from "lucide-react"
 
-import { getTickets } from "@/lib/api"
+import { getMe, getTickets } from "@/lib/api"
 import { Screen, ScreenBody, ScreenEmpty, ScreenHeader } from "@/components/screen"
 import { cn } from "@/lib/cn"
 
 type FilterKey = "all" | "waiting" | "review" | "work" | "support" | "closed"
 
 export function AdminTicketsScreen() {
+  const { data: meData } = useQuery({ queryKey: ["me"], queryFn: getMe })
   const { data } = useQuery({
     queryKey: ["tickets"],
     queryFn: getTickets,
@@ -34,7 +35,10 @@ export function AdminTicketsScreen() {
       (ticket) => !isSupport(ticket) && ticket.status === "PAYMENT_REVIEW",
     )
     const work = tickets.filter(
-      (ticket) => !isSupport(ticket) && ticket.isPaid && ticket.status !== "CLOSED",
+      (ticket) =>
+        !isSupport(ticket) &&
+        ticket.isPaid &&
+        !["CLOSED", "CANCELLED"].includes(ticket.status),
     )
     const closed = tickets.filter(
       (ticket) => !isSupport(ticket) && ["CLOSED", "CANCELLED"].includes(ticket.status),
@@ -51,6 +55,14 @@ export function AdminTicketsScreen() {
   }, [tickets])
 
   const visibleTickets = buckets[filter]
+
+  if (meData && meData.user.role !== "ADMIN") {
+    return (
+      <Screen>
+        <ScreenHeader title="Доступ закрыт" subtitle="Заказы продавца доступны только админу." />
+      </Screen>
+    )
+  }
 
   return (
     <Screen>

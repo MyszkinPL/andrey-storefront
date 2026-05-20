@@ -48,6 +48,7 @@ export async function PATCH(
       const activeTickets = await prisma.ticket.findMany({
         where: {
           createdById: id,
+          productId: { not: null },
           status: { notIn: ["CLOSED", "CANCELLED"] },
         },
         select: {
@@ -60,6 +61,7 @@ export async function PATCH(
           await tx.ticket.updateMany({
             where: {
               createdById: id,
+              productId: { not: null },
               status: { notIn: ["CLOSED", "CANCELLED"] },
             },
             data: {

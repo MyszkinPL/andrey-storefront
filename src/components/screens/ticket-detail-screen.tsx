@@ -801,7 +801,6 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                   <InfoRow
                     label="Аккаунт"
                     value={ticket.createdBy?.isBanned ? "Заблокирован" : "Активен"}
-                    hint={ticket.createdBy?.isBanned ? ticket.createdBy.banReason || "Без причины" : undefined}
                   />
                 </div>
                 {ticket.createdBy ? (

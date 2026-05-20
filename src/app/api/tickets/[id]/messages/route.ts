@@ -42,6 +42,13 @@ export async function POST(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
+    if (["CLOSED", "CANCELLED"].includes(ticket.status)) {
+      return NextResponse.json(
+        { error: "Закрытый заказ нельзя продолжить сообщениями" },
+        { status: 400 },
+      )
+    }
+
     if (
       user.role !== "ADMIN" &&
       ticket.productId &&
@@ -63,13 +70,6 @@ export async function POST(
         senderId: user.id,
         body,
         attachments,
-      },
-    })
-
-    await prisma.ticket.update({
-      where: { id },
-      data: {
-        status: ticket.status === "CLOSED" ? "OPEN" : ticket.status,
       },
     })
 

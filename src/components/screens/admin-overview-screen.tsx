@@ -20,7 +20,7 @@ export function AdminOverviewScreen() {
     queryFn: getAdminUsers,
   })
 
-  if (meData?.user.role !== "ADMIN") {
+  if (meData && meData.user.role !== "ADMIN") {
     return (
       <Screen>
         <ScreenHeader title="Доступ закрыт" subtitle="Эта зона только для админа." />

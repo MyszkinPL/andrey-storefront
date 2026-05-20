@@ -167,6 +167,14 @@ export function AdminSettingsScreen() {
     ? `${meData.settings.appUrl}/api/crypto-pay/webhook`
     : ""
 
+  if (meData && meData.user.role !== "ADMIN") {
+    return (
+      <Screen>
+        <ScreenHeader title="Доступ закрыт" subtitle="Настройки магазина доступны только админу." />
+      </Screen>
+    )
+  }
+
   function openCreateModal(preset?: PaymentMethodForm) {
     setEditorIndex(null)
     setEditorDraft({ ...(preset || emptyMethod) })
