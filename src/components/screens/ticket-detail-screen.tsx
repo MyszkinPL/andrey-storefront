@@ -195,7 +195,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
       : "Ожидает оплату"
   const orderSteps = getOrderSteps(ticket)
   const headerActions = adminToolsVisible ? (
-    <div className="flex w-full gap-2 overflow-x-auto pb-1 sm:w-auto sm:flex-wrap sm:justify-end sm:overflow-visible sm:pb-0">
+    <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]">
       {!ticket.isPaid ? (
         <button
           onClick={() => paymentMutation.mutate()}
@@ -491,8 +491,33 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
             ]}
           />
         }
-        trailing={headerActions}
       />
+
+      {adminToolsVisible ? (
+        <div className="px-4 pb-3">
+          <div className="ui-card p-3">
+            {headerActions}
+            {ticket.createdBy ? (
+              <div className="mt-3 flex items-center justify-between gap-3 rounded-[18px] bg-[var(--color-bg)] px-3 py-2.5">
+                <div className="min-w-0">
+                  <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-muted)]">
+                    Покупатель
+                  </p>
+                  <p className="mt-1 truncate text-sm font-medium text-[var(--color-text)]">
+                    {[ticket.createdBy.firstName, ticket.createdBy.lastName || ""].join(" ").trim()}
+                  </p>
+                </div>
+                <Link
+                  href="/admin/users"
+                  className="shrink-0 rounded-full bg-[var(--color-surface)] px-3 py-1.5 text-xs font-medium text-[var(--color-text)]"
+                >
+                  Модерация
+                </Link>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
 
       <div className="flex min-h-0 flex-1 flex-col px-4 pb-4">
         <div
@@ -784,65 +809,15 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
 
           {!isSupportFlow ? (
             <aside className="order-1 grid min-h-0 content-start gap-4 overflow-y-auto xl:order-2">
-            {adminToolsVisible ? (
-              <section className="ui-card shrink-0 p-4">
-                <p className="text-sm font-semibold text-[var(--color-text)]">Контакты</p>
-                <div className="mt-4 grid gap-2">
-                  <InfoRow
-                    label="Покупатель"
-                    value={
-                      ticket.createdBy
-                        ? [
-                            ticket.createdBy.firstName,
-                            ticket.createdBy.lastName || "",
-                          ]
-                            .join(" ")
-                            .trim()
-                        : "—"
-                    }
-                    hint={ticket.createdBy?.username ? `@${ticket.createdBy.username}` : undefined}
-                  />
-                  <InfoRow
-                    label="Ответственный"
-                    value={
-                      ticket.assignedTo
-                        ? [
-                            ticket.assignedTo.firstName,
-                            ticket.assignedTo.lastName || "",
-                          ]
-                            .join(" ")
-                            .trim()
-                        : "Не назначен"
-                    }
-                    hint={ticket.assignedTo?.username ? `@${ticket.assignedTo.username}` : undefined}
-                  />
-                  <InfoRow
-                    label="Аккаунт"
-                    value={ticket.createdBy?.isBanned ? "Заблокирован" : "Активен"}
-                  />
-                </div>
-                {ticket.createdBy ? (
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    <Link
-                      href="/admin/users"
-                      className="rounded-full bg-[var(--color-bg)] px-3 py-2 text-xs font-medium text-[var(--color-text)]"
-                    >
-                      Открыть модерацию
-                    </Link>
-                  </div>
-                ) : null}
-              </section>
-            ) : null}
-
             <section className="ui-card shrink-0 p-4">
               <p className="text-sm font-semibold text-[var(--color-text)]">Статус заказа</p>
-              <div className="mt-4 grid gap-3">
+              <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
                 {orderSteps.map((step, index) => (
-                  <div key={step.title} className="flex gap-3">
-                    <div className="flex w-6 flex-col items-center">
+                  <div key={step.title} className="rounded-[18px] bg-[var(--color-bg)] p-3">
+                    <div className="flex items-start gap-3">
                       <div
                         className={cn(
-                          "flex size-6 items-center justify-center rounded-full text-[11px] font-semibold",
+                          "flex size-7 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold",
                           step.state === "done" &&
                             "bg-[var(--color-accent)] text-[var(--color-accent-text)]",
                           step.state === "current" &&
@@ -853,31 +828,21 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                       >
                         {index + 1}
                       </div>
-                      {index < orderSteps.length - 1 ? (
-                        <div
+                      <div className="min-w-0">
+                        <p
                           className={cn(
-                            "mt-1 h-full min-h-6 w-px",
-                            step.state === "done"
-                              ? "bg-[var(--color-accent)]/40"
-                              : "bg-[var(--color-border)]",
+                            "text-sm font-medium",
+                            step.state === "upcoming"
+                              ? "text-[var(--color-muted)]"
+                              : "text-[var(--color-text)]",
                           )}
-                        />
-                      ) : null}
-                    </div>
-                    <div className="min-w-0 pb-3">
-                      <p
-                        className={cn(
-                          "text-sm font-medium",
-                          step.state === "upcoming"
-                            ? "text-[var(--color-muted)]"
-                            : "text-[var(--color-text)]",
-                        )}
-                      >
-                        {step.title}
-                      </p>
-                      <p className="mt-1 text-xs leading-5 text-[var(--color-muted)]">
-                        {step.subtitle}
-                      </p>
+                        >
+                          {step.title}
+                        </p>
+                        <p className="mt-1 text-xs leading-5 text-[var(--color-muted)]">
+                          {step.subtitle}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -1237,30 +1202,6 @@ function SenderAvatar({
           )}
         </div>
       ) : null}
-    </div>
-  )
-}
-
-function InfoRow({
-  label,
-  value,
-  hint,
-}: {
-  label: string
-  value: string
-  hint?: string
-}) {
-  return (
-    <div className="rounded-[16px] bg-[var(--color-bg)] px-3 py-2.5">
-      <div className="flex items-start justify-between gap-3">
-        <p className="shrink-0 text-[10px] uppercase tracking-[0.14em] text-[var(--color-muted)]">
-          {label}
-        </p>
-        <div className="min-w-0 text-right">
-          <p className="truncate text-sm font-medium text-[var(--color-text)]">{value}</p>
-          {hint ? <p className="mt-0.5 truncate text-[11px] text-[var(--color-muted)]">{hint}</p> : null}
-        </div>
-      </div>
     </div>
   )
 }
