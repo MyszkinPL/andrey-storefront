@@ -546,7 +546,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
               </section>
             ) : null}
 
-            <section className="ui-card flex min-h-[56dvh] max-h-[72dvh] flex-col overflow-hidden xl:min-h-0 xl:max-h-none">
+            <section className="ui-card flex min-h-[48dvh] max-h-[62dvh] flex-col overflow-hidden xl:min-h-0 xl:max-h-none">
               <div className="hidden border-b border-[var(--color-border)] px-4 py-3 sm:px-5 xl:block">
                 <div className="flex flex-wrap items-center gap-2">
                   {!isSupportFlow ? (
@@ -580,7 +580,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                   />
                 </div>
               ) : (
-                <div className="flex flex-1 flex-col gap-2.5 overflow-y-auto overscroll-contain bg-[linear-gradient(180deg,color-mix(in_srgb,var(--color-bg)_78%,transparent),transparent_24%)] px-3 py-3 sm:px-4 sm:py-4 xl:min-h-0">
+                <div className="flex flex-1 flex-col justify-end gap-2.5 overflow-y-auto overscroll-contain bg-[linear-gradient(180deg,color-mix(in_srgb,var(--color-bg)_78%,transparent),transparent_24%)] px-3 py-3 sm:px-4 sm:py-4 xl:min-h-0">
                   {groupedMessages.map((entry) => {
                     const isAdmin = entry.senderRole === "ADMIN"
                     const senderRoleLabel = isAdmin ? "Админ" : "Покупатель"
