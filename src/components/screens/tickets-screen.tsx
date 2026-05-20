@@ -77,8 +77,16 @@ export function TicketsScreen() {
     <Screen>
       <ScreenHeader
         inlineTrailingMobile
-        title="Заказы"
-        subtitle={`${buckets.active.length} активных · ${buckets.waiting.length} ждут оплату`}
+        title={
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p>Заказы</p>
+              <p className="mt-1 text-xs font-normal text-[var(--color-muted)]">
+                {buckets.active.length} активных · {buckets.waiting.length} ждут оплату
+              </p>
+            </div>
+          </div>
+        }
         trailing={
           <button
             onClick={() => quickSupport.mutate()}
