@@ -64,6 +64,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
   const [attachments, setAttachments] = useState<TicketMessageAttachment[]>([])
   const [isUploading, setIsUploading] = useState(false)
   const [previewImage, setPreviewImage] = useState<string | null>(null)
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const { data } = useQuery({
     queryKey: ["ticket", ticketId],
     queryFn: () => getTicket(ticketId),
@@ -226,10 +227,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
         Закрыть
       </button>
       <button
-        onClick={() => {
-          if (!window.confirm("Удалить заказ из базы полностью?")) return
-          deleteTicketMutation.mutate()
-        }}
+        onClick={() => setIsDeleteModalOpen(true)}
         disabled={deleteTicketMutation.isPending}
         className="inline-flex shrink-0 items-center justify-center gap-1 rounded-full bg-[var(--color-destructive)]/14 px-3 py-2 text-xs font-medium text-[var(--color-destructive)] disabled:opacity-60"
       >
@@ -1037,6 +1035,19 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
       {previewImage ? (
         <ImagePreviewModal src={previewImage} onClose={() => setPreviewImage(null)} />
       ) : null}
+
+      {isDeleteModalOpen ? (
+        <ConfirmDeleteModal
+          loading={deleteTicketMutation.isPending}
+          onClose={() => {
+            if (deleteTicketMutation.isPending) return
+            setIsDeleteModalOpen(false)
+          }}
+          onConfirm={() => {
+            deleteTicketMutation.mutate()
+          }}
+        />
+      ) : null}
     </Screen>
   )
 }
@@ -1296,6 +1307,66 @@ function ImagePreviewModal({
 
         <div className="relative h-full w-full">
           <Image src={src} alt="" fill unoptimized sizes="100vw" className="object-contain" />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ConfirmDeleteModal({
+  loading,
+  onClose,
+  onConfirm,
+}: {
+  loading: boolean
+  onClose: () => void
+  onConfirm: () => void
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-[var(--color-overlay)] p-3 md:items-center md:p-6"
+      onClick={onClose}
+    >
+      <div
+        className="ui-card w-full max-w-md p-4 sm:p-5"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-base font-semibold text-[var(--color-text)]">
+              Удалить заказ
+            </p>
+            <p className="mt-1 text-sm text-[var(--color-muted)]">
+              Заказ будет удалён из базы полностью. Это действие нельзя отменить.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[var(--color-bg)] text-[var(--color-muted)]"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        <div className="mt-5 flex items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={loading}
+            className="rounded-full bg-[var(--color-bg)] px-4 py-2 text-sm font-medium text-[var(--color-text)] disabled:opacity-60"
+          >
+            Отмена
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={loading}
+            className="rounded-full bg-[var(--color-destructive)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+          >
+            {loading ? "Удаляю..." : "Удалить"}
+          </button>
         </div>
       </div>
     </div>
