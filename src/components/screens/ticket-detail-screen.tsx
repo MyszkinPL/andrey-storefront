@@ -190,6 +190,9 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
 
   const showManualWaitingCard =
     ticket.paymentMethodType === "MANUAL" && ticket.manualPaymentRequestedAt && !ticket.isPaid
+  const showPaymentDetailsCard =
+    (ticket.paymentMethodType === "CRYPTO_PAY" && Boolean(ticket.cryptoInvoiceUrl) && !ticket.isPaid) ||
+    (ticket.paymentMethodType === "MANUAL" && Boolean(ticket.paymentMethodDetails) && !ticket.isPaid)
 
   return (
     <Screen noTabBar className="pt-3">
@@ -333,7 +336,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                 </div>
               ) : null}
 
-              {ticket.paymentMethodTitle ? (
+              {showPaymentDetailsCard ? (
                 <div className="mt-6 rounded-[24px] border border-[var(--color-border)] bg-[var(--color-bg)] p-3.5 sm:p-4">
                   {ticket.paymentMethodType === "CRYPTO_PAY" && ticket.cryptoInvoiceUrl ? (
                     <div className="grid gap-3">
