@@ -8,7 +8,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { format } from "date-fns"
 import { ru } from "date-fns/locale"
 import {
-  ChevronDown,
   CircleDashed,
   ExternalLink,
   RefreshCcw,
@@ -37,7 +36,6 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
   const queryClient = useQueryClient()
   const { mode } = useMode()
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
-  const [isMobileDetailsOpen, setIsMobileDetailsOpen] = useState(false)
 
   const { data: meData } = useQuery({
     queryKey: ["me"],
@@ -311,7 +309,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
             </div>
           ) : null}
 
-          <div className="mt-3 grid gap-2 rounded-[20px] bg-[var(--color-bg)] p-3 sm:grid-cols-3">
+          <div className="mt-3 flex items-center gap-2 overflow-x-auto rounded-[20px] bg-[var(--color-bg)] p-2.5 [scrollbar-width:none]">
             {[
               {
                 title: "Оплата",
@@ -342,7 +340,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
             ].map((step, index) => (
               <div
                 key={step.title}
-                className="flex items-center gap-2 rounded-[16px] bg-[var(--color-surface)] px-3 py-2"
+                className="flex shrink-0 items-center gap-2 rounded-full bg-[var(--color-surface)] px-2.5 py-1.5"
               >
                 <div
                   className={cn(
@@ -354,9 +352,10 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                 >
                   {index + 1}
                 </div>
-                <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
                   <p className="text-xs font-medium text-[var(--color-text)]">{step.title}</p>
-                  <p className="mt-0.5 text-[10px] text-[var(--color-muted)]">{step.subtitle}</p>
+                  <span className="text-[10px] text-[var(--color-muted)]">·</span>
+                  <p className="text-[10px] text-[var(--color-muted)]">{step.subtitle}</p>
                 </div>
               </div>
             ))}
@@ -420,32 +419,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
           </div>
         </section>
 
-        <button
-          type="button"
-          onClick={() => setIsMobileDetailsOpen((current) => !current)}
-          className="ui-card flex items-center justify-between px-4 py-3 text-left xl:hidden"
-        >
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-[var(--color-text)]">Детали заказа</p>
-            <p className="mt-1 text-xs text-[var(--color-muted)]">
-              {paymentStateLabel} · {ticket.paymentMethodTitle || "Без способа оплаты"}
-            </p>
-          </div>
-          <ChevronDown
-            size={16}
-            className={cn(
-              "shrink-0 text-[var(--color-muted)] transition-transform",
-              isMobileDetailsOpen && "rotate-180",
-            )}
-          />
-        </button>
-
-        <aside
-          className={cn(
-            "grid content-start gap-3 xl:row-span-2 xl:block xl:space-y-3",
-            isMobileDetailsOpen ? "grid" : "hidden xl:block",
-          )}
-        >
+        <aside className="hidden xl:block xl:row-span-2 xl:space-y-3">
           <section className="ui-card p-3.5">
             <p className="text-sm font-semibold text-[var(--color-text)]">Статус заказа</p>
             <div className="mt-3 flex gap-2 overflow-x-auto [scrollbar-width:none] xl:grid xl:overflow-visible">
