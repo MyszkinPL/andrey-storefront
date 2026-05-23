@@ -14,8 +14,8 @@ type FilterKey = "all" | "waiting" | "review" | "work" | "closed"
 export function AdminTicketsScreen() {
   const { data: meData } = useQuery({ queryKey: ["me"], queryFn: getMe })
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["tickets"],
-    queryFn: getTickets,
+    queryKey: ["tickets", "all"],
+    queryFn: () => getTickets({ scope: "all" }),
     refetchInterval: 10_000,
   })
   const [filter, setFilter] = useState<FilterKey>("all")

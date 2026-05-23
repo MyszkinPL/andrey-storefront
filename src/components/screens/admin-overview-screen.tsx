@@ -8,7 +8,7 @@ import { Screen, ScreenBody, ScreenEmpty, ScreenHeader } from "@/components/scre
 export function AdminOverviewScreen() {
   const { data: meData } = useQuery({ queryKey: ["me"], queryFn: getMe })
   const { data: productsData, isLoading: isLoadingProducts, isError: isErrorProducts } = useQuery({ queryKey: ["products"], queryFn: getProducts })
-  const { data: ticketsData, isLoading: isLoadingTickets, isError: isErrorTickets } = useQuery({ queryKey: ["tickets"], queryFn: getTickets })
+  const { data: ticketsData, isLoading: isLoadingTickets, isError: isErrorTickets } = useQuery({ queryKey: ["tickets", "all"], queryFn: () => getTickets({ scope: "all" }) })
   const { data: paymentData, isLoading: isLoadingPayments, isError: isErrorPayments } = useQuery({
     queryKey: ["payment-methods"],
     queryFn: getPaymentMethods,

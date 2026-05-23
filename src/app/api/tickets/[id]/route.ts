@@ -148,6 +148,7 @@ export async function GET(
       deliveredKey: ticket.deliveredKey?.value || null,
       manualPaymentRequestedAt: ticket.manualPaymentRequestedAt?.toISOString() || null,
       isAdmin: user.role === "ADMIN",
+      isOwner: ticket.createdById === user.id,
       createdBy:
         user.role === "ADMIN"
           ? {
@@ -215,7 +216,7 @@ export async function PATCH(
     }
 
     if (payload.markManualPaid) {
-      if (user.role === "ADMIN" || ticket.createdById !== user.id) {
+      if (ticket.createdById !== user.id) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 })
       }
 
@@ -264,7 +265,7 @@ export async function PATCH(
     }
 
     if (payload.cancelByUser) {
-      if (user.role === "ADMIN" || ticket.createdById !== user.id) {
+      if (ticket.createdById !== user.id) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 })
       }
 

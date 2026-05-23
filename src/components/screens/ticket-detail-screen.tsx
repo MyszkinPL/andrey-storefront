@@ -113,8 +113,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
   const ticket = data.ticket
   const isSupportFlow = !ticket.productTitle && !ticket.paymentMethodTitle
   const isBuyerView = mode === "buyer"
-  const isActualAdmin = meData?.user.role === "ADMIN"
-  const isRealBuyerView = isBuyerView && !isActualAdmin
+  const isRealBuyerView = isBuyerView && ticket.isOwner
   const isClosed = ["CLOSED", "CANCELLED"].includes(ticket.status)
   const supportLink = meData?.settings.supportUsername
     ? `https://t.me/${meData.settings.supportUsername.replace(/^@/, "")}`

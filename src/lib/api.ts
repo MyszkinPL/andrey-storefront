@@ -150,7 +150,10 @@ export function createTicket(payload: {
   })
 }
 
-export function getTickets() {
+export function getTickets(params?: { scope?: "all" }) {
+  const query = new URLSearchParams()
+  if (params?.scope) query.set("scope", params.scope)
+
   return api<{
     tickets: Array<{
       id: string
@@ -166,7 +169,7 @@ export function getTickets() {
       paymentMethodType: PaymentMethodType | null
       manualPaymentRequestedAt: string | null
     }>
-  }>("/api/tickets")
+  }>(`/api/tickets${query.size ? `?${query.toString()}` : ""}`)
 }
 
 export function getTicket(id: string) {
@@ -183,6 +186,7 @@ export function getTicket(id: string) {
       deliveredKey: string | null
       manualPaymentRequestedAt: string | null
       isAdmin: boolean
+      isOwner: boolean
       createdBy: {
         id: string
         firstName: string

@@ -13,9 +13,14 @@ const schema = z.object({
   paymentMethodType: z.nativeEnum(PaymentMethodType).optional(),
 })
 
-export async function GET() {
+export async function GET(request: Request) {
   const user = await requireUser()
-  const where = user.role === "ADMIN" ? {} : { createdById: user.id }
+  const { searchParams } = new URL(request.url)
+  const scope = searchParams.get("scope")
+  const where =
+    user.role === "ADMIN" && scope === "all"
+      ? {}
+      : { createdById: user.id }
 
   const tickets = await prisma.ticket.findMany({
     where,

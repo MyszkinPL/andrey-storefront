@@ -23,7 +23,7 @@ type FilterKey = "all" | "waiting" | "review" | "active" | "closed"
 export function TicketsScreen() {
   const { data: ticketsData, isLoading, isError } = useQuery({
     queryKey: ["tickets"],
-    queryFn: getTickets,
+    queryFn: () => getTickets(),
   })
   const { data: meData } = useQuery({ queryKey: ["me"], queryFn: getMe })
   const [filter, setFilter] = useState<FilterKey>("all")
