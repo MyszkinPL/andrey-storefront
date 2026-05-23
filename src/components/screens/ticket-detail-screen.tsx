@@ -248,7 +248,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                   />
                 </div>
 
-                <div className="mt-5 flex size-20 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--color-accent)_18%,var(--color-surface)_82%)] sm:size-24">
+                <div className="mt-5">
                   <PaymentMethodIcon
                     iconDataUrl={ticket.paymentMethodIconDataUrl}
                     title={ticket.paymentMethodTitle || "PM"}
@@ -305,9 +305,13 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                 <div className="mt-6 rounded-[24px] border border-[var(--color-border)] bg-[var(--color-bg)] p-3.5 sm:p-4">
                   {ticket.paymentMethodType === "CRYPTO_PAY" && ticket.cryptoInvoiceUrl ? (
                     <div className="grid gap-3">
-                      <div className="grid gap-2 sm:grid-cols-2">
-                        <PaymentDataItem label="Статус" value={ticket.cryptoInvoiceStatus === "paid" ? "Оплачен" : "Ждёт оплату"} />
-                        <PaymentDataItem label="Сумма" value={amountLabel || "—"} align="right" />
+                      <div className="rounded-[18px] bg-[var(--color-surface)] px-4 py-3 text-left">
+                        <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-muted)]">
+                          Invoice
+                        </p>
+                        <p className="mt-1 text-sm font-medium text-[var(--color-text)]">
+                          {ticket.cryptoInvoiceStatus === "paid" ? "Оплачен" : "Готов к оплате"}
+                        </p>
                       </div>
                       {!ticket.isPaid ? (
                         <a
@@ -420,8 +424,8 @@ function PaymentMethodIcon({
     return (
       <div
         className={cn(
-          "relative overflow-hidden rounded-[18px]",
-          large ? "size-11 rounded-[16px]" : "size-12",
+          "relative overflow-hidden",
+          large ? "size-16 rounded-[20px]" : "size-12 rounded-[18px]",
         )}
       >
         <Image
@@ -429,8 +433,8 @@ function PaymentMethodIcon({
           alt=""
           fill
           unoptimized
-          sizes={large ? "44px" : "48px"}
-          className="object-cover"
+          sizes={large ? "64px" : "48px"}
+          className="object-contain"
         />
       </div>
     )
@@ -440,27 +444,10 @@ function PaymentMethodIcon({
     <div
       className={cn(
         "flex items-center justify-center bg-[var(--color-bg)] text-xs font-semibold text-[var(--color-text)]",
-        large ? "size-11 rounded-[16px]" : "size-12 rounded-[18px]",
+        large ? "size-16 rounded-[20px]" : "size-12 rounded-[18px]",
       )}
     >
       {title.slice(0, 2).toUpperCase()}
-    </div>
-  )
-}
-
-function PaymentDataItem({
-  label,
-  value,
-  align = "left",
-}: {
-  label: string
-  value: string
-  align?: "left" | "right"
-}) {
-  return (
-    <div className={cn("rounded-[16px] bg-[var(--color-surface)] px-3 py-3", align === "right" && "text-right")}>
-      <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-muted)]">{label}</p>
-      <p className="mt-1 text-sm font-medium text-[var(--color-text)]">{value}</p>
     </div>
   )
 }
