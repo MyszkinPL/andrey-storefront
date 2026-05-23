@@ -525,14 +525,39 @@ function CopyValueCard({
   onCopy: () => void
 }) {
   return (
-    <div className="rounded-[18px] bg-[var(--color-surface)] px-4 py-3">
-      <div className="flex items-start justify-between gap-3">
-        <p className="min-w-0 whitespace-pre-wrap break-all text-sm leading-6 text-[var(--color-text)]">
-          {value}
-        </p>
-        <CopyButton copied={copied} onClick={onCopy} />
+    <div className="relative rounded-[18px] bg-[var(--color-surface)] px-4 py-3 pr-14">
+      <p className="min-w-0 whitespace-pre-wrap break-all text-sm leading-6 text-[var(--color-text)]">
+        {value}
+      </p>
+      <div className="absolute right-3 top-3">
+        <CopyIconButton copied={copied} onClick={onCopy} />
       </div>
     </div>
+  )
+}
+
+function CopyIconButton({
+  copied,
+  onClick,
+}: {
+  copied: boolean
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={copied ? "Скопировано" : "Копировать"}
+      title={copied ? "Скопировано" : "Копировать"}
+      className={cn(
+        "inline-flex size-8 shrink-0 items-center justify-center rounded-full transition-colors",
+        copied
+          ? "bg-[var(--color-accent)] text-[var(--color-accent-text)]"
+          : "bg-[var(--color-bg)] text-[var(--color-text)]",
+      )}
+    >
+      {copied ? <Check size={13} /> : <Copy size={13} />}
+    </button>
   )
 }
 
