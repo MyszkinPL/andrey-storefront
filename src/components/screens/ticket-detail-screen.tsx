@@ -238,6 +238,79 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
             <span className="ml-auto text-[11px] text-[var(--color-muted)]">{createdAtLabel}</span>
           </div>
 
+          {ticket.paymentMethodTitle ? (
+            <div className="mt-3 rounded-[20px] bg-[var(--color-bg)] p-3">
+              <div className="flex items-start gap-3">
+                <PaymentMethodIcon
+                  iconDataUrl={ticket.paymentMethodIconDataUrl}
+                  title={ticket.paymentMethodTitle}
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-[var(--color-text)]">
+                    {ticket.paymentMethodTitle}
+                  </p>
+                  <p className="mt-1 text-xs text-[var(--color-muted)]">
+                    {ticket.paymentMethodType === "CRYPTO_PAY" ? "Автооплата" : "Ручная оплата"}
+                  </p>
+                </div>
+                {ticket.paymentMethodType === "CRYPTO_PAY" ? (
+                  <button
+                    type="button"
+                    onClick={() => refreshMutation.mutate()}
+                    className="flex size-9 items-center justify-center rounded-full bg-[var(--color-surface)] text-[var(--color-muted)]"
+                  >
+                    <RefreshCcw
+                      size={14}
+                      className={refreshMutation.isPending ? "animate-spin" : ""}
+                    />
+                  </button>
+                ) : null}
+              </div>
+
+              {ticket.paymentMethodType === "CRYPTO_PAY" && ticket.cryptoInvoiceUrl ? (
+                <div className="mt-3 grid gap-2">
+                  <div className="flex items-center justify-between gap-3 rounded-[16px] bg-[var(--color-surface)] px-3 py-2.5">
+                    <div>
+                      <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-muted)]">
+                        Статус
+                      </p>
+                      <p className="mt-1 text-sm font-medium text-[var(--color-text)]">
+                        {ticket.cryptoInvoiceStatus === "paid" ? "Оплачен" : "Ждёт оплату"}
+                      </p>
+                    </div>
+                    {ticket.cryptoInvoiceAmount ? (
+                      <div className="text-right">
+                        <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-muted)]">
+                          Сумма
+                        </p>
+                        <p className="mt-1 text-sm font-medium text-[var(--color-text)]">
+                          {ticket.cryptoInvoiceAmount} {ticket.cryptoInvoiceFiat || "RUB"}
+                        </p>
+                      </div>
+                    ) : null}
+                  </div>
+                  {!ticket.isPaid ? (
+                    <a
+                      href={ticket.cryptoInvoiceUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center justify-center gap-2 rounded-[16px] bg-[var(--color-accent)] px-4 py-2.5 text-sm font-semibold text-[var(--color-accent-text)]"
+                    >
+                      Открыть invoice
+                      <ExternalLink size={14} />
+                    </a>
+                  ) : null}
+                </div>
+              ) : ticket.paymentMethodDetails ? (
+                <div className="mt-3 rounded-[16px] bg-[var(--color-surface)] p-3">
+                  <p className="whitespace-pre-wrap text-sm leading-5 text-[var(--color-text)]">
+                    {ticket.paymentMethodDetails}
+                  </p>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
           <div className="mt-3 grid gap-2 rounded-[20px] bg-[var(--color-bg)] p-3 sm:grid-cols-3">
             {[
               {
@@ -269,11 +342,11 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
             ].map((step, index) => (
               <div
                 key={step.title}
-                className="flex items-center gap-2.5 rounded-[16px] bg-[var(--color-surface)] px-3 py-2.5"
+                className="flex items-center gap-2 rounded-[16px] bg-[var(--color-surface)] px-3 py-2"
               >
                 <div
                   className={cn(
-                    "flex size-7 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold",
+                    "flex size-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold",
                     step.active
                       ? "bg-[var(--color-accent)] text-[var(--color-accent-text)]"
                       : "bg-[var(--color-surface-2)] text-[var(--color-muted)]",
@@ -282,8 +355,8 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                   {index + 1}
                 </div>
                 <div className="min-w-0">
-                  <p className="text-[13px] font-medium text-[var(--color-text)]">{step.title}</p>
-                  <p className="mt-0.5 text-[11px] text-[var(--color-muted)]">{step.subtitle}</p>
+                  <p className="text-xs font-medium text-[var(--color-text)]">{step.title}</p>
+                  <p className="mt-0.5 text-[10px] text-[var(--color-muted)]">{step.subtitle}</p>
                 </div>
               </div>
             ))}
@@ -375,13 +448,16 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
         >
           <section className="ui-card p-3.5">
             <p className="text-sm font-semibold text-[var(--color-text)]">Статус заказа</p>
-            <div className="mt-3 grid gap-2">
+            <div className="mt-3 flex gap-2 overflow-x-auto [scrollbar-width:none] xl:grid xl:overflow-visible">
               {orderSteps.map((step, index) => (
-                <div key={step.title} className="rounded-[18px] bg-[var(--color-bg)] p-2.5">
-                  <div className="flex items-start gap-2.5">
+                <div
+                  key={step.title}
+                  className="min-w-[158px] rounded-[16px] bg-[var(--color-bg)] p-2.5 xl:min-w-0"
+                >
+                  <div className="flex items-start gap-2">
                     <div
                       className={cn(
-                        "flex size-7 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold",
+                        "flex size-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold",
                         step.state === "done" &&
                           "bg-[var(--color-accent)] text-[var(--color-accent-text)]",
                         step.state === "current" &&
@@ -395,7 +471,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                     <div className="min-w-0">
                       <p
                         className={cn(
-                          "text-[13px] font-medium",
+                          "text-xs font-medium",
                           step.state === "upcoming"
                             ? "text-[var(--color-muted)]"
                             : "text-[var(--color-text)]",
@@ -403,7 +479,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                       >
                         {step.title}
                       </p>
-                      <p className="mt-0.5 text-[11px] leading-4.5 text-[var(--color-muted)]">
+                      <p className="mt-0.5 text-[10px] leading-4 text-[var(--color-muted)]">
                         {step.subtitle}
                       </p>
                     </div>
@@ -414,7 +490,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
           </section>
 
           {ticket.paymentMethodTitle ? (
-            <section className="ui-card p-3.5">
+            <section className="hidden ui-card p-3.5 xl:block">
               <div className="flex items-start gap-3">
                 <PaymentMethodIcon
                   iconDataUrl={ticket.paymentMethodIconDataUrl}
@@ -467,17 +543,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                     </div>
                   </div>
 
-                  {!ticket.isPaid ? (
-                    <a
-                      href={ticket.cryptoInvoiceUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="flex items-center justify-center gap-2 rounded-[18px] bg-[var(--color-accent)] px-4 py-2.5 text-sm font-semibold text-[var(--color-accent-text)]"
-                    >
-                      Открыть invoice
-                      <ExternalLink size={15} />
-                    </a>
-                  ) : null}
+                  {!ticket.isPaid ? null : null}
                 </div>
               ) : ticket.paymentMethodDetails ? (
                 <div className="mt-3 rounded-[18px] bg-[var(--color-bg)] p-3.5">
