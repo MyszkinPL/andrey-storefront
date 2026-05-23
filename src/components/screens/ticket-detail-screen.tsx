@@ -2,7 +2,7 @@
 
 import type { PaymentMethodType } from "@prisma/client"
 import Image from "next/image"
-import { useMemo, useState } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { format } from "date-fns"
@@ -109,6 +109,32 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
 
   useBackButton(() => router.back())
 
+  const paymentOptions = [
+    ...((paymentData?.paymentMethods ?? []).filter((item) => item.isActive).map((method) => ({
+      key: `manual:${method.id}`,
+      id: method.id,
+      type: "MANUAL" as const,
+      title: method.title,
+      subtitle: method.details,
+      iconDataUrl: method.iconDataUrl,
+    })) ?? []),
+    ...(paymentData?.cryptoPay.enabled
+      ? [
+          {
+            key: "crypto:auto",
+            id: undefined,
+            type: "CRYPTO_PAY" as const,
+            title: paymentData.cryptoPay.title || "Crypto Bot",
+            subtitle:
+              paymentData.cryptoPay.acceptedAssets
+                ? `Автооплата · ${paymentData.cryptoPay.acceptedAssets}`
+                : "Автооплата через invoice",
+            iconDataUrl: paymentData.cryptoPay.iconDataUrl || null,
+          },
+        ]
+      : []),
+  ]
+
   if (isLoading) {
     return (
       <Screen noTabBar>
@@ -141,34 +167,6 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
   const supportLink = meData?.settings.supportUsername
     ? `https://t.me/${meData.settings.supportUsername.replace(/^@/, "")}`
     : null
-  const paymentOptions = useMemo(
-    () => [
-      ...((paymentData?.paymentMethods ?? []).filter((item) => item.isActive).map((method) => ({
-        key: `manual:${method.id}`,
-        id: method.id,
-        type: "MANUAL" as const,
-        title: method.title,
-        subtitle: method.details,
-        iconDataUrl: method.iconDataUrl,
-      })) ?? []),
-      ...(paymentData?.cryptoPay.enabled
-        ? [
-            {
-              key: "crypto:auto",
-              id: undefined,
-              type: "CRYPTO_PAY" as const,
-              title: paymentData.cryptoPay.title || "Crypto Bot",
-              subtitle:
-                paymentData.cryptoPay.acceptedAssets
-                  ? `Автооплата · ${paymentData.cryptoPay.acceptedAssets}`
-                  : "Автооплата через invoice",
-              iconDataUrl: paymentData.cryptoPay.iconDataUrl || null,
-            },
-          ]
-        : []),
-    ],
-    [paymentData],
-  )
   const createdAtLabel = format(new Date(ticket.createdAt), "dd MMMM · HH:mm", {
     locale: ru,
   })
