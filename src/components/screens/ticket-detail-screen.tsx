@@ -7,7 +7,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { format } from "date-fns"
 import { ru } from "date-fns/locale"
 import {
+  Check,
   CircleDashed,
+  Copy,
   ExternalLink,
   RefreshCcw,
   Trash2,
@@ -35,6 +37,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
   const queryClient = useQueryClient()
   const { mode } = useMode()
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [copiedField, setCopiedField] = useState<"payment" | "key" | null>(null)
 
   const { data: meData } = useQuery({
     queryKey: ["me"],
@@ -49,6 +52,14 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
   async function invalidate() {
     await queryClient.invalidateQueries({ queryKey: ["ticket", ticketId] })
     await queryClient.invalidateQueries({ queryKey: ["tickets"] })
+  }
+
+  async function copyValue(value: string, field: "payment" | "key") {
+    await navigator.clipboard.writeText(value)
+    setCopiedField(field)
+    window.setTimeout(() => {
+      setCopiedField((current) => (current === field ? null : current))
+    }, 1500)
   }
 
   const statusMutation = useMutation({
@@ -353,9 +364,11 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                     </div>
                   ) : ticket.paymentMethodDetails ? (
                     <div className="grid gap-3">
-                      <p className="whitespace-pre-wrap rounded-[18px] bg-[var(--color-surface)] px-4 py-3 text-sm leading-6 text-[var(--color-text)]">
-                        {ticket.paymentMethodDetails}
-                      </p>
+                      <CopyValueCard
+                        value={ticket.paymentMethodDetails}
+                        copied={copiedField === "payment"}
+                        onCopy={() => copyValue(ticket.paymentMethodDetails || "", "payment")}
+                      />
                       {ticket.paymentMethodType === "MANUAL" &&
                       !ticket.isPaid &&
                       !ticket.manualPaymentRequestedAt &&
@@ -377,7 +390,13 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
 
               {ticket.deliveredKey ? (
                 <div className="mt-5 rounded-[24px] border border-[var(--color-border)] bg-[var(--color-bg)] p-4">
-                  <p className="text-sm font-semibold text-[var(--color-text)]">Выданный ключ</p>
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm font-semibold text-[var(--color-text)]">Выданный ключ</p>
+                    <CopyButton
+                      copied={copiedField === "key"}
+                      onClick={() => copyValue(ticket.deliveredKey || "", "key")}
+                    />
+                  </div>
                   <p className="mt-3 break-all rounded-[18px] bg-[var(--color-surface)] px-4 py-4 font-mono text-sm text-[var(--color-text)]">
                     {ticket.deliveredKey}
                   </p>
@@ -493,6 +512,51 @@ function HeaderMetaRow({
         </span>
       ))}
     </div>
+  )
+}
+
+function CopyValueCard({
+  value,
+  copied,
+  onCopy,
+}: {
+  value: string
+  copied: boolean
+  onCopy: () => void
+}) {
+  return (
+    <div className="rounded-[18px] bg-[var(--color-surface)] px-4 py-3">
+      <div className="flex items-start justify-between gap-3">
+        <p className="min-w-0 whitespace-pre-wrap break-all text-sm leading-6 text-[var(--color-text)]">
+          {value}
+        </p>
+        <CopyButton copied={copied} onClick={onCopy} />
+      </div>
+    </div>
+  )
+}
+
+function CopyButton({
+  copied,
+  onClick,
+}: {
+  copied: boolean
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-medium transition-colors",
+        copied
+          ? "bg-[var(--color-accent)] text-[var(--color-accent-text)]"
+          : "bg-[var(--color-bg)] text-[var(--color-text)]",
+      )}
+    >
+      {copied ? <Check size={12} /> : <Copy size={12} />}
+      {copied ? "Скопировано" : "Копировать"}
+    </button>
   )
 }
 
