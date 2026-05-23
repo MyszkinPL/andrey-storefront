@@ -113,6 +113,8 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
   const ticket = data.ticket
   const isSupportFlow = !ticket.productTitle && !ticket.paymentMethodTitle
   const isBuyerView = mode === "buyer"
+  const isActualAdmin = meData?.user.role === "ADMIN"
+  const isRealBuyerView = isBuyerView && !isActualAdmin
   const isClosed = ["CLOSED", "CANCELLED"].includes(ticket.status)
   const supportLink = meData?.settings.supportUsername
     ? `https://t.me/${meData.settings.supportUsername.replace(/^@/, "")}`
@@ -328,7 +330,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                       {ticket.paymentMethodType === "MANUAL" &&
                       !ticket.isPaid &&
                       !ticket.manualPaymentRequestedAt &&
-                      isBuyerView &&
+                      isRealBuyerView &&
                       !isClosed ? (
                         <button
                           type="button"
@@ -363,7 +365,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
               ) : null}
 
               <div className="mt-5 grid gap-2 sm:grid-cols-2">
-                {ticket.isPaid && supportLink && isBuyerView ? (
+                {ticket.isPaid && supportLink && isRealBuyerView ? (
                   <a
                     href={supportLink}
                     target="_blank"
@@ -374,7 +376,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                   </a>
                 ) : null}
 
-                {isBuyerView && !ticket.isPaid && !isClosed ? (
+                {isRealBuyerView && !ticket.isPaid && !isClosed ? (
                   <button
                     type="button"
                     onClick={() => cancelOrderMutation.mutate()}
