@@ -1,7 +1,6 @@
 "use client"
 
 import Image from "next/image"
-import Link from "next/link"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
@@ -128,11 +127,30 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
     ? "Оплачено"
     : ticket.status === "PAYMENT_REVIEW"
       ? "На проверке"
-      : ticket.status === "CANCELLED"
-        ? "Отменён"
-        : "Ожидает оплату"
-  const orderSteps = getOrderSteps(ticket)
+        : ticket.status === "CANCELLED"
+          ? "Отменён"
+          : "Ожидает оплату"
   const adminToolsVisible = ticket.isAdmin && mode === "admin"
+  const amountLabel = ticket.cryptoInvoiceAmount
+    ? `${ticket.cryptoInvoiceAmount} ${ticket.cryptoInvoiceFiat || "RUB"}`
+    : null
+  const stepper = [
+    {
+      label: "Оплата",
+      active: true,
+      done: ticket.isPaid,
+    },
+    {
+      label: ticket.deliveredKey ? "Ключ" : "Выдача",
+      active: ticket.isPaid,
+      done: Boolean(ticket.deliveredKey) || ticket.status === "CLOSED",
+    },
+    {
+      label: "Готово",
+      active: ticket.status === "CLOSED" || Boolean(ticket.deliveredKey),
+      done: ticket.status === "CLOSED" || Boolean(ticket.deliveredKey),
+    },
+  ]
 
   const headerActions = adminToolsVisible ? (
     <div className="flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none]">
@@ -228,309 +246,172 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
         </div>
       ) : null}
 
-      <div className="grid gap-3 px-4 pb-3 xl:grid-cols-[minmax(0,1fr)_340px]">
-        <section className="ui-card p-3.5 sm:p-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <StatusBadge kind={ticket.isPaid ? "paid" : "waiting"}>{paymentStateLabel}</StatusBadge>
-            <StatusBadge>{ticket.paymentMethodTitle || "Без способа оплаты"}</StatusBadge>
-            <span className="ml-auto text-[11px] text-[var(--color-muted)]">{createdAtLabel}</span>
-          </div>
-
-          {ticket.paymentMethodTitle ? (
-            <div className="mt-3 rounded-[20px] bg-[var(--color-bg)] p-3">
-              <div className="flex items-start gap-3">
-                <PaymentMethodIcon
-                  iconDataUrl={ticket.paymentMethodIconDataUrl}
-                  title={ticket.paymentMethodTitle}
-                />
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-[var(--color-text)]">
-                    {ticket.paymentMethodTitle}
-                  </p>
-                  <p className="mt-1 text-xs text-[var(--color-muted)]">
-                    {ticket.paymentMethodType === "CRYPTO_PAY" ? "Автооплата" : "Ручная оплата"}
-                  </p>
+      <div className="px-4 pb-4">
+        <div className="mx-auto grid w-full max-w-3xl gap-3">
+          <section className="ui-card overflow-hidden">
+            <div className="px-5 py-6 sm:px-8 sm:py-8">
+              <div className="flex flex-col items-center text-center">
+                <div className="flex size-20 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--color-accent)_18%,var(--color-surface)_82%)] sm:size-24">
+                  <PaymentMethodIcon
+                    iconDataUrl={ticket.paymentMethodIconDataUrl}
+                    title={ticket.paymentMethodTitle || "PM"}
+                    large
+                  />
                 </div>
-                {ticket.paymentMethodType === "CRYPTO_PAY" ? (
-                  <button
-                    type="button"
-                    onClick={() => refreshMutation.mutate()}
-                    className="flex size-9 items-center justify-center rounded-full bg-[var(--color-surface)] text-[var(--color-muted)]"
-                  >
-                    <RefreshCcw
-                      size={14}
-                      className={refreshMutation.isPending ? "animate-spin" : ""}
-                    />
-                  </button>
+
+                <p className="mt-5 text-sm font-medium text-[var(--color-muted)]">
+                  {ticket.productTitle || ticket.subject}
+                </p>
+                <p className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-[var(--color-text)] sm:text-[2rem]">
+                  {paymentStateLabel}
+                </p>
+                <p className="mt-2 text-sm text-[var(--color-muted)]">
+                  {ticket.paymentMethodTitle || "Способ оплаты"}
+                </p>
+                {amountLabel ? (
+                  <p className="mt-3 text-3xl font-semibold leading-none text-[var(--color-text)] sm:text-[2.6rem]">
+                    {amountLabel}
+                  </p>
                 ) : null}
+                <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+                  <StatusBadge kind={ticket.isPaid ? "paid" : "waiting"}>{paymentStateLabel}</StatusBadge>
+                  {ticket.productCategory ? <StatusBadge>{ticket.productCategory}</StatusBadge> : null}
+                  <StatusBadge>#{ticket.number}</StatusBadge>
+                </div>
               </div>
 
-              {ticket.paymentMethodType === "CRYPTO_PAY" && ticket.cryptoInvoiceUrl ? (
-                <div className="mt-3 grid gap-2">
-                  <div className="flex items-center justify-between gap-3 rounded-[16px] bg-[var(--color-surface)] px-3 py-2.5">
-                    <div>
-                      <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-muted)]">
-                        Статус
-                      </p>
-                      <p className="mt-1 text-sm font-medium text-[var(--color-text)]">
-                        {ticket.cryptoInvoiceStatus === "paid" ? "Оплачен" : "Ждёт оплату"}
-                      </p>
-                    </div>
-                    {ticket.cryptoInvoiceAmount ? (
-                      <div className="text-right">
-                        <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-muted)]">
-                          Сумма
-                        </p>
-                        <p className="mt-1 text-sm font-medium text-[var(--color-text)]">
-                          {ticket.cryptoInvoiceAmount} {ticket.cryptoInvoiceFiat || "RUB"}
-                        </p>
+              {ticket.paymentMethodTitle ? (
+                <div className="mt-6 rounded-[24px] border border-[var(--color-border)] bg-[var(--color-bg)] p-3.5 sm:p-4">
+                  {ticket.paymentMethodType === "CRYPTO_PAY" && ticket.cryptoInvoiceUrl ? (
+                    <div className="grid gap-3">
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        <PaymentDataItem label="Статус" value={ticket.cryptoInvoiceStatus === "paid" ? "Оплачен" : "Ждёт оплату"} />
+                        <PaymentDataItem label="Сумма" value={amountLabel || "—"} align="right" />
                       </div>
-                    ) : null}
-                  </div>
-                  {!ticket.isPaid ? (
-                    <a
-                      href={ticket.cryptoInvoiceUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="flex items-center justify-center gap-2 rounded-[16px] bg-[var(--color-accent)] px-4 py-2.5 text-sm font-semibold text-[var(--color-accent-text)]"
-                    >
-                      Открыть invoice
-                      <ExternalLink size={14} />
-                    </a>
-                  ) : null}
-                </div>
-              ) : ticket.paymentMethodDetails ? (
-                <div className="mt-3 rounded-[16px] bg-[var(--color-surface)] p-3">
-                  <p className="whitespace-pre-wrap text-sm leading-5 text-[var(--color-text)]">
-                    {ticket.paymentMethodDetails}
-                  </p>
-                </div>
-              ) : null}
-            </div>
-          ) : null}
-
-          <div className="mt-3 flex items-center gap-2 overflow-x-auto rounded-[20px] bg-[var(--color-bg)] p-2.5 [scrollbar-width:none]">
-            {[
-              {
-                title: "Оплата",
-                active: true,
-              },
-              {
-                title: ticket.deliveredKey ? "Ключ" : "Выдача",
-                active: ticket.isPaid,
-              },
-              {
-                title: "Готово",
-                active: ticket.status === "CLOSED" || Boolean(ticket.deliveredKey),
-              },
-            ].map((step, index) => (
-              <div
-                key={step.title}
-                className="flex shrink-0 items-center gap-2 rounded-full bg-[var(--color-surface)] px-2.5 py-1.5"
-              >
-                <div
-                  className={cn(
-                    "flex size-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold",
-                    step.active
-                      ? "bg-[var(--color-accent)] text-[var(--color-accent-text)]"
-                      : "bg-[var(--color-surface-2)] text-[var(--color-muted)]",
-                  )}
-                >
-                  {index + 1}
-                </div>
-                <p className="text-xs font-medium text-[var(--color-text)]">{step.title}</p>
-              </div>
-            ))}
-          </div>
-
-          {ticket.deliveredKey ? (
-            <div className="mt-3 rounded-[20px] bg-[var(--color-bg)] p-3.5">
-              <p className="text-sm font-semibold text-[var(--color-text)]">Выданный ключ</p>
-              <p className="mt-2 break-all rounded-[16px] bg-[var(--color-surface)] p-3 font-mono text-sm text-[var(--color-text)]">
-                {ticket.deliveredKey}
-              </p>
-            </div>
-          ) : null}
-
-          {showManualWaitingCard ? (
-            <div className="mt-3 rounded-[20px] bg-[var(--color-bg)] p-3.5">
-              <p className="text-sm font-semibold text-[var(--color-text)]">Платёж на проверке</p>
-              <p className="mt-1 text-sm leading-5 text-[var(--color-muted)]">
-                Продавец вручную проверит оплату и после подтверждения продолжит выдачу.
-              </p>
-            </div>
-          ) : null}
-
-          <div className="mt-3 flex flex-wrap gap-2">
-            {ticket.paymentMethodType === "MANUAL" &&
-            !ticket.isPaid &&
-            !ticket.manualPaymentRequestedAt &&
-            isBuyerView &&
-            !isClosed ? (
-              <button
-                type="button"
-                onClick={() => markManualPaidMutation.mutate()}
-                disabled={markManualPaidMutation.isPending}
-                className="rounded-[18px] bg-[var(--color-accent)] px-4 py-2.5 text-sm font-semibold text-[var(--color-accent-text)] disabled:opacity-60"
-              >
-                {markManualPaidMutation.isPending ? "Отмечаю..." : "Я оплатил"}
-              </button>
-            ) : null}
-
-            {ticket.isPaid && supportLink && isBuyerView ? (
-              <a
-                href={supportLink}
-                target="_blank"
-                rel="noreferrer"
-                className="rounded-[18px] bg-[var(--color-accent)] px-4 py-2.5 text-sm font-semibold text-[var(--color-accent-text)]"
-              >
-                Поддержка в Telegram
-              </a>
-            ) : null}
-
-            {isBuyerView && !ticket.isPaid && !isClosed ? (
-              <button
-                type="button"
-                onClick={() => cancelOrderMutation.mutate()}
-                disabled={cancelOrderMutation.isPending}
-                className="rounded-[18px] bg-[var(--color-surface)] px-4 py-2.5 text-sm font-medium text-[var(--color-destructive)] disabled:opacity-60"
-              >
-                {cancelOrderMutation.isPending ? "Отменяю..." : "Отменить заказ"}
-              </button>
-            ) : null}
-          </div>
-        </section>
-
-        <aside className="hidden xl:block xl:row-span-2 xl:space-y-3">
-          <section className="ui-card p-3.5">
-            <p className="text-sm font-semibold text-[var(--color-text)]">Статус заказа</p>
-            <div className="mt-3 flex gap-2 overflow-x-auto [scrollbar-width:none] xl:grid xl:overflow-visible">
-              {orderSteps.map((step, index) => (
-                <div
-                  key={step.title}
-                  className="min-w-[158px] rounded-[16px] bg-[var(--color-bg)] p-2.5 xl:min-w-0"
-                >
-                  <div className="flex items-start gap-2">
-                    <div
-                      className={cn(
-                        "flex size-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold",
-                        step.state === "done" &&
-                          "bg-[var(--color-accent)] text-[var(--color-accent-text)]",
-                        step.state === "current" &&
-                          "border border-[var(--color-accent)] bg-[var(--color-bg)] text-[var(--color-text)]",
-                        step.state === "upcoming" &&
-                          "bg-[var(--color-surface)] text-[var(--color-muted)]",
-                      )}
-                    >
-                      {index + 1}
-                    </div>
-                    <div className="min-w-0">
-                      <p
-                        className={cn(
-                          "text-xs font-medium",
-                          step.state === "upcoming"
-                            ? "text-[var(--color-muted)]"
-                            : "text-[var(--color-text)]",
-                        )}
-                      >
-                        {step.title}
-                      </p>
-                      <p className="mt-0.5 text-[10px] leading-4 text-[var(--color-muted)]">
-                        {step.subtitle}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          {ticket.paymentMethodTitle ? (
-            <section className="hidden ui-card p-3.5 xl:block">
-              <div className="flex items-start gap-3">
-                <PaymentMethodIcon
-                  iconDataUrl={ticket.paymentMethodIconDataUrl}
-                  title={ticket.paymentMethodTitle}
-                />
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-[var(--color-text)]">
-                    {ticket.paymentMethodTitle}
-                  </p>
-                  <p className="mt-1 text-xs text-[var(--color-muted)]">
-                    {ticket.paymentMethodType === "CRYPTO_PAY" ? "Crypto Pay" : "Ручная оплата"}
-                  </p>
-                </div>
-                {ticket.paymentMethodType === "CRYPTO_PAY" ? (
-                  <button
-                    type="button"
-                    onClick={() => refreshMutation.mutate()}
-                    className="flex size-10 items-center justify-center rounded-full bg-[var(--color-bg)] text-[var(--color-muted)]"
-                  >
-                    <RefreshCcw
-                      size={15}
-                      className={refreshMutation.isPending ? "animate-spin" : ""}
-                    />
-                  </button>
-                ) : null}
-              </div>
-
-              {ticket.paymentMethodType === "CRYPTO_PAY" && ticket.cryptoInvoiceUrl ? (
-                <div className="mt-3 grid gap-2.5">
-                  <div className="rounded-[18px] bg-[var(--color-bg)] p-3.5">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-[10px] uppercase tracking-[0.16em] text-[var(--color-muted)]">
-                          Статус
-                        </p>
-                        <p className="mt-1 text-sm font-medium text-[var(--color-text)]">
-                          {ticket.cryptoInvoiceStatus === "paid" ? "Оплачен" : "Ждёт оплату"}
-                        </p>
-                      </div>
-                      {ticket.cryptoInvoiceAmount ? (
-                        <div className="text-right">
-                          <p className="text-[10px] uppercase tracking-[0.16em] text-[var(--color-muted)]">
-                            Сумма
-                          </p>
-                          <p className="mt-1 text-sm font-medium text-[var(--color-text)]">
-                            {ticket.cryptoInvoiceAmount} {ticket.cryptoInvoiceFiat || "RUB"}
-                          </p>
-                        </div>
+                      {!ticket.isPaid ? (
+                        <a
+                          href={ticket.cryptoInvoiceUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="flex min-h-12 items-center justify-center gap-2 rounded-[18px] bg-[var(--color-accent)] px-4 py-3 text-sm font-semibold text-[var(--color-accent-text)]"
+                        >
+                          Открыть invoice
+                          <ExternalLink size={16} />
+                        </a>
                       ) : null}
                     </div>
-                  </div>
-
-                  {!ticket.isPaid ? null : null}
-                </div>
-              ) : ticket.paymentMethodDetails ? (
-                <div className="mt-3 rounded-[18px] bg-[var(--color-bg)] p-3.5">
-                  <p className="whitespace-pre-wrap text-sm leading-5 text-[var(--color-text)]">
-                    {ticket.paymentMethodDetails}
-                  </p>
+                  ) : ticket.paymentMethodDetails ? (
+                    <div className="grid gap-3">
+                      <p className="whitespace-pre-wrap rounded-[18px] bg-[var(--color-surface)] px-4 py-3 text-sm leading-6 text-[var(--color-text)]">
+                        {ticket.paymentMethodDetails}
+                      </p>
+                      {ticket.paymentMethodType === "MANUAL" &&
+                      !ticket.isPaid &&
+                      !ticket.manualPaymentRequestedAt &&
+                      isBuyerView &&
+                      !isClosed ? (
+                        <button
+                          type="button"
+                          onClick={() => markManualPaidMutation.mutate()}
+                          disabled={markManualPaidMutation.isPending}
+                          className="min-h-12 rounded-[18px] bg-[var(--color-accent)] px-4 py-3 text-sm font-semibold text-[var(--color-accent-text)] disabled:opacity-60"
+                        >
+                          {markManualPaidMutation.isPending ? "Отмечаю..." : "Я оплатил"}
+                        </button>
+                      ) : null}
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
-            </section>
-          ) : null}
 
-          <section className="ui-card p-3.5">
-            <p className="text-sm font-semibold text-[var(--color-text)]">История</p>
-            <div className="mt-3 grid gap-2">
-              <div className="rounded-[18px] bg-[var(--color-bg)] px-3.5 py-3">
-                <p className="text-sm text-[var(--color-text)]">Заказ создан</p>
-                <p className="mt-1 text-[11px] text-[var(--color-muted)]">{createdAtLabel}</p>
+              <div className="mt-5">
+                <div className="flex items-center gap-2 rounded-[18px] bg-[var(--color-bg)] px-3 py-2.5 sm:px-4">
+                  {stepper.map((step, index) => (
+                    <div key={step.label} className="flex min-w-0 flex-1 items-center gap-2">
+                      <div
+                        className={cn(
+                          "flex size-7 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold",
+                          step.done || step.active
+                            ? "bg-[var(--color-accent)] text-[var(--color-accent-text)]"
+                            : "bg-[var(--color-surface)] text-[var(--color-muted)]",
+                        )}
+                      >
+                        {index + 1}
+                      </div>
+                      <span
+                        className={cn(
+                          "truncate text-xs font-medium",
+                          step.done || step.active
+                            ? "text-[var(--color-text)]"
+                            : "text-[var(--color-muted)]",
+                        )}
+                      >
+                        {step.label}
+                      </span>
+                      {index < stepper.length - 1 ? (
+                        <div className="h-px min-w-3 flex-1 bg-[var(--color-border)]" />
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
               </div>
-              {ticket.manualPaymentRequestedAt ? (
-                <div className="rounded-[18px] bg-[var(--color-bg)] px-3.5 py-3">
-                  <p className="text-sm text-[var(--color-text)]">Платёж отмечен пользователем</p>
-                  <p className="mt-1 text-[11px] text-[var(--color-muted)]">
-                    {format(new Date(ticket.manualPaymentRequestedAt), "dd MMM · HH:mm", {
-                      locale: ru,
-                    })}
+
+              {ticket.deliveredKey ? (
+                <div className="mt-5 rounded-[24px] border border-[var(--color-border)] bg-[var(--color-bg)] p-4">
+                  <p className="text-sm font-semibold text-[var(--color-text)]">Выданный ключ</p>
+                  <p className="mt-3 break-all rounded-[18px] bg-[var(--color-surface)] px-4 py-4 font-mono text-sm text-[var(--color-text)]">
+                    {ticket.deliveredKey}
                   </p>
                 </div>
               ) : null}
+
+              {showManualWaitingCard ? (
+                <div className="mt-5 rounded-[24px] border border-[var(--color-border)] bg-[var(--color-bg)] p-4">
+                  <p className="text-sm font-semibold text-[var(--color-text)]">Платёж на проверке</p>
+                  <p className="mt-2 text-sm leading-6 text-[var(--color-muted)]">
+                    Продавец вручную проверит оплату и после подтверждения продолжит выдачу.
+                  </p>
+                </div>
+              ) : null}
+
+              <div className="mt-5 grid gap-2 sm:grid-cols-2">
+                {ticket.isPaid && supportLink && isBuyerView ? (
+                  <a
+                    href={supportLink}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex min-h-12 items-center justify-center rounded-[18px] bg-[var(--color-accent)] px-4 py-3 text-sm font-semibold text-[var(--color-accent-text)]"
+                  >
+                    Поддержка в Telegram
+                  </a>
+                ) : null}
+
+                {isBuyerView && !ticket.isPaid && !isClosed ? (
+                  <button
+                    type="button"
+                    onClick={() => cancelOrderMutation.mutate()}
+                    disabled={cancelOrderMutation.isPending}
+                    className="min-h-12 rounded-[18px] bg-[var(--color-surface)] px-4 py-3 text-sm font-medium text-[var(--color-destructive)] disabled:opacity-60"
+                  >
+                    {cancelOrderMutation.isPending ? "Отменяю..." : "Отменить заказ"}
+                  </button>
+                ) : null}
+              </div>
             </div>
           </section>
-        </aside>
+
+          <section className="ui-card overflow-hidden">
+            <div className="px-5 py-4 sm:px-6">
+              <p className="text-sm font-semibold text-[var(--color-text)]">Детали транзакции</p>
+              <div className="mt-3 overflow-hidden rounded-[20px] border border-[var(--color-border)]">
+                <DetailRow label="Дата" value={createdAtLabel} />
+                <DetailRow label="Заказ" value={`#${ticket.number}`} />
+                <DetailRow label="Способ" value={ticket.paymentMethodTitle || "—"} />
+                {ticket.productCategory ? <DetailRow label="Категория" value={ticket.productCategory} /> : null}
+              </div>
+            </div>
+          </section>
+        </div>
       </div>
 
       {isDeleteModalOpen ? (
@@ -566,106 +447,6 @@ function renderStatus(status: string) {
   }
 }
 
-function getOrderSteps(ticket: {
-  status: string
-  isPaid: boolean
-  paymentMethodType: string | null
-  cryptoInvoiceUrl: string | null
-  cryptoInvoiceStatus: string | null
-  deliveredKey: string | null
-  manualPaymentRequestedAt: string | null
-}) {
-  const closedUnpaid = ticket.status === "CLOSED" && !ticket.isPaid
-  const cancelled = ticket.status === "CANCELLED"
-  const invoiceReady =
-    ticket.paymentMethodType === "CRYPTO_PAY" ? Boolean(ticket.cryptoInvoiceUrl) : true
-  const paymentDone = ticket.isPaid
-  const workStarted = ticket.status === "IN_PROGRESS" || ticket.status === "CLOSED"
-  const fulfilled = Boolean(ticket.deliveredKey) || ticket.status === "CLOSED"
-
-  const stepStates = cancelled
-    ? (["done", "upcoming", "upcoming", "done"] as const)
-    : closedUnpaid
-      ? (["done", "current", "upcoming", "upcoming"] as const)
-      : ([
-          "done",
-          paymentDone ? "done" : "current",
-          fulfilled ? "done" : workStarted ? "current" : "upcoming",
-          fulfilled ? "done" : "upcoming",
-        ] as const)
-
-  return [
-    {
-      title: "Заказ создан",
-      subtitle: "Заказ открыт и привязан к товару.",
-      state: stepStates[0],
-    },
-    {
-      title: cancelled
-        ? "Оплата отменена"
-        : closedUnpaid
-          ? "Заказ закрыт без оплаты"
-          : paymentDone
-            ? "Оплата подтверждена"
-            : ticket.paymentMethodType === "MANUAL" && ticket.manualPaymentRequestedAt
-              ? "Платёж на проверке"
-              : "Ожидание оплаты",
-      subtitle: cancelled
-        ? "Заказ отменён до подтверждения оплаты."
-        : closedUnpaid
-          ? "Оплата не была подтверждена, заказ закрыт."
-          : ticket.paymentMethodType === "CRYPTO_PAY"
-            ? invoiceReady
-              ? ticket.cryptoInvoiceStatus === "paid"
-                ? "Crypto Pay получил оплату."
-                : "Инвойс готов к оплате."
-              : "Инвойс ещё создаётся или требует обновления."
-            : ticket.manualPaymentRequestedAt
-              ? "Покупатель отметил оплату. Нужна ручная проверка."
-              : "Ожидается подтверждение по выбранным реквизитам.",
-      state: stepStates[1],
-    },
-    {
-      title: cancelled
-        ? "Обработка остановлена"
-        : closedUnpaid
-          ? "Обработка не начата"
-          : workStarted
-            ? "Заказ в работе"
-            : "Ожидает обработки",
-      subtitle: cancelled
-        ? "Заказ отменён, выдача не начнётся."
-        : closedUnpaid
-          ? "Этот этап не начался, потому что оплаты не было."
-          : fulfilled
-            ? "Продавец завершил выдачу."
-            : workStarted
-              ? "Продавец обрабатывает заказ."
-              : "Начнётся после подтверждения оплаты.",
-      state: stepStates[2],
-    },
-    {
-      title: cancelled
-        ? "Заказ отменён"
-        : closedUnpaid
-          ? "Выдача отменена"
-          : fulfilled
-            ? "Заказ завершён"
-            : "Выдача / закрытие",
-      subtitle: cancelled
-        ? "Этот заказ больше не активен."
-        : closedUnpaid
-          ? "Товар не выдавался, потому что заказ закрыт без оплаты."
-          : ticket.deliveredKey
-            ? "Ключ уже выдан в этом заказе."
-            : ticket.status === "CLOSED"
-              ? "Заказ закрыт."
-              : "Финальный этап после выдачи товара.",
-      state: stepStates[3],
-    },
-  ]
-}
-
 function StatusBadge({
   children,
   kind = "default",
@@ -690,19 +471,26 @@ function StatusBadge({
 function PaymentMethodIcon({
   iconDataUrl,
   title,
+  large = false,
 }: {
   iconDataUrl: string | null
   title: string
+  large?: boolean
 }) {
   if (iconDataUrl) {
     return (
-      <div className="relative size-12 overflow-hidden rounded-[18px]">
+      <div
+        className={cn(
+          "relative overflow-hidden rounded-[18px]",
+          large ? "size-11 rounded-[16px]" : "size-12",
+        )}
+      >
         <Image
           src={iconDataUrl}
           alt=""
           fill
           unoptimized
-          sizes="48px"
+          sizes={large ? "44px" : "48px"}
           className="object-cover"
         />
       </div>
@@ -710,8 +498,45 @@ function PaymentMethodIcon({
   }
 
   return (
-    <div className="flex size-12 items-center justify-center rounded-[18px] bg-[var(--color-bg)] text-xs font-semibold text-[var(--color-text)]">
+    <div
+      className={cn(
+        "flex items-center justify-center bg-[var(--color-bg)] text-xs font-semibold text-[var(--color-text)]",
+        large ? "size-11 rounded-[16px]" : "size-12 rounded-[18px]",
+      )}
+    >
       {title.slice(0, 2).toUpperCase()}
+    </div>
+  )
+}
+
+function PaymentDataItem({
+  label,
+  value,
+  align = "left",
+}: {
+  label: string
+  value: string
+  align?: "left" | "right"
+}) {
+  return (
+    <div className={cn("rounded-[16px] bg-[var(--color-surface)] px-3 py-3", align === "right" && "text-right")}>
+      <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-muted)]">{label}</p>
+      <p className="mt-1 text-sm font-medium text-[var(--color-text)]">{value}</p>
+    </div>
+  )
+}
+
+function DetailRow({
+  label,
+  value,
+}: {
+  label: string
+  value: string
+}) {
+  return (
+    <div className="grid grid-cols-[112px_minmax(0,1fr)] border-b border-[var(--color-border)] last:border-b-0">
+      <div className="px-4 py-3 text-xs text-[var(--color-muted)]">{label}</div>
+      <div className="px-4 py-3 text-sm font-medium text-[var(--color-text)]">{value}</div>
     </div>
   )
 }
