@@ -219,6 +219,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
           ? "Отменён"
       : "Ожидает оплату"
   const orderSteps = getOrderSteps(ticket)
+  const compactMobileChat = groupedMessages.length > 0 && groupedMessages.length <= 2
   const headerActions = adminToolsVisible ? (
     <div className="flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none]">
       {!ticket.isPaid ? (
@@ -633,7 +634,14 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
               </section>
             ) : null}
 
-            <section className="ui-card flex min-h-[44dvh] max-h-[58dvh] flex-col overflow-hidden xl:min-h-0 xl:max-h-none">
+            <section
+              className={cn(
+                "ui-card flex flex-col overflow-hidden xl:min-h-0 xl:max-h-none",
+                compactMobileChat
+                  ? "min-h-[30dvh] max-h-[42dvh] sm:min-h-[38dvh] sm:max-h-[50dvh]"
+                  : "min-h-[44dvh] max-h-[58dvh]",
+              )}
+            >
               <div className="hidden border-b border-[var(--color-border)] px-4 py-3 sm:px-5 xl:block">
                 <div className="flex flex-wrap items-center gap-2">
                   {!isSupportFlow ? (
@@ -669,7 +677,12 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                   </div>
                 </div>
               ) : (
-                <div className="flex flex-1 flex-col justify-end gap-2 overflow-y-auto overscroll-contain bg-[linear-gradient(180deg,color-mix(in_srgb,var(--color-bg)_78%,transparent),transparent_24%)] px-3 py-3 sm:px-4 sm:py-4 xl:min-h-0">
+                <div
+                  className={cn(
+                    "flex flex-1 flex-col justify-end gap-2 overflow-y-auto overscroll-contain bg-[linear-gradient(180deg,color-mix(in_srgb,var(--color-bg)_78%,transparent),transparent_24%)] px-3 sm:px-4 xl:min-h-0",
+                    compactMobileChat ? "py-2 sm:py-3" : "py-3 sm:py-4",
+                  )}
+                >
                   {groupedMessages.map((entry) => {
                     const isAdmin = entry.senderRole === "ADMIN"
                     const senderRoleLabel = isAdmin ? "Админ" : "Покупатель"
