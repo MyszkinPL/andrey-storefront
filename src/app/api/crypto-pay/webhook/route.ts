@@ -6,6 +6,7 @@ import {
   type CryptoPayWebhookUpdate,
   verifyCryptoPaySignature,
 } from "@/lib/crypto-pay"
+import { notifyOrderPaid } from "@/lib/order-notifications"
 import { prisma } from "@/lib/prisma"
 import { confirmTicketPaymentFlow } from "@/lib/ticket-payment"
 
@@ -69,6 +70,7 @@ export async function POST(request: Request) {
         await prisma.$transaction((tx) =>
           confirmTicketPaymentFlow(tx, ticket.id, admin.id),
         )
+        await notifyOrderPaid(ticket.id)
       }
     }
 

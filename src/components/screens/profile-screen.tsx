@@ -1,7 +1,7 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
-import { BadgeInfo, CreditCard } from "lucide-react"
+import { CreditCard } from "lucide-react"
 
 import { getMe, getPaymentMethods } from "@/lib/api"
 import { Screen, ScreenBody, ScreenEmpty, ScreenHeader } from "@/components/screen"
@@ -56,23 +56,6 @@ export function ProfileScreen() {
           />
         ) : (
           <>
-        <section className="ui-card p-4 xl:col-span-2">
-          <div className="flex items-start gap-2">
-            <BadgeInfo size={16} className="text-[var(--color-muted)]" />
-            <div>
-              <p className="text-sm font-semibold text-[var(--color-text)]">Поддержка</p>
-              <p className="mt-2 text-sm leading-6 text-[var(--color-muted)]">
-                {meData?.settings.supportIntro || "Связь с продавцом доступна напрямую в Telegram."}
-              </p>
-              {meData?.settings.supportUsername ? (
-                <p className="mt-2 text-sm text-[var(--color-text)]">
-                  @{meData.settings.supportUsername}
-                </p>
-              ) : null}
-            </div>
-          </div>
-        </section>
-
         {methods.length === 0 && !hasCryptoPay ? (
           <ScreenEmpty
             icon={<CreditCard size={30} className="text-[var(--color-muted)]" />}

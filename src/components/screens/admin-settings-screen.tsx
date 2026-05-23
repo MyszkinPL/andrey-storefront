@@ -54,7 +54,6 @@ export function AdminSettingsScreen() {
   })
 
   const [shopName, setShopName] = useState("")
-  const [supportIntro, setSupportIntro] = useState("")
   const [supportUsername, setSupportUsername] = useState("")
   const [cryptoPayEnabled, setCryptoPayEnabled] = useState(false)
   const [cryptoPayToken, setCryptoPayToken] = useState("")
@@ -91,7 +90,6 @@ export function AdminSettingsScreen() {
     if (!meData) return
     queueMicrotask(() => {
       setShopName(meData.settings.shopName)
-      setSupportIntro(meData.settings.supportIntro)
       setSupportUsername(meData.settings.supportUsername || "")
       setCryptoPayEnabled(Boolean(meData.settings.cryptoPayEnabled))
       setCryptoPayToken(meData.settings.cryptoPayToken || "")
@@ -120,7 +118,7 @@ export function AdminSettingsScreen() {
     mutationFn: () =>
       saveSettings({
         shopName,
-        supportIntro,
+        supportIntro: meData?.settings.supportIntro || "",
         supportUsername,
         cryptoPayEnabled,
         cryptoPayToken,
@@ -259,12 +257,6 @@ export function AdminSettingsScreen() {
                 onChange={(e) => setShopName(e.target.value)}
                 placeholder="Название магазина"
                 className="ui-input"
-              />
-              <textarea
-                value={supportIntro}
-                onChange={(e) => setSupportIntro(e.target.value)}
-                placeholder="Короткий текст про поддержку в Telegram"
-                className="ui-input min-h-24"
               />
               <input
                 value={supportUsername}

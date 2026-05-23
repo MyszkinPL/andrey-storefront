@@ -25,7 +25,6 @@ import {
   markManualTicketPaid,
   rejectManualTicketPayment,
   refreshCryptoInvoice,
-  updateTicketStatus,
 } from "@/lib/api"
 import { useMode } from "@/components/mode-provider"
 import { Screen, ScreenEmpty, ScreenHeader } from "@/components/screen"
@@ -62,11 +61,6 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
     }, 1500)
   }
 
-  const statusMutation = useMutation({
-    mutationFn: (status: "OPEN" | "CLOSED") =>
-      updateTicketStatus(ticketId, status),
-    onSuccess: invalidate,
-  })
   const paymentMutation = useMutation({
     mutationFn: () => confirmTicketPayment(ticketId),
     onSuccess: invalidate,
@@ -327,13 +321,6 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                         </button>
                       ) : null}
                       <button
-                        onClick={() => statusMutation.mutate("CLOSED")}
-                        disabled={statusMutation.isPending}
-                        className="rounded-full bg-[var(--color-surface)] px-4 py-2 text-sm font-medium text-[var(--color-text)] disabled:opacity-60"
-                      >
-                        {statusMutation.isPending ? "Закрываю..." : "Закрыть заказ"}
-                      </button>
-                      <button
                         onClick={() => setIsDeleteModalOpen(true)}
                         disabled={deleteTicketMutation.isPending}
                         className="inline-flex items-center gap-2 rounded-full bg-[var(--color-destructive)]/14 px-4 py-2 text-sm font-medium text-[var(--color-destructive)] disabled:opacity-60"
@@ -362,13 +349,18 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                         </a>
                       ) : null}
                     </div>
-                  ) : ticket.paymentMethodDetails ? (
+                  ) : ticket.paymentMethodDetails && !ticket.isPaid ? (
                     <div className="grid gap-3">
-                      <CopyValueCard
-                        value={ticket.paymentMethodDetails}
-                        copied={copiedField === "payment"}
-                        onCopy={() => copyValue(ticket.paymentMethodDetails || "", "payment")}
-                      />
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-sm font-semibold text-[var(--color-text)]">Реквизиты</p>
+                        <CopyButton
+                          copied={copiedField === "payment"}
+                          onClick={() => copyValue(ticket.paymentMethodDetails || "", "payment")}
+                        />
+                      </div>
+                      <p className="break-all rounded-[18px] bg-[var(--color-surface)] px-4 py-4 text-sm leading-6 text-[var(--color-text)]">
+                        {ticket.paymentMethodDetails}
+                      </p>
                       {ticket.paymentMethodType === "MANUAL" &&
                       !ticket.isPaid &&
                       !ticket.manualPaymentRequestedAt &&
@@ -512,52 +504,6 @@ function HeaderMetaRow({
         </span>
       ))}
     </div>
-  )
-}
-
-function CopyValueCard({
-  value,
-  copied,
-  onCopy,
-}: {
-  value: string
-  copied: boolean
-  onCopy: () => void
-}) {
-  return (
-    <div className="relative rounded-[18px] bg-[var(--color-surface)] px-4 py-3 pr-14">
-      <p className="min-w-0 whitespace-pre-wrap break-all text-sm leading-6 text-[var(--color-text)]">
-        {value}
-      </p>
-      <div className="absolute right-3 top-3">
-        <CopyIconButton copied={copied} onClick={onCopy} />
-      </div>
-    </div>
-  )
-}
-
-function CopyIconButton({
-  copied,
-  onClick,
-}: {
-  copied: boolean
-  onClick: () => void
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label={copied ? "Скопировано" : "Копировать"}
-      title={copied ? "Скопировано" : "Копировать"}
-      className={cn(
-        "inline-flex size-8 shrink-0 items-center justify-center rounded-full transition-colors",
-        copied
-          ? "bg-[var(--color-accent)] text-[var(--color-accent-text)]"
-          : "bg-[var(--color-bg)] text-[var(--color-text)]",
-      )}
-    >
-      {copied ? <Check size={13} /> : <Copy size={13} />}
-    </button>
   )
 }
 

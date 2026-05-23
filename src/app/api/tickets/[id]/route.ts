@@ -4,7 +4,12 @@ import { z } from "zod"
 
 import { createCryptoInvoice, getCryptoInvoice } from "@/lib/crypto-pay"
 import { requireUser } from "@/lib/auth"
-import { getBot } from "@/lib/bot"
+import {
+  notifyManualPaymentRejected,
+  notifyManualPaymentRequested,
+  notifyOrderCancelled,
+  notifyOrderPaid,
+} from "@/lib/order-notifications"
 import { prisma } from "@/lib/prisma"
 import { confirmTicketPaymentFlow } from "@/lib/ticket-payment"
 
@@ -103,13 +108,14 @@ async function syncCryptoInvoice(ticketId: string) {
       orderBy: { createdAt: "asc" },
     })
 
-    if (admin) {
-      await prisma.$transaction((tx) =>
-        confirmTicketPaymentFlow(tx, ticketId, admin.id),
-      )
+      if (admin) {
+        await prisma.$transaction((tx) =>
+          confirmTicketPaymentFlow(tx, ticketId, admin.id),
+        )
+        await notifyOrderPaid(ticketId)
+      }
     }
   }
-}
 
 export async function GET(
   _request: Request,
@@ -262,38 +268,7 @@ export async function PATCH(
         })
       })
 
-      const [buyer, order, admins] = await Promise.all([
-        prisma.user.findUnique({
-          where: { id: ticket.createdById },
-          select: { firstName: true, username: true },
-        }),
-        prisma.ticket.findUnique({
-          where: { id },
-          select: {
-            number: true,
-            product: { select: { title: true } },
-          },
-        }),
-        prisma.user.findMany({
-          where: { role: Role.ADMIN },
-          select: { telegramId: true },
-        }),
-      ])
-
-      if (order && admins.length > 0) {
-        const bot = getBot()
-        const buyerLabel =
-          buyer?.username ? `@${buyer.username}` : buyer?.firstName || "Покупатель"
-        const orderLabel = order.product?.title || `Заказ #${order.number}`
-        await Promise.allSettled(
-          admins.map((admin) =>
-            bot.api.sendMessage(
-              Number(admin.telegramId),
-              `Покупатель отметил ручную оплату.\n${orderLabel} · #${order.number}\n${buyerLabel}`,
-            ),
-          ),
-        )
-      }
+      await notifyManualPaymentRequested(id)
 
       return NextResponse.json({ ok: true })
     }
@@ -333,6 +308,8 @@ export async function PATCH(
           },
         })
       })
+
+      await notifyOrderCancelled(id)
 
       return NextResponse.json({ ok: true })
     }
@@ -400,6 +377,14 @@ export async function PATCH(
         })
       }
     })
+
+    if (payload.confirmPayment) {
+      await notifyOrderPaid(id)
+    }
+
+    if (payload.rejectManualPayment) {
+      await notifyManualPaymentRejected(id)
+    }
 
     return NextResponse.json({ ok: true })
   } catch (error) {
