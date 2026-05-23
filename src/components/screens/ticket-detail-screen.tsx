@@ -67,6 +67,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
   const [previewImage, setPreviewImage] = useState<string | null>(null)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [isMobileDetailsOpen, setIsMobileDetailsOpen] = useState(false)
+  const [isSystemOpen, setIsSystemOpen] = useState(false)
   const { data, isLoading, isError } = useQuery({
     queryKey: ["ticket", ticketId],
     queryFn: () => getTicket(ticketId),
@@ -219,12 +220,12 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
       : "Ожидает оплату"
   const orderSteps = getOrderSteps(ticket)
   const headerActions = adminToolsVisible ? (
-    <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]">
+    <div className="flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none]">
       {!ticket.isPaid ? (
         <button
           onClick={() => paymentMutation.mutate()}
           disabled={ticket.status === "CANCELLED"}
-          className="shrink-0 rounded-full bg-[var(--color-accent)] px-3 py-2 text-xs font-semibold text-[var(--color-accent-text)]"
+          className="shrink-0 rounded-full bg-[var(--color-accent)] px-2.5 py-1.5 text-[11px] font-semibold text-[var(--color-accent-text)]"
         >
           Подтвердить оплату
         </button>
@@ -232,7 +233,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
       {ticket.status === "PAYMENT_REVIEW" ? (
         <button
           onClick={() => rejectManualPaymentMutation.mutate()}
-          className="shrink-0 rounded-full bg-[var(--color-bg)] px-3 py-2 text-xs font-medium text-[var(--color-text)]"
+          className="shrink-0 rounded-full bg-[var(--color-bg)] px-2.5 py-1.5 text-[11px] font-medium text-[var(--color-text)]"
         >
           Отклонить
         </button>
@@ -240,20 +241,20 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
       <button
         onClick={() => statusMutation.mutate("IN_PROGRESS")}
         disabled={ticket.status === "CANCELLED"}
-        className="shrink-0 rounded-full bg-[var(--color-bg)] px-3 py-2 text-xs font-medium text-[var(--color-text)]"
+        className="shrink-0 rounded-full bg-[var(--color-bg)] px-2.5 py-1.5 text-[11px] font-medium text-[var(--color-text)]"
       >
         В работу
       </button>
       <button
         onClick={() => statusMutation.mutate("CLOSED")}
-        className="shrink-0 rounded-full bg-[var(--color-bg)] px-3 py-2 text-xs font-medium text-[var(--color-text)]"
+        className="shrink-0 rounded-full bg-[var(--color-bg)] px-2.5 py-1.5 text-[11px] font-medium text-[var(--color-text)]"
       >
         Закрыть
       </button>
       <button
         onClick={() => setIsDeleteModalOpen(true)}
         disabled={deleteTicketMutation.isPending}
-        className="inline-flex shrink-0 items-center justify-center gap-1 rounded-full bg-[var(--color-destructive)]/14 px-3 py-2 text-xs font-medium text-[var(--color-destructive)] disabled:opacity-60"
+        className="inline-flex shrink-0 items-center justify-center gap-1 rounded-full bg-[var(--color-destructive)]/14 px-2.5 py-1.5 text-[11px] font-medium text-[var(--color-destructive)] disabled:opacity-60"
       >
         <Trash2 size={12} />
         {deleteTicketMutation.isPending ? "Удаляю..." : "Удалить"}
@@ -305,8 +306,8 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
           }
         />
 
-        <div className="grid gap-4 px-4 pb-4">
-          <section className="ui-card p-4 sm:p-5">
+        <div className="grid gap-3 px-4 pb-3">
+          <section className="ui-card p-3.5 sm:p-4">
             <div className="flex flex-wrap items-center gap-2">
               <StatusBadge kind="waiting">Оплата</StatusBadge>
               <StatusBadge>{ticket.paymentMethodTitle || "Способ оплаты"}</StatusBadge>
@@ -315,8 +316,8 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
               </span>
             </div>
 
-            <div className="mt-4 grid gap-4">
-              <div className="grid gap-2 rounded-[20px] bg-[var(--color-bg)] p-4 sm:grid-cols-3">
+            <div className="mt-3 grid gap-3">
+              <div className="grid gap-2 rounded-[20px] bg-[var(--color-bg)] p-3 sm:grid-cols-3">
                 {[
                   {
                     title: "Оплата",
@@ -339,7 +340,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                 ].map((step, index) => (
                   <div
                     key={step.title}
-                    className="flex items-center gap-3 rounded-[16px] bg-[var(--color-surface)] px-3 py-3"
+                    className="flex items-center gap-2.5 rounded-[16px] bg-[var(--color-surface)] px-3 py-2.5"
                   >
                     <div
                       className={cn(
@@ -352,10 +353,10 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                       {index + 1}
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-[var(--color-text)]">
+                      <p className="text-[13px] font-medium text-[var(--color-text)]">
                         {step.title}
                       </p>
-                      <p className="mt-0.5 text-xs text-[var(--color-muted)]">
+                      <p className="mt-0.5 text-[11px] text-[var(--color-muted)]">
                         {step.subtitle}
                       </p>
                     </div>
@@ -364,7 +365,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
               </div>
 
               {ticket.paymentMethodTitle ? (
-                <section className="rounded-[20px] bg-[var(--color-bg)] p-4 sm:p-5">
+                <section className="rounded-[20px] bg-[var(--color-bg)] p-3.5 sm:p-4">
                   <div className="flex items-start gap-3">
                     <PaymentMethodIcon
                       iconDataUrl={ticket.paymentMethodIconDataUrl}
@@ -469,11 +470,11 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
               ) : null}
 
               {!ticket.isPaid && ticket.status !== "CANCELLED" ? (
-                <button
-                  type="button"
-                  onClick={() => cancelOrderMutation.mutate()}
-                  disabled={cancelOrderMutation.isPending}
-                  className="rounded-[18px] bg-[var(--color-surface)] px-4 py-3 text-sm font-medium text-[var(--color-destructive)] disabled:opacity-60"
+                      <button
+                        type="button"
+                        onClick={() => cancelOrderMutation.mutate()}
+                        disabled={cancelOrderMutation.isPending}
+                        className="rounded-[18px] bg-[var(--color-surface)] px-4 py-2.5 text-sm font-medium text-[var(--color-destructive)] disabled:opacity-60"
                 >
                   {cancelOrderMutation.isPending ? "Отменяю..." : "Отменить заказ"}
                 </button>
@@ -482,18 +483,38 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
           </section>
 
           {systemMessages.length > 0 ? (
-            <section className="ui-card p-4 sm:p-5">
-              <p className="text-sm font-semibold text-[var(--color-text)]">История заказа</p>
-              <div className="mt-4 grid gap-2">
-                {systemMessages.map((entry) => (
-                  <div key={entry.id} className="rounded-[18px] bg-[var(--color-bg)] px-4 py-3">
-                    <p className="text-sm text-[var(--color-text)]">{entry.body}</p>
-                    <p className="mt-1 text-[11px] text-[var(--color-muted)]">
-                      {format(new Date(entry.createdAt), "dd MMM · HH:mm", { locale: ru })}
-                    </p>
-                  </div>
-                ))}
-              </div>
+            <section className="ui-card p-3.5 sm:p-4">
+              <button
+                type="button"
+                onClick={() => setIsSystemOpen((current) => !current)}
+                className="flex w-full items-center justify-between gap-3 text-left"
+              >
+                <div>
+                  <p className="text-sm font-semibold text-[var(--color-text)]">История заказа</p>
+                  <p className="mt-0.5 text-xs text-[var(--color-muted)]">
+                    {systemMessages.length} системных событий
+                  </p>
+                </div>
+                <ChevronDown
+                  size={16}
+                  className={cn(
+                    "shrink-0 text-[var(--color-muted)] transition-transform",
+                    isSystemOpen && "rotate-180",
+                  )}
+                />
+              </button>
+              {isSystemOpen ? (
+                <div className="mt-3 grid gap-2">
+                  {systemMessages.map((entry) => (
+                    <div key={entry.id} className="rounded-[18px] bg-[var(--color-bg)] px-3.5 py-3">
+                      <p className="text-sm text-[var(--color-text)]">{entry.body}</p>
+                      <p className="mt-1 text-[11px] text-[var(--color-muted)]">
+                        {format(new Date(entry.createdAt), "dd MMM · HH:mm", { locale: ru })}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
             </section>
           ) : null}
         </div>
@@ -518,11 +539,11 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
       />
 
       {adminToolsVisible ? (
-        <div className="px-4 pb-3">
-          <div className="ui-card p-3">
+        <div className="px-4 pb-2.5">
+          <div className="ui-card p-2.5">
             {headerActions}
             {ticket.createdBy ? (
-              <div className="mt-3 flex items-center justify-between gap-3 rounded-[18px] bg-[var(--color-bg)] px-3 py-2.5">
+              <div className="mt-2.5 flex items-center justify-between gap-3 rounded-[18px] bg-[var(--color-bg)] px-3 py-2.5">
                 <div className="min-w-0">
                   <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-muted)]">
                     Покупатель
@@ -568,31 +589,51 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
 
         <div
           className={cn(
-            "grid gap-4 xl:min-h-0 xl:flex-1",
+            "grid gap-3 xl:min-h-0 xl:flex-1",
             !isSupportFlow && "xl:grid-cols-[minmax(0,1fr)_360px]",
           )}
         >
-          <div className="order-1 grid gap-4 xl:order-1 xl:min-h-0">
+          <div className="order-1 grid gap-3 xl:order-1 xl:min-h-0">
             {systemMessages.length > 0 ? (
-              <section className="ui-card p-4">
-                <div className="flex items-center gap-2">
-                  <CircleDashed size={16} className="text-[var(--color-muted)]" />
-                  <p className="text-sm font-semibold text-[var(--color-text)]">Системные события</p>
-                </div>
-                <div className="mt-3 grid gap-2">
-                  {systemMessages.map((entry) => (
-                    <div key={entry.id} className="rounded-[18px] bg-[var(--color-bg)] px-4 py-3">
-                      <p className="text-sm text-[var(--color-text)]">{entry.body}</p>
-                      <p className="mt-1 text-[11px] text-[var(--color-muted)]">
-                        {format(new Date(entry.createdAt), "dd MMM · HH:mm", { locale: ru })}
+              <section className="ui-card p-3">
+                <button
+                  type="button"
+                  onClick={() => setIsSystemOpen((current) => !current)}
+                  className="flex w-full items-center justify-between gap-3 text-left"
+                >
+                  <div className="flex items-center gap-2">
+                    <CircleDashed size={15} className="text-[var(--color-muted)]" />
+                    <div>
+                      <p className="text-sm font-semibold text-[var(--color-text)]">Системные события</p>
+                      <p className="mt-0.5 text-xs text-[var(--color-muted)]">
+                        {systemMessages.length} записей
                       </p>
                     </div>
-                  ))}
-                </div>
+                  </div>
+                  <ChevronDown
+                    size={16}
+                    className={cn(
+                      "shrink-0 text-[var(--color-muted)] transition-transform",
+                      isSystemOpen && "rotate-180",
+                    )}
+                  />
+                </button>
+                {isSystemOpen ? (
+                  <div className="mt-3 grid gap-2">
+                    {systemMessages.map((entry) => (
+                      <div key={entry.id} className="rounded-[18px] bg-[var(--color-bg)] px-3.5 py-3">
+                        <p className="text-sm text-[var(--color-text)]">{entry.body}</p>
+                        <p className="mt-1 text-[11px] text-[var(--color-muted)]">
+                          {format(new Date(entry.createdAt), "dd MMM · HH:mm", { locale: ru })}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
               </section>
             ) : null}
 
-            <section className="ui-card flex min-h-[48dvh] max-h-[62dvh] flex-col overflow-hidden xl:min-h-0 xl:max-h-none">
+            <section className="ui-card flex min-h-[44dvh] max-h-[58dvh] flex-col overflow-hidden xl:min-h-0 xl:max-h-none">
               <div className="hidden border-b border-[var(--color-border)] px-4 py-3 sm:px-5 xl:block">
                 <div className="flex flex-wrap items-center gap-2">
                   {!isSupportFlow ? (
@@ -613,20 +654,22 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
               <div className="flex flex-1 flex-col xl:min-h-0">
               {groupedMessages.length === 0 ? (
                 <div className="flex flex-1 items-center justify-center p-4 sm:p-5 xl:min-h-0">
-                  <ScreenEmpty
-                    title="Сообщений пока нет"
-                    subtitle={
-                      isSupportFlow
+                  <div className="rounded-[22px] bg-[var(--color-bg)] px-5 py-5 text-center">
+                    <div className="mx-auto mb-3 flex size-11 items-center justify-center rounded-full bg-[var(--color-surface)] text-[var(--color-muted)]">
+                      <CreditCard size={20} />
+                    </div>
+                    <p className="text-sm font-medium text-[var(--color-text)]">Сообщений пока нет</p>
+                    <p className="mt-1 max-w-[240px] text-xs leading-5 text-[var(--color-muted)]">
+                      {isSupportFlow
                         ? "Начни диалог с продавцом."
                         : ticket.paymentMethodType === "MANUAL" && ticket.manualPaymentRequestedAt
                           ? "Платёж отмечен. Можно уточнить детали у продавца."
-                          : "После оплаты здесь будет нормальный диалог по заказу."
-                    }
-                    icon={<CreditCard size={28} className="text-[var(--color-muted)]" />}
-                  />
+                          : "После оплаты здесь будет диалог по заказу."}
+                    </p>
+                  </div>
                 </div>
               ) : (
-                <div className="flex flex-1 flex-col justify-end gap-2.5 overflow-y-auto overscroll-contain bg-[linear-gradient(180deg,color-mix(in_srgb,var(--color-bg)_78%,transparent),transparent_24%)] px-3 py-3 sm:px-4 sm:py-4 xl:min-h-0">
+                <div className="flex flex-1 flex-col justify-end gap-2 overflow-y-auto overscroll-contain bg-[linear-gradient(180deg,color-mix(in_srgb,var(--color-bg)_78%,transparent),transparent_24%)] px-3 py-3 sm:px-4 sm:py-4 xl:min-h-0">
                   {groupedMessages.map((entry) => {
                     const isAdmin = entry.senderRole === "ADMIN"
                     const senderRoleLabel = isAdmin ? "Админ" : "Покупатель"
@@ -645,7 +688,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
 
                         <div
                           className={cn(
-                            "max-w-[82%] sm:max-w-[74%]",
+                            "max-w-[80%] sm:max-w-[72%]",
                             entry.attachments.length > 0 && "w-[min(360px,72vw)] sm:w-[min(420px,52vw)]",
                             entry.isMine && "flex flex-col items-end",
                           )}
@@ -712,10 +755,10 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
 
                             {entry.body ? (
                               <p
-                                className={cn(
-                                  "whitespace-pre-wrap break-words px-3 pb-2.5 text-sm leading-[1.35rem]",
-                                  !entry.attachments.length && "pt-2.5",
-                                )}
+                              className={cn(
+                                "whitespace-pre-wrap break-words px-3 pb-2 text-sm leading-[1.3rem]",
+                                !entry.attachments.length && "pt-2.5",
+                              )}
                               >
                                 {entry.body}
                               </p>
@@ -760,7 +803,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                     {attachments.map((attachment, index) => (
                       <div
                         key={`${attachment.url}-${index}`}
-                        className="relative h-20 w-20 shrink-0 overflow-hidden rounded-[18px] border border-[var(--color-border)] bg-[var(--color-bg)]"
+                        className="relative h-16 w-16 shrink-0 overflow-hidden rounded-[16px] border border-[var(--color-border)] bg-[var(--color-bg)]"
                       >
                         <Image
                           src={attachment.url}
@@ -791,12 +834,12 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
                     disabled={isClosed || isUploading || attachments.length >= MAX_ATTACHMENTS}
-                    className="flex size-10 shrink-0 items-center justify-center rounded-[15px] bg-[var(--color-bg)] text-[var(--color-text)] disabled:opacity-45"
+                    className="flex size-9 shrink-0 items-center justify-center rounded-[14px] bg-[var(--color-bg)] text-[var(--color-text)] disabled:opacity-45"
                   >
-                    <ImagePlus size={18} />
+                    <ImagePlus size={17} />
                   </button>
 
-                  <div className="min-w-0 flex-1 rounded-[18px] bg-[var(--color-bg)] px-3 py-2">
+                  <div className="min-w-0 flex-1 rounded-[18px] bg-[var(--color-bg)] px-3 py-1.5">
                     <textarea
                       value={message}
                       onChange={(event) => setMessage(event.target.value)}
@@ -808,9 +851,9 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                             : "Сообщение по заказу или скрин"
                       }
                       disabled={isClosed}
-                      className="min-h-[38px] max-h-28 w-full resize-none bg-transparent py-0.5 text-sm leading-5 text-[var(--color-text)] outline-none placeholder:text-[var(--color-muted)]"
+                      className="min-h-[34px] max-h-24 w-full resize-none bg-transparent py-0.5 text-sm leading-5 text-[var(--color-text)] outline-none placeholder:text-[var(--color-muted)]"
                     />
-                    <div className="flex items-center justify-between gap-2 px-1 pt-1">
+                    <div className="flex items-center justify-between gap-2 px-1 pt-0.5">
                       <span className="text-[11px] text-[var(--color-muted)]">
                         {isUploading
                           ? "Обработка..."
@@ -823,13 +866,13 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                         onClick={() => canSend && sendMutation.mutate()}
                         disabled={!canSend}
                         className={cn(
-                          "flex size-8 items-center justify-center rounded-full transition-colors",
+                          "flex size-7.5 items-center justify-center rounded-full transition-colors",
                           canSend
                             ? "bg-[var(--color-accent)] text-[var(--color-accent-text)]"
                             : "bg-[var(--color-surface-2)] text-[var(--color-muted)]",
                         )}
                       >
-                        <SendHorizontal size={16} />
+                        <SendHorizontal size={15} />
                       </button>
                     </div>
                   </div>
@@ -857,12 +900,12 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                 isMobileDetailsOpen ? "grid" : "hidden xl:grid",
               )}
             >
-            <section className="ui-card shrink-0 p-4">
+            <section className="ui-card shrink-0 p-3.5">
               <p className="text-sm font-semibold text-[var(--color-text)]">Статус заказа</p>
-              <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
+              <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
                 {orderSteps.map((step, index) => (
-                  <div key={step.title} className="rounded-[18px] bg-[var(--color-bg)] p-3">
-                    <div className="flex items-start gap-3">
+                  <div key={step.title} className="rounded-[18px] bg-[var(--color-bg)] p-2.5">
+                    <div className="flex items-start gap-2.5">
                       <div
                         className={cn(
                           "flex size-7 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold",
@@ -879,7 +922,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                       <div className="min-w-0">
                         <p
                           className={cn(
-                            "text-sm font-medium",
+                            "text-[13px] font-medium",
                             step.state === "upcoming"
                               ? "text-[var(--color-muted)]"
                               : "text-[var(--color-text)]",
@@ -887,7 +930,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                         >
                           {step.title}
                         </p>
-                        <p className="mt-1 text-xs leading-5 text-[var(--color-muted)]">
+                        <p className="mt-0.5 text-[11px] leading-4.5 text-[var(--color-muted)]">
                           {step.subtitle}
                         </p>
                       </div>
@@ -898,7 +941,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
             </section>
 
             {ticket.paymentMethodTitle ? (
-              <section className="ui-card shrink-0 p-4">
+              <section className="ui-card shrink-0 p-3.5">
                 <div className="flex items-start gap-3">
                   <PaymentMethodIcon
                     iconDataUrl={ticket.paymentMethodIconDataUrl}
@@ -928,15 +971,15 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                 </div>
 
                 {ticket.paymentMethodDetails && showRawPaymentDetails ? (
-                  <div className="mt-4 rounded-[18px] bg-[var(--color-bg)] p-4">
-                    <p className="whitespace-pre-wrap text-sm leading-6 text-[var(--color-text)]">
+                  <div className="mt-3 rounded-[18px] bg-[var(--color-bg)] p-3.5">
+                    <p className="whitespace-pre-wrap text-sm leading-5 text-[var(--color-text)]">
                       {ticket.paymentMethodDetails}
                     </p>
                   </div>
                 ) : null}
 
                 {ticket.paymentMethodType === "MANUAL" && ticket.manualPaymentRequestedAt && !ticket.isPaid ? (
-                  <div className="mt-4 rounded-[18px] bg-[var(--color-bg)] p-4">
+                  <div className="mt-3 rounded-[18px] bg-[var(--color-bg)] p-3.5">
                     <p className="text-sm font-medium text-[var(--color-text)]">
                       Платёж отправлен на проверку
                     </p>
@@ -947,8 +990,8 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                 ) : null}
 
                 {ticket.paymentMethodType === "CRYPTO_PAY" && ticket.cryptoInvoiceUrl ? (
-                  <div className="mt-4 grid gap-3">
-                    <div className="rounded-[18px] bg-[var(--color-bg)] p-4">
+                  <div className="mt-3 grid gap-2.5">
+                    <div className="rounded-[18px] bg-[var(--color-bg)] p-3.5">
                       <div className="flex items-start justify-between gap-3">
                         <div>
                           <p className="text-[10px] uppercase tracking-[0.16em] text-[var(--color-muted)]">
@@ -994,14 +1037,14 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                       href={ticket.cryptoInvoiceUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className="flex items-center justify-center gap-2 rounded-[18px] bg-[var(--color-accent)] px-4 py-3 text-sm font-semibold text-[var(--color-accent-text)]"
+                    className="flex items-center justify-center gap-2 rounded-[18px] bg-[var(--color-accent)] px-4 py-2.5 text-sm font-semibold text-[var(--color-accent-text)]"
                     >
                       Открыть invoice
                       <ExternalLink size={15} />
                     </a>
                   </div>
                 ) : ticket.paymentMethodType === "CRYPTO_PAY" ? (
-                  <div className="mt-4 rounded-[18px] bg-[var(--color-bg)] p-4">
+                  <div className="mt-3 rounded-[18px] bg-[var(--color-bg)] p-3.5">
                     <div className="flex items-center justify-between gap-3">
                       <div>
                         <p className="text-sm font-medium text-[var(--color-text)]">
@@ -1021,7 +1064,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                     </div>
                   </div>
                 ) : ticket.paymentMethodType === "MANUAL" && !ticket.paymentMethodDetails ? (
-                  <div className="mt-4 rounded-[18px] bg-[var(--color-bg)] p-4">
+                  <div className="mt-3 rounded-[18px] bg-[var(--color-bg)] p-3.5">
                     <p className="text-sm text-[var(--color-muted)]">
                       Реквизиты пока не добавлены.
                     </p>
@@ -1033,7 +1076,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                     type="button"
                     onClick={() => cancelOrderMutation.mutate()}
                     disabled={cancelOrderMutation.isPending}
-                    className="mt-4 w-full rounded-[18px] bg-[var(--color-surface)] px-4 py-3 text-sm font-medium text-[var(--color-destructive)] disabled:opacity-60"
+                    className="mt-3 w-full rounded-[18px] bg-[var(--color-surface)] px-4 py-2.5 text-sm font-medium text-[var(--color-destructive)] disabled:opacity-60"
                   >
                     {cancelOrderMutation.isPending ? "Отменяю..." : "Отменить заказ"}
                   </button>

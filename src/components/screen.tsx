@@ -13,7 +13,7 @@ export function Screen({
     <main
       className={cn(
         "mx-auto flex min-h-dvh w-full max-w-6xl flex-col",
-        !noTabBar && "pb-[92px]",
+        !noTabBar && "pb-[88px]",
         className,
       )}
       style={{ paddingTop: "env(safe-area-inset-top, 0)" }}
@@ -35,10 +35,10 @@ export function ScreenHeader({
   inlineTrailingMobile?: boolean
 }) {
   return (
-    <header className="px-4 pb-3 pt-3">
+    <header className="px-4 pb-2 pt-2.5">
       <div
         className={cn(
-          "ui-card px-4 py-3",
+          "ui-card px-3.5 py-2.5",
           inlineTrailingMobile
             ? "flex items-start justify-between gap-3"
             : "flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between",
@@ -72,7 +72,7 @@ export function ScreenBody({
   children: React.ReactNode
   className?: string
 }) {
-  return <div className={cn("grid gap-3 px-4 pb-4", className)}>{children}</div>
+  return <div className={cn("grid gap-2.5 px-4 pb-3", className)}>{children}</div>
 }
 
 export function ScreenEmpty({
@@ -85,9 +85,9 @@ export function ScreenEmpty({
   subtitle?: string
 }) {
   return (
-    <div className="flex flex-1 items-center justify-center px-4 pb-4">
-      <div className="ui-card flex w-full max-w-md flex-col items-center justify-center px-8 py-12 text-center">
-        <div className="mb-4 flex size-16 items-center justify-center rounded-full bg-[var(--color-surface-2)]">
+    <div className="flex flex-1 items-center justify-center px-4 pb-3">
+      <div className="ui-card flex w-full max-w-sm flex-col items-center justify-center px-6 py-9 text-center">
+        <div className="mb-3 flex size-14 items-center justify-center rounded-full bg-[var(--color-surface-2)]">
           {icon}
         </div>
         <p className="text-base font-medium text-[var(--color-text)]">{title}</p>
