@@ -203,6 +203,7 @@ export function getTicket(id: string) {
         username: string | null
       } | null
       paymentMethodTitle: string | null
+      paymentMethodId: string | null
       paymentMethodType: PaymentMethodType | null
       paymentMethodDetails: string | null
       paymentMethodIconDataUrl: string | null
@@ -241,6 +242,18 @@ export function markManualTicketPaid(id: string) {
   return api<{ ok: true }>(`/api/orders/${id}`, {
     method: "PATCH",
     body: JSON.stringify({ markManualPaid: true }),
+  })
+}
+
+export function changeTicketPaymentMethod(
+  id: string,
+  payload:
+    | { paymentMethodId: string; paymentMethodType?: undefined }
+    | { paymentMethodType: Extract<PaymentMethodType, "CRYPTO_PAY">; paymentMethodId?: undefined },
+) {
+  return api<{ ok: true }>(`/api/orders/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
   })
 }
 

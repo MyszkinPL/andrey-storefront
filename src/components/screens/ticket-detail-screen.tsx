@@ -1,7 +1,8 @@
 "use client"
 
+import type { PaymentMethodType } from "@prisma/client"
 import Image from "next/image"
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { format } from "date-fns"
@@ -18,9 +19,11 @@ import {
 
 import {
   cancelOwnTicket,
+  changeTicketPaymentMethod,
   confirmTicketPayment,
   deleteAdminTicket,
   getMe,
+  getPaymentMethods,
   getTicket,
   markManualTicketPaid,
   rejectManualTicketPayment,
@@ -41,6 +44,11 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
   const { data: meData } = useQuery({
     queryKey: ["me"],
     queryFn: getMe,
+  })
+  const { data: paymentData } = useQuery({
+    queryKey: ["payment-methods"],
+    queryFn: getPaymentMethods,
+    enabled: true,
   })
   const { data, isLoading, isError } = useQuery({
     queryKey: ["ticket", ticketId],
@@ -79,6 +87,16 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
   })
   const markManualPaidMutation = useMutation({
     mutationFn: () => markManualTicketPaid(ticketId),
+    onSuccess: invalidate,
+  })
+  const changePaymentMethodMutation = useMutation({
+    mutationFn: (payload: { paymentMethodId?: string; paymentMethodType?: PaymentMethodType }) =>
+      changeTicketPaymentMethod(
+        ticketId,
+        payload.paymentMethodId
+          ? { paymentMethodId: payload.paymentMethodId }
+          : { paymentMethodType: "CRYPTO_PAY" },
+      ),
     onSuccess: invalidate,
   })
   const deleteTicketMutation = useMutation({
@@ -123,6 +141,34 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
   const supportLink = meData?.settings.supportUsername
     ? `https://t.me/${meData.settings.supportUsername.replace(/^@/, "")}`
     : null
+  const paymentOptions = useMemo(
+    () => [
+      ...((paymentData?.paymentMethods ?? []).filter((item) => item.isActive).map((method) => ({
+        key: `manual:${method.id}`,
+        id: method.id,
+        type: "MANUAL" as const,
+        title: method.title,
+        subtitle: method.details,
+        iconDataUrl: method.iconDataUrl,
+      })) ?? []),
+      ...(paymentData?.cryptoPay.enabled
+        ? [
+            {
+              key: "crypto:auto",
+              id: undefined,
+              type: "CRYPTO_PAY" as const,
+              title: paymentData.cryptoPay.title || "Crypto Bot",
+              subtitle:
+                paymentData.cryptoPay.acceptedAssets
+                  ? `Автооплата · ${paymentData.cryptoPay.acceptedAssets}`
+                  : "Автооплата через invoice",
+              iconDataUrl: paymentData.cryptoPay.iconDataUrl || null,
+            },
+          ]
+        : []),
+    ],
+    [paymentData],
+  )
   const createdAtLabel = format(new Date(ticket.createdAt), "dd MMMM · HH:mm", {
     locale: ru,
   })
@@ -141,9 +187,21 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
     !ticket.isPaid
   const canRefreshCryptoPayment =
     ticket.paymentMethodType === "CRYPTO_PAY" && !ticket.isPaid && !isClosed
+  const canSwitchPaymentMethod =
+    isRealBuyerView &&
+    !ticket.isPaid &&
+    !isClosed &&
+    !ticket.manualPaymentRequestedAt &&
+    paymentOptions.length > 1
   const amountLabel = ticket.cryptoInvoiceAmount
     ? `${ticket.cryptoInvoiceAmount} ${ticket.cryptoInvoiceFiat || "RUB"}`
     : null
+  const currentPaymentKey =
+    ticket.paymentMethodType === "MANUAL" && ticket.paymentMethodId
+      ? `manual:${ticket.paymentMethodId}`
+      : ticket.paymentMethodType === "CRYPTO_PAY"
+        ? "crypto:auto"
+        : null
   const stepper = [
     {
       label: "Оплата",
@@ -332,6 +390,68 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                         {deleteTicketMutation.isPending ? "Удаляю..." : "Удалить"}
                       </button>
                     </div>
+                  </div>
+                </div>
+              ) : null}
+
+              {canSwitchPaymentMethod ? (
+                <div className="mt-6 rounded-[24px] border border-[var(--color-border)] bg-[var(--color-bg)] p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-[var(--color-text)]">Способ оплаты</p>
+                      <p className="mt-1 text-xs text-[var(--color-muted)]">
+                        Можно сменить до оплаты
+                      </p>
+                    </div>
+                    {changePaymentMethodMutation.isPending ? (
+                      <span className="text-xs text-[var(--color-muted)]">Сохраняю…</span>
+                    ) : null}
+                  </div>
+                  <div className="mt-3 grid gap-2">
+                    {paymentOptions.map((option) => {
+                      const isActive = option.key === currentPaymentKey
+
+                      return (
+                        <button
+                          key={option.key}
+                          type="button"
+                          disabled={isActive || changePaymentMethodMutation.isPending}
+                          onClick={() =>
+                            changePaymentMethodMutation.mutate(
+                              option.type === "MANUAL"
+                                ? { paymentMethodId: option.id }
+                                : { paymentMethodType: "CRYPTO_PAY" },
+                            )
+                          }
+                          className={cn(
+                            "flex items-center gap-3 rounded-[18px] border px-3 py-3 text-left transition-colors disabled:opacity-60 sm:px-4",
+                            isActive
+                              ? "border-[var(--color-accent)] bg-[color-mix(in_srgb,var(--color-accent)_10%,var(--color-bg))]"
+                              : "border-[var(--color-border)] bg-[var(--color-surface)]",
+                          )}
+                        >
+                          <PaymentMethodIcon iconDataUrl={option.iconDataUrl} title={option.title} />
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-semibold text-[var(--color-text)]">
+                              {option.title}
+                            </p>
+                            <p className="mt-1 line-clamp-2 text-xs leading-5 text-[var(--color-muted)]">
+                              {option.subtitle}
+                            </p>
+                          </div>
+                          <span
+                            className={cn(
+                              "rounded-full px-2.5 py-1 text-[11px] font-medium",
+                              isActive
+                                ? "bg-[var(--color-accent)] text-[var(--color-accent-text)]"
+                                : "bg-[var(--color-bg)] text-[var(--color-muted)]",
+                            )}
+                          >
+                            {isActive ? "Выбран" : "Выбрать"}
+                          </span>
+                        </button>
+                      )
+                    })}
                   </div>
                 </div>
               ) : null}

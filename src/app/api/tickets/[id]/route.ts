@@ -20,6 +20,8 @@ const schema = z.object({
   markManualPaid: z.boolean().optional(),
   rejectManualPayment: z.boolean().optional(),
   cancelByUser: z.boolean().optional(),
+  paymentMethodId: z.string().optional(),
+  paymentMethodType: z.nativeEnum(PaymentMethodType).optional(),
 })
 
 async function syncCryptoInvoice(ticketId: string) {
@@ -178,6 +180,7 @@ export async function GET(
             }
           : null,
       paymentMethodTitle: ticket.paymentMethodTitle || null,
+      paymentMethodId: ticket.paymentMethodId || null,
       paymentMethodType: ticket.paymentMethodType || null,
       paymentMethodDetails: ticket.paymentMethodDetails || null,
       paymentMethodIconDataUrl: ticket.paymentMethodIconDataUrl || null,
@@ -271,6 +274,117 @@ export async function PATCH(
       await notifyManualPaymentRequested(id)
 
       return NextResponse.json({ ok: true })
+    }
+
+    if (payload.paymentMethodId || payload.paymentMethodType) {
+      if (ticket.createdById !== user.id) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+      }
+
+      const ownTicket = await prisma.ticket.findUnique({
+        where: { id },
+        select: {
+          id: true,
+          status: true,
+          isPaid: true,
+          manualPaymentRequestedAt: true,
+          product: {
+            select: {
+              priceRub: true,
+              title: true,
+            },
+          },
+        },
+      })
+
+      if (!ownTicket) {
+        return NextResponse.json({ error: "Not found" }, { status: 404 })
+      }
+
+      if (ownTicket.isPaid) {
+        return NextResponse.json({ error: "После оплаты способ менять нельзя" }, { status: 400 })
+      }
+
+      if (ownTicket.status === TicketStatus.CLOSED || ownTicket.status === TicketStatus.CANCELLED) {
+        return NextResponse.json({ error: "Заказ уже закрыт" }, { status: 400 })
+      }
+
+      if (ownTicket.manualPaymentRequestedAt) {
+        return NextResponse.json(
+          { error: "Способ оплаты нельзя менять после отметки об оплате" },
+          { status: 400 },
+        )
+      }
+
+      if (!ownTicket.product) {
+        return NextResponse.json({ error: "У заказа нет товара" }, { status: 400 })
+      }
+
+      if (payload.paymentMethodId) {
+        const manualMethod = await prisma.paymentMethod.findFirst({
+          where: {
+            id: payload.paymentMethodId,
+            type: PaymentMethodType.MANUAL,
+            isActive: true,
+          },
+        })
+
+        if (!manualMethod) {
+          return NextResponse.json({ error: "Способ оплаты не найден" }, { status: 404 })
+        }
+
+        await prisma.ticket.update({
+          where: { id },
+          data: {
+            paymentMethodId: manualMethod.id,
+            paymentMethodType: PaymentMethodType.MANUAL,
+            paymentMethodTitle: manualMethod.title,
+            paymentMethodDetails: manualMethod.details,
+            paymentMethodIconDataUrl: manualMethod.iconDataUrl,
+            manualPaymentRequestedAt: null,
+            cryptoInvoiceId: null,
+            cryptoInvoiceUrl: null,
+            cryptoInvoiceStatus: null,
+            cryptoInvoiceAsset: null,
+            cryptoInvoiceAmount: null,
+            cryptoInvoiceExpiresAt: null,
+          },
+        })
+
+        return NextResponse.json({ ok: true })
+      }
+
+      if (payload.paymentMethodType === PaymentMethodType.CRYPTO_PAY) {
+        const settings = await prisma.shopSettings.findUnique({ where: { id: 1 } })
+
+        if (!settings?.cryptoPayEnabled || !settings.cryptoPayToken) {
+          return NextResponse.json({ error: "Crypto Bot сейчас недоступен" }, { status: 400 })
+        }
+
+        await prisma.ticket.update({
+          where: { id },
+          data: {
+            paymentMethodId: null,
+            paymentMethodType: PaymentMethodType.CRYPTO_PAY,
+            paymentMethodTitle: "Crypto Bot",
+            paymentMethodDetails: "Автоматическая оплата через invoice",
+            paymentMethodIconDataUrl: "/crypto-bot-logo.svg",
+            manualPaymentRequestedAt: null,
+            cryptoInvoiceId: null,
+            cryptoInvoiceUrl: null,
+            cryptoInvoiceStatus: null,
+            cryptoInvoiceAsset: null,
+            cryptoInvoiceAmount: null,
+            cryptoInvoiceExpiresAt: null,
+          },
+        })
+
+        await syncCryptoInvoice(id)
+
+        return NextResponse.json({ ok: true })
+      }
+
+      return NextResponse.json({ error: "Неверный способ оплаты" }, { status: 400 })
     }
 
     if (payload.cancelByUser) {
