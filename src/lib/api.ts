@@ -144,7 +144,7 @@ export function createTicket(payload: {
   paymentMethodId?: string
   paymentMethodType?: PaymentMethodType
 }) {
-  return api<{ ticketId: string }>("/api/tickets", {
+  return api<{ ticketId: string }>("/api/orders", {
     method: "POST",
     body: JSON.stringify(payload),
   })
@@ -169,7 +169,7 @@ export function getTickets(params?: { scope?: "all" }) {
       paymentMethodType: PaymentMethodType | null
       manualPaymentRequestedAt: string | null
     }>
-  }>(`/api/tickets${query.size ? `?${query.toString()}` : ""}`)
+  }>(`/api/orders${query.size ? `?${query.toString()}` : ""}`)
 }
 
 export function getTicket(id: string) {
@@ -213,53 +213,53 @@ export function getTicket(id: string) {
       cryptoInvoiceAmount: string | null
       cryptoInvoiceExpiresAt: string | null
     }
-  }>(`/api/tickets/${id}`)
+  }>(`/api/orders/${id}`)
 }
 
 export function updateTicketStatus(id: string, status: TicketStatus) {
-  return api<{ ok: true }>(`/api/tickets/${id}`, {
+  return api<{ ok: true }>(`/api/orders/${id}`, {
     method: "PATCH",
     body: JSON.stringify({ status }),
   })
 }
 
 export function confirmTicketPayment(id: string) {
-  return api<{ ok: true }>(`/api/tickets/${id}`, {
+  return api<{ ok: true }>(`/api/orders/${id}`, {
     method: "PATCH",
     body: JSON.stringify({ confirmPayment: true }),
   })
 }
 
 export function refreshCryptoInvoice(id: string) {
-  return api<{ ok: true }>(`/api/tickets/${id}`, {
+  return api<{ ok: true }>(`/api/orders/${id}`, {
     method: "PATCH",
     body: JSON.stringify({ refreshCryptoInvoice: true }),
   })
 }
 
 export function markManualTicketPaid(id: string) {
-  return api<{ ok: true }>(`/api/tickets/${id}`, {
+  return api<{ ok: true }>(`/api/orders/${id}`, {
     method: "PATCH",
     body: JSON.stringify({ markManualPaid: true }),
   })
 }
 
 export function rejectManualTicketPayment(id: string) {
-  return api<{ ok: true }>(`/api/tickets/${id}`, {
+  return api<{ ok: true }>(`/api/orders/${id}`, {
     method: "PATCH",
     body: JSON.stringify({ rejectManualPayment: true }),
   })
 }
 
 export function cancelOwnTicket(id: string) {
-  return api<{ ok: true }>(`/api/tickets/${id}`, {
+  return api<{ ok: true }>(`/api/orders/${id}`, {
     method: "PATCH",
     body: JSON.stringify({ cancelByUser: true }),
   })
 }
 
 export function deleteAdminTicket(id: string) {
-  return api<{ ok: true }>(`/api/tickets/${id}`, {
+  return api<{ ok: true }>(`/api/orders/${id}`, {
     method: "DELETE",
   })
 }
