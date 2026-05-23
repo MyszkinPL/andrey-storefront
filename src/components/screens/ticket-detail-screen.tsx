@@ -273,10 +273,37 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                     {amountLabel}
                   </p>
                 ) : null}
-                <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-                  <StatusBadge kind={ticket.isPaid ? "paid" : "waiting"}>{paymentStateLabel}</StatusBadge>
-                  {ticket.productCategory ? <StatusBadge>{ticket.productCategory}</StatusBadge> : null}
-                  <StatusBadge>#{ticket.number}</StatusBadge>
+              </div>
+
+              <div className="mt-5">
+                <div className="flex items-center gap-2 rounded-[18px] bg-[var(--color-bg)] px-3 py-2.5 sm:px-4">
+                  {stepper.map((step, index) => (
+                    <div key={step.label} className="flex min-w-0 flex-1 items-center gap-2">
+                      <div
+                        className={cn(
+                          "flex size-7 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold",
+                          step.done || step.active
+                            ? "bg-[var(--color-accent)] text-[var(--color-accent-text)]"
+                            : "bg-[var(--color-surface)] text-[var(--color-muted)]",
+                        )}
+                      >
+                        {index + 1}
+                      </div>
+                      <span
+                        className={cn(
+                          "truncate text-xs font-medium",
+                          step.done || step.active
+                            ? "text-[var(--color-text)]"
+                            : "text-[var(--color-muted)]",
+                        )}
+                      >
+                        {step.label}
+                      </span>
+                      {index < stepper.length - 1 ? (
+                        <div className="h-px min-w-3 flex-1 bg-[var(--color-border)]" />
+                      ) : null}
+                    </div>
+                  ))}
                 </div>
               </div>
 
@@ -323,38 +350,6 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                   ) : null}
                 </div>
               ) : null}
-
-              <div className="mt-5">
-                <div className="flex items-center gap-2 rounded-[18px] bg-[var(--color-bg)] px-3 py-2.5 sm:px-4">
-                  {stepper.map((step, index) => (
-                    <div key={step.label} className="flex min-w-0 flex-1 items-center gap-2">
-                      <div
-                        className={cn(
-                          "flex size-7 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold",
-                          step.done || step.active
-                            ? "bg-[var(--color-accent)] text-[var(--color-accent-text)]"
-                            : "bg-[var(--color-surface)] text-[var(--color-muted)]",
-                        )}
-                      >
-                        {index + 1}
-                      </div>
-                      <span
-                        className={cn(
-                          "truncate text-xs font-medium",
-                          step.done || step.active
-                            ? "text-[var(--color-text)]"
-                            : "text-[var(--color-muted)]",
-                        )}
-                      >
-                        {step.label}
-                      </span>
-                      {index < stepper.length - 1 ? (
-                        <div className="h-px min-w-3 flex-1 bg-[var(--color-border)]" />
-                      ) : null}
-                    </div>
-                  ))}
-                </div>
-              </div>
 
               {ticket.deliveredKey ? (
                 <div className="mt-5 rounded-[24px] border border-[var(--color-border)] bg-[var(--color-bg)] p-4">
