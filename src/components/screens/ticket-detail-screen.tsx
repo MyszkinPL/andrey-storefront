@@ -114,9 +114,6 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
   const isSupportFlow = !ticket.productTitle && !ticket.paymentMethodTitle
   const isBuyerView = mode === "buyer"
   const isClosed = ["CLOSED", "CANCELLED"].includes(ticket.status)
-  const isAwaitingPayment = !ticket.isPaid
-  const isManualPayment = ticket.paymentMethodType === "MANUAL"
-  const isManualPaymentRequested = Boolean(ticket.manualPaymentRequestedAt)
   const supportLink = meData?.settings.supportUsername
     ? `https://t.me/${meData.settings.supportUsername.replace(/^@/, "")}`
     : null
@@ -225,21 +222,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
     ticket.paymentMethodType === "MANUAL" && ticket.manualPaymentRequestedAt && !ticket.isPaid
 
   return (
-    <Screen noTabBar>
-      <ScreenHeader
-        title={ticket.productTitle || ticket.subject}
-        subtitle={
-          <HeaderMetaRow
-            items={[
-              `#${ticket.number}`,
-              renderStatus(ticket.status),
-              ticket.productCategory || null,
-              ticket.paymentMethodTitle || null,
-            ]}
-          />
-        }
-      />
-
+    <Screen noTabBar className="pt-3">
       {adminToolsVisible ? (
         <div className="px-4 pb-2.5">
           <div className="ui-card p-2.5">{headerActions}</div>
@@ -251,7 +234,20 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
           <section className="ui-card overflow-hidden">
             <div className="px-5 py-6 sm:px-8 sm:py-8">
               <div className="flex flex-col items-center text-center">
-                <div className="flex size-20 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--color-accent)_18%,var(--color-surface)_82%)] sm:size-24">
+                <p className="text-2xl font-semibold tracking-[-0.03em] text-[var(--color-text)]">
+                  {ticket.productTitle || ticket.subject}
+                </p>
+                <div className="mt-2">
+                  <HeaderMetaRow
+                    items={[
+                      `#${ticket.number}`,
+                      createdAtLabel,
+                      ticket.productCategory || null,
+                    ]}
+                  />
+                </div>
+
+                <div className="mt-5 flex size-20 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--color-accent)_18%,var(--color-surface)_82%)] sm:size-24">
                   <PaymentMethodIcon
                     iconDataUrl={ticket.paymentMethodIconDataUrl}
                     title={ticket.paymentMethodTitle || "PM"}
@@ -259,10 +255,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                   />
                 </div>
 
-                <p className="mt-5 text-sm font-medium text-[var(--color-muted)]">
-                  {ticket.productTitle || ticket.subject}
-                </p>
-                <p className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-[var(--color-text)] sm:text-[2rem]">
+                <p className="mt-5 text-2xl font-semibold tracking-[-0.03em] text-[var(--color-text)] sm:text-[2rem]">
                   {paymentStateLabel}
                 </p>
                 <p className="mt-2 text-sm text-[var(--color-muted)]">
@@ -394,18 +387,6 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
               </div>
             </div>
           </section>
-
-          <section className="ui-card overflow-hidden">
-            <div className="px-5 py-4 sm:px-6">
-              <p className="text-sm font-semibold text-[var(--color-text)]">Детали транзакции</p>
-              <div className="mt-3 overflow-hidden rounded-[20px] border border-[var(--color-border)]">
-                <DetailRow label="Дата" value={createdAtLabel} />
-                <DetailRow label="Заказ" value={`#${ticket.number}`} />
-                <DetailRow label="Способ" value={ticket.paymentMethodTitle || "—"} />
-                {ticket.productCategory ? <DetailRow label="Категория" value={ticket.productCategory} /> : null}
-              </div>
-            </div>
-          </section>
         </div>
       </div>
 
@@ -422,44 +403,6 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
         />
       ) : null}
     </Screen>
-  )
-}
-
-function renderStatus(status: string) {
-  switch (status) {
-    case "OPEN":
-      return "Открыт"
-    case "PAYMENT_REVIEW":
-      return "Проверка оплаты"
-    case "IN_PROGRESS":
-      return "В работе"
-    case "CLOSED":
-      return "Закрыт"
-    case "CANCELLED":
-      return "Отменён"
-    default:
-      return status
-  }
-}
-
-function StatusBadge({
-  children,
-  kind = "default",
-}: {
-  children: React.ReactNode
-  kind?: "default" | "paid" | "waiting"
-}) {
-  return (
-    <span
-      className={cn(
-        "rounded-full px-2.5 py-1 text-[10px]",
-        kind === "paid" && "bg-[var(--color-accent)]/14 text-[var(--color-accent)]",
-        kind === "waiting" && "bg-[var(--color-bg)] text-[var(--color-muted)]",
-        kind === "default" && "bg-[var(--color-bg)] text-[var(--color-muted)]",
-      )}
-    >
-      {children}
-    </span>
   )
 }
 
@@ -517,21 +460,6 @@ function PaymentDataItem({
     <div className={cn("rounded-[16px] bg-[var(--color-surface)] px-3 py-3", align === "right" && "text-right")}>
       <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-muted)]">{label}</p>
       <p className="mt-1 text-sm font-medium text-[var(--color-text)]">{value}</p>
-    </div>
-  )
-}
-
-function DetailRow({
-  label,
-  value,
-}: {
-  label: string
-  value: string
-}) {
-  return (
-    <div className="grid grid-cols-[112px_minmax(0,1fr)] border-b border-[var(--color-border)] last:border-b-0">
-      <div className="px-4 py-3 text-xs text-[var(--color-muted)]">{label}</div>
-      <div className="px-4 py-3 text-sm font-medium text-[var(--color-text)]">{value}</div>
     </div>
   )
 }
