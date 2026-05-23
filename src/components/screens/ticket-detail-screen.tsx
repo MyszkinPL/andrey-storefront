@@ -313,28 +313,14 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
             {[
               {
                 title: "Оплата",
-                subtitle: ticket.isPaid ? "Подтверждена" : "Ожидается",
                 active: true,
               },
               {
                 title: ticket.deliveredKey ? "Ключ" : "Выдача",
-                subtitle: ticket.deliveredKey
-                  ? "Выдано"
-                  : ticket.isPaid
-                    ? ticket.status === "IN_PROGRESS"
-                      ? "В работе"
-                      : "Следующий этап"
-                    : "После оплаты",
                 active: ticket.isPaid,
               },
               {
-                title: "Завершение",
-                subtitle:
-                  ticket.status === "CLOSED"
-                    ? "Заказ закрыт"
-                    : ticket.deliveredKey
-                      ? "Можно закрывать"
-                      : "Финальный этап",
+                title: "Готово",
                 active: ticket.status === "CLOSED" || Boolean(ticket.deliveredKey),
               },
             ].map((step, index) => (
@@ -352,11 +338,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                 >
                   {index + 1}
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <p className="text-xs font-medium text-[var(--color-text)]">{step.title}</p>
-                  <span className="text-[10px] text-[var(--color-muted)]">·</span>
-                  <p className="text-[10px] text-[var(--color-muted)]">{step.subtitle}</p>
-                </div>
+                <p className="text-xs font-medium text-[var(--color-text)]">{step.title}</p>
               </div>
             ))}
           </div>
