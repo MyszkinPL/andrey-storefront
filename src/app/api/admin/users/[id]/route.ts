@@ -89,3 +89,76 @@ export async function PATCH(
     )
   }
 }
+
+export async function GET(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    await requireAdmin()
+    const { id } = await params
+
+    const user = await prisma.user.findUnique({
+      where: { id },
+      include: {
+        tickets: {
+          where: {
+            productId: { not: null },
+          },
+          include: {
+            product: true,
+          },
+          orderBy: {
+            updatedAt: "desc",
+          },
+          take: 20,
+        },
+        _count: {
+          select: {
+            tickets: {
+              where: {
+                productId: { not: null },
+                status: { notIn: ["CLOSED", "CANCELLED"] },
+              },
+            },
+          },
+        },
+      },
+    })
+
+    if (!user) {
+      return NextResponse.json({ error: "Пользователь не найден" }, { status: 404 })
+    }
+
+    return NextResponse.json({
+      user: {
+        id: user.id,
+        telegramId: user.telegramId.toString(),
+        firstName: user.firstName,
+        lastName: user.lastName,
+        username: user.username,
+        photoUrl: user.photoUrl,
+        role: user.role,
+        isBanned: user.isBanned,
+        bannedAt: user.bannedAt?.toISOString() ?? null,
+        activeOrderCount: user._count.tickets,
+        createdAt: user.createdAt.toISOString(),
+        orders: user.tickets.map((ticket) => ({
+          id: ticket.id,
+          number: ticket.number,
+          status: ticket.status,
+          isPaid: ticket.isPaid,
+          updatedAt: ticket.updatedAt.toISOString(),
+          productTitle: ticket.product?.title || null,
+          productCategory: ticket.product?.category || null,
+          priceRub: ticket.product?.priceRub || null,
+        })),
+      },
+    })
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "User read failed" },
+      { status: 400 },
+    )
+  }
+}

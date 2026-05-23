@@ -13,7 +13,7 @@ type FilterKey = "all" | "waiting" | "review" | "work" | "support" | "closed"
 
 export function AdminTicketsScreen() {
   const { data: meData } = useQuery({ queryKey: ["me"], queryFn: getMe })
-  const { data } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     queryKey: ["tickets"],
     queryFn: getTickets,
     refetchInterval: 10_000,
@@ -68,7 +68,19 @@ export function AdminTicketsScreen() {
     <Screen>
       <ScreenHeader title="Заказы" subtitle="Одна очередь без пустых секций и мусора" />
 
-      {tickets.length === 0 ? (
+      {isLoading ? (
+        <ScreenEmpty
+          title="Загружаю заказы"
+          subtitle="Подтягиваю очередь продавца."
+          icon={<Clock3 size={28} className="text-[var(--color-muted)]" />}
+        />
+      ) : isError ? (
+        <ScreenEmpty
+          title="Очередь не загрузилась"
+          subtitle="Обнови экран или попробуй позже."
+          icon={<Clock3 size={28} className="text-[var(--color-muted)]" />}
+        />
+      ) : tickets.length === 0 ? (
         <ScreenEmpty
           title="Активных заказов нет"
           subtitle="Новые покупки появятся здесь."

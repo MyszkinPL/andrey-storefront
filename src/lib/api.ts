@@ -38,7 +38,6 @@ export type PaymentMethodInput = {
 
 export type ShopSettingsPayload = {
   shopName: string
-  welcomeText: string
   supportIntro: string
   supportUsername?: string
   cryptoPayEnabled: boolean
@@ -95,7 +94,6 @@ export function getMe() {
     }
     settings: {
       shopName: string
-      welcomeText: string
       supportIntro: string
       supportUsername: string | null
       cryptoPayEnabled?: boolean
@@ -301,8 +299,31 @@ export function updateAdminUserModeration(
   })
 }
 
-export function getAdminUsers() {
+export function getAdminUsers(params?: {
+  q?: string
+  filter?: "all" | "buyers" | "admins" | "banned"
+  page?: number
+  limit?: number
+}) {
+  const query = new URLSearchParams()
+  if (params?.q) query.set("q", params.q)
+  if (params?.filter) query.set("filter", params.filter)
+  if (params?.page) query.set("page", String(params.page))
+  if (params?.limit) query.set("limit", String(params.limit))
+
   return api<{
+    pageInfo: {
+      page: number
+      limit: number
+      total: number
+      hasMore: boolean
+    }
+    summary: {
+      total: number
+      buyers: number
+      admins: number
+      banned: number
+    }
     users: Array<{
       id: string
       telegramId: string
@@ -328,7 +349,35 @@ export function getAdminUsers() {
         priceRub: number | null
       }>
     }>
-  }>("/api/admin/users")
+  }>(`/api/admin/users${query.size ? `?${query.toString()}` : ""}`)
+}
+
+export function getAdminUser(id: string) {
+  return api<{
+    user: {
+      id: string
+      telegramId: string
+      firstName: string
+      lastName: string | null
+      username: string | null
+      photoUrl: string | null
+      role: "USER" | "ADMIN"
+      isBanned: boolean
+      bannedAt: string | null
+      activeOrderCount: number
+      createdAt: string
+      orders: Array<{
+        id: string
+        number: number
+        status: TicketStatus
+        isPaid: boolean
+        updatedAt: string
+        productTitle: string | null
+        productCategory: string | null
+        priceRub: number | null
+      }>
+    }
+  }>(`/api/admin/users/${id}`)
 }
 
 export function getPaymentMethods() {

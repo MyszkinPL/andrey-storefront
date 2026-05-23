@@ -67,7 +67,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
   const [previewImage, setPreviewImage] = useState<string | null>(null)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [isMobileDetailsOpen, setIsMobileDetailsOpen] = useState(false)
-  const { data } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     queryKey: ["ticket", ticketId],
     queryFn: () => getTicket(ticketId),
     refetchInterval: 10_000,
@@ -169,7 +169,29 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
 
   useBackButton(() => router.back())
 
-  if (!data?.ticket) return null
+  if (isLoading) {
+    return (
+      <Screen noTabBar>
+        <ScreenEmpty
+          icon={<CircleDashed size={28} className="text-[var(--color-muted)]" />}
+          title="Загружаю заказ"
+          subtitle="Подтягиваю оплату, чат и статус."
+        />
+      </Screen>
+    )
+  }
+
+  if (isError || !data?.ticket) {
+    return (
+      <Screen noTabBar>
+        <ScreenEmpty
+          icon={<CircleDashed size={28} className="text-[var(--color-muted)]" />}
+          title="Заказ не загрузился"
+          subtitle="Обнови экран или попробуй позже."
+        />
+      </Screen>
+    )
+  }
 
   const ticket = data.ticket
   const isSupportFlow = !ticket.productTitle && !ticket.paymentMethodTitle

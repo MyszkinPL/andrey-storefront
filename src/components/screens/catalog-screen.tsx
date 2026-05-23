@@ -12,7 +12,10 @@ import { getMe, getProducts } from "@/lib/api"
 import { cn } from "@/lib/cn"
 
 export function CatalogScreen() {
-  const { data: productsData } = useQuery({ queryKey: ["products"], queryFn: getProducts })
+  const { data: productsData, isLoading, isError } = useQuery({
+    queryKey: ["products"],
+    queryFn: getProducts,
+  })
   const { data: meData } = useQuery({ queryKey: ["me"], queryFn: getMe })
   const [category, setCategory] = useState("")
   const [search, setSearch] = useState("")
@@ -36,6 +39,7 @@ export function CatalogScreen() {
       return categoryOk && searchOk
     })
   }, [category, productsData?.products, search])
+  const shopName = meData?.settings.shopName || "Shop"
 
   return (
     <Screen>
@@ -45,7 +49,7 @@ export function CatalogScreen() {
           <div className="flex items-center gap-3">
             <Image
               src="/logo.svg"
-              alt="snx.sell"
+              alt={shopName}
               width={40}
               height={40}
               className="size-10 shrink-0 object-contain"
@@ -53,7 +57,7 @@ export function CatalogScreen() {
             />
             <div className="min-w-0">
               <p className="truncate text-xl font-semibold tracking-[-0.02em] text-[var(--color-text)]">
-                snx.sell
+                {shopName}
               </p>
             </div>
           </div>
@@ -72,6 +76,21 @@ export function CatalogScreen() {
       />
 
       <ScreenBody className="gap-4">
+        {isLoading ? (
+          <ScreenEmpty
+            icon={<PackageSearch size={32} className="text-[var(--color-muted)]" />}
+            title="Загружаю каталог"
+            subtitle="Подтягиваю товары магазина."
+          />
+        ) : isError ? (
+          <ScreenEmpty
+            icon={<PackageSearch size={32} className="text-[var(--color-muted)]" />}
+            title="Каталог не загрузился"
+            subtitle="Обнови экран или попробуй позже."
+          />
+        ) : null}
+        {!isLoading && !isError ? (
+          <>
         <section className="ui-card p-3">
           <label className="ui-card-soft flex items-center gap-3 px-4 py-3">
             <Search size={16} className="text-[var(--color-muted)]" />
@@ -155,6 +174,8 @@ export function CatalogScreen() {
             ))}
           </div>
         )}
+          </>
+        ) : null}
       </ScreenBody>
     </Screen>
   )

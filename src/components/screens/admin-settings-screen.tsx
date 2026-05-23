@@ -54,7 +54,6 @@ export function AdminSettingsScreen() {
   })
 
   const [shopName, setShopName] = useState("")
-  const [welcomeText, setWelcomeText] = useState("")
   const [supportIntro, setSupportIntro] = useState("")
   const [supportUsername, setSupportUsername] = useState("")
   const [cryptoPayEnabled, setCryptoPayEnabled] = useState(false)
@@ -92,7 +91,6 @@ export function AdminSettingsScreen() {
     if (!meData) return
     queueMicrotask(() => {
       setShopName(meData.settings.shopName)
-      setWelcomeText(meData.settings.welcomeText)
       setSupportIntro(meData.settings.supportIntro)
       setSupportUsername(meData.settings.supportUsername || "")
       setCryptoPayEnabled(Boolean(meData.settings.cryptoPayEnabled))
@@ -122,7 +120,6 @@ export function AdminSettingsScreen() {
     mutationFn: () =>
       saveSettings({
         shopName,
-        welcomeText,
         supportIntro,
         supportUsername,
         cryptoPayEnabled,
@@ -260,19 +257,13 @@ export function AdminSettingsScreen() {
               <input
                 value={shopName}
                 onChange={(e) => setShopName(e.target.value)}
-                placeholder="Название"
+                placeholder="Название магазина"
                 className="ui-input"
-              />
-              <textarea
-                value={welcomeText}
-                onChange={(e) => setWelcomeText(e.target.value)}
-                placeholder="Текст на главной"
-                className="ui-input min-h-24"
               />
               <textarea
                 value={supportIntro}
                 onChange={(e) => setSupportIntro(e.target.value)}
-                placeholder="Текст на экране заказов"
+                placeholder="Короткий текст про поддержку и оплату"
                 className="ui-input min-h-24"
               />
               <input

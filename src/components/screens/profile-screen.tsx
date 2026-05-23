@@ -8,8 +8,8 @@ import { Screen, ScreenBody, ScreenEmpty, ScreenHeader } from "@/components/scre
 import { Avatar } from "@/components/ui"
 
 export function ProfileScreen() {
-  const { data: meData } = useQuery({ queryKey: ["me"], queryFn: getMe })
-  const { data: paymentData } = useQuery({
+  const { data: meData, isLoading: isLoadingMe, isError: isErrorMe } = useQuery({ queryKey: ["me"], queryFn: getMe })
+  const { data: paymentData, isLoading: isLoadingPayments, isError: isErrorPayments } = useQuery({
     queryKey: ["payment-methods"],
     queryFn: getPaymentMethods,
   })
@@ -42,6 +42,20 @@ export function ProfileScreen() {
       />
 
       <ScreenBody className="gap-3 xl:grid-cols-[minmax(0,320px)_minmax(0,1fr)]">
+        {isLoadingMe || isLoadingPayments ? (
+          <ScreenEmpty
+            icon={<CreditCard size={30} className="text-[var(--color-muted)]" />}
+            title="Загружаю профиль"
+            subtitle="Подтягиваю данные магазина и оплаты."
+          />
+        ) : isErrorMe || isErrorPayments ? (
+          <ScreenEmpty
+            icon={<CreditCard size={30} className="text-[var(--color-muted)]" />}
+            title="Профиль не загрузился"
+            subtitle="Обнови экран или попробуй позже."
+          />
+        ) : (
+          <>
         <section className="ui-card p-4 xl:col-span-2">
           <div className="flex items-start gap-2">
             <BadgeInfo size={16} className="text-[var(--color-muted)]" />
@@ -100,6 +114,8 @@ export function ProfileScreen() {
               ) : null}
             </div>
           </section>
+        )}
+          </>
         )}
       </ScreenBody>
     </Screen>

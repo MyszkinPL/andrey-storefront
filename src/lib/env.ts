@@ -5,6 +5,7 @@ const schema = z.object({
   APP_URL: z.string().url(),
   DATABASE_URL: z.string().min(1),
   SESSION_SECRET: z.string().min(24),
+  TELEGRAM_WEBHOOK_SECRET: z.string().optional(),
   ADMIN_TELEGRAM_IDS: z.string().default(""),
   ALLOW_DEV_AUTH: z
     .string()

@@ -9,8 +9,8 @@ import "./globals.css"
 import { Providers } from "./providers"
 
 export const metadata: Metadata = {
-  title: "snx.sell",
-  description: "Telegram + desktop storefront for software subscriptions",
+  title: "Store",
+  description: "Telegram storefront for digital goods",
   icons: {
     icon: [{ url: "/logo.svg", type: "image/svg+xml" }],
   },

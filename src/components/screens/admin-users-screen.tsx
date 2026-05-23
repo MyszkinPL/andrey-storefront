@@ -5,20 +5,27 @@ import { useMemo, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Ban, History, Search, ShieldCheck, X } from "lucide-react"
 
-import { getAdminUsers, getMe, updateAdminUserModeration } from "@/lib/api"
+import { getAdminUser, getAdminUsers, getMe, updateAdminUserModeration } from "@/lib/api"
 import { Screen, ScreenBody, ScreenEmpty, ScreenHeader } from "@/components/screen"
 import { cn } from "@/lib/cn"
 
 export function AdminUsersScreen() {
   const queryClient = useQueryClient()
   const { data: meData } = useQuery({ queryKey: ["me"], queryFn: getMe })
-  const { data } = useQuery({
-    queryKey: ["admin-users"],
-    queryFn: getAdminUsers,
-    refetchInterval: 10_000,
-  })
   const [search, setSearch] = useState("")
   const [filter, setFilter] = useState<"all" | "buyers" | "admins" | "banned">("all")
+  const [page, setPage] = useState(1)
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["admin-users", search, filter, page],
+    queryFn: () =>
+      getAdminUsers({
+        q: search,
+        filter,
+        page,
+        limit: 30,
+      }),
+    refetchInterval: 10_000,
+  })
   const [banDraft, setBanDraft] = useState<null | { id: string; name: string }>(null)
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
 
@@ -34,18 +41,7 @@ export function AdminUsersScreen() {
     },
   })
 
-  const users = useMemo(() => {
-    const query = search.trim().toLowerCase()
-    return (data?.users ?? []).filter((user) => {
-      if (filter === "buyers" && user.role !== "USER") return false
-      if (filter === "admins" && user.role !== "ADMIN") return false
-      if (filter === "banned" && !user.isBanned) return false
-      if (!query) return true
-      return `${user.firstName} ${user.lastName || ""} ${user.username || ""} ${user.telegramId}`
-        .toLowerCase()
-        .includes(query)
-    })
-  }, [data?.users, filter, search])
+  const users = useMemo(() => data?.users ?? [], [data?.users])
   const selectedUser = users.find((user) => user.id === selectedUserId) ?? null
 
   if (meData && meData.user.role !== "ADMIN") {
@@ -66,7 +62,10 @@ export function AdminUsersScreen() {
             <Search size={16} className="text-[var(--color-muted)]" />
             <input
               value={search}
-              onChange={(event) => setSearch(event.target.value)}
+              onChange={(event) => {
+                setSearch(event.target.value)
+                setPage(1)
+              }}
               placeholder="Поиск по имени, username или telegram id"
               className="w-full bg-transparent text-sm text-[var(--color-text)] outline-none placeholder:text-[var(--color-muted)]"
             />
@@ -81,7 +80,10 @@ export function AdminUsersScreen() {
             ].map((item) => (
               <button
                 key={item.key}
-                onClick={() => setFilter(item.key)}
+                onClick={() => {
+                  setFilter(item.key)
+                  setPage(1)
+                }}
                 className={cn(
                   "rounded-full px-4 py-2 text-xs sm:text-sm transition-colors",
                   filter === item.key
@@ -93,9 +95,30 @@ export function AdminUsersScreen() {
               </button>
             ))}
           </div>
+
+          {data?.summary ? (
+            <div className="mt-3 flex flex-wrap gap-2">
+              <InlineMeta label="Всего" value={String(data.summary.total)} />
+              <InlineMeta label="Покупатели" value={String(data.summary.buyers)} />
+              <InlineMeta label="Админы" value={String(data.summary.admins)} />
+              <InlineMeta label="Бан" value={String(data.summary.banned)} />
+            </div>
+          ) : null}
         </section>
 
-        {users.length === 0 ? (
+        {isLoading ? (
+          <ScreenEmpty
+            icon={<ShieldCheck size={28} className="text-[var(--color-muted)]" />}
+            title="Загружаю пользователей"
+            subtitle="Подтягиваю модерацию."
+          />
+        ) : isError ? (
+          <ScreenEmpty
+            icon={<ShieldCheck size={28} className="text-[var(--color-muted)]" />}
+            title="Список не загрузился"
+            subtitle="Обнови экран или попробуй позже."
+          />
+        ) : users.length === 0 ? (
           <ScreenEmpty
             icon={<ShieldCheck size={28} className="text-[var(--color-muted)]" />}
             title="Никого не найдено"
@@ -161,13 +184,23 @@ export function AdminUsersScreen() {
                 </div>
               </section>
             ))}
+            {data?.pageInfo?.hasMore ? (
+              <button
+                type="button"
+                onClick={() => setPage((current) => current + 1)}
+                className="ui-card py-3 text-sm font-medium text-[var(--color-text)]"
+              >
+                Показать ещё
+              </button>
+            ) : null}
           </div>
         )}
       </ScreenBody>
 
       {selectedUser ? (
         <UserDetailsSheet
-          user={selectedUser}
+          userId={selectedUser.id}
+          fallbackUser={selectedUser}
           moderationPending={moderationMutation.isPending}
           onClose={() => setSelectedUserId(null)}
           onToggleBan={() => {
@@ -246,17 +279,26 @@ export function AdminUsersScreen() {
 }
 
 function UserDetailsSheet({
-  user,
+  userId,
+  fallbackUser,
   moderationPending,
   onClose,
   onToggleBan,
 }: {
-  user: Awaited<ReturnType<typeof getAdminUsers>>["users"][number]
+  userId: string
+  fallbackUser: Awaited<ReturnType<typeof getAdminUsers>>["users"][number]
   moderationPending: boolean
   onClose: () => void
   onToggleBan: () => void
 }) {
   const [ordersOpen, setOrdersOpen] = useState(true)
+  const userQuery = useQuery<Awaited<ReturnType<typeof getAdminUser>>>({
+    queryKey: ["admin-user", userId],
+    queryFn: () => getAdminUser(userId),
+    refetchInterval: 10_000,
+  })
+  const detailedUser = userQuery.data?.user
+  const user = detailedUser ?? fallbackUser
 
   return (
     <div
@@ -303,76 +345,82 @@ function UserDetailsSheet({
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3 sm:px-5 sm:py-4">
-          <div className="grid gap-3">
-            <section className="ui-card-soft p-4">
-              <div className="grid gap-2 sm:grid-cols-3">
-                <DetailMetric label="Активные заказы" value={String(user.activeOrderCount)} />
-                <DetailMetric
-                  label="Доступ"
-                  value={
-                    user.role === "ADMIN" ? "Админ" : user.isBanned ? "Заблокирован" : "Активен"
-                  }
-                />
-                <DetailMetric label="Telegram ID" value={user.telegramId} />
-              </div>
-            </section>
-
-            <section className="ui-card-soft p-4">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <History size={15} className="text-[var(--color-muted)]" />
-                  <p className="text-sm font-semibold text-[var(--color-text)]">История заказов</p>
-                  <span className="text-xs text-[var(--color-muted)]">{user.orders.length}</span>
+          {userQuery.isLoading && !detailedUser ? (
+            <div className="rounded-[20px] bg-[var(--color-bg)] px-4 py-10 text-center text-sm text-[var(--color-muted)]">
+              Загружаю пользователя…
+            </div>
+          ) : (
+            <div className="grid gap-3">
+              <section className="ui-card-soft p-4">
+                <div className="grid gap-2 sm:grid-cols-3">
+                  <DetailMetric label="Активные заказы" value={String(user.activeOrderCount)} />
+                  <DetailMetric
+                    label="Доступ"
+                    value={
+                      user.role === "ADMIN" ? "Админ" : user.isBanned ? "Заблокирован" : "Активен"
+                    }
+                  />
+                  <DetailMetric label="Telegram ID" value={user.telegramId} />
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setOrdersOpen((current) => !current)}
-                  className="rounded-full bg-[var(--color-bg)] px-3 py-1.5 text-xs text-[var(--color-text)]"
-                >
-                  {ordersOpen ? "Скрыть" : "Показать"}
-                </button>
-              </div>
+              </section>
 
-              {ordersOpen ? (
-                user.orders.length > 0 ? (
-                  <div className="mt-3 grid gap-2">
-                    {user.orders.map((order) => (
-                      <Link
-                        key={order.id}
-                        href={`/tickets/${order.id}`}
-                        className="rounded-[18px] bg-[var(--color-bg)] px-4 py-3 transition-colors hover:bg-[var(--color-surface)]"
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <p className="truncate text-sm font-medium text-[var(--color-text)]">
-                              {order.productTitle || `Заказ #${order.number}`}
-                            </p>
-                            <p className="mt-1 text-xs text-[var(--color-muted)]">
-                              #{order.number}
-                              {order.productCategory ? ` · ${order.productCategory}` : ""}
-                              {order.priceRub ? ` · ${order.priceRub.toLocaleString("ru-RU")} ₽` : ""}
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-xs font-medium text-[var(--color-text)]">
-                              {renderOrderStatus(order.status, order.isPaid)}
-                            </p>
-                            <p className="mt-1 text-[11px] text-[var(--color-muted)]">
-                              {new Date(order.updatedAt).toLocaleDateString("ru-RU")}
-                            </p>
-                          </div>
-                        </div>
-                      </Link>
-                    ))}
+              <section className="ui-card-soft p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <History size={15} className="text-[var(--color-muted)]" />
+                    <p className="text-sm font-semibold text-[var(--color-text)]">История заказов</p>
+                    <span className="text-xs text-[var(--color-muted)]">{user.orders.length}</span>
                   </div>
-                ) : (
-                  <div className="mt-3 rounded-[18px] bg-[var(--color-bg)] px-4 py-4 text-sm text-[var(--color-muted)]">
-                    Заказов пока нет.
-                  </div>
-                )
-              ) : null}
-            </section>
-          </div>
+                  <button
+                    type="button"
+                    onClick={() => setOrdersOpen((current) => !current)}
+                    className="rounded-full bg-[var(--color-bg)] px-3 py-1.5 text-xs text-[var(--color-text)]"
+                  >
+                    {ordersOpen ? "Скрыть" : "Показать"}
+                  </button>
+                </div>
+
+                {ordersOpen ? (
+                  user.orders.length > 0 ? (
+                    <div className="mt-3 grid gap-2">
+                      {user.orders.map((order) => (
+                        <Link
+                          key={order.id}
+                          href={`/tickets/${order.id}`}
+                          className="rounded-[18px] bg-[var(--color-bg)] px-4 py-3 transition-colors hover:bg-[var(--color-surface)]"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-medium text-[var(--color-text)]">
+                                {order.productTitle || `Заказ #${order.number}`}
+                              </p>
+                              <p className="mt-1 text-xs text-[var(--color-muted)]">
+                                #{order.number}
+                                {order.productCategory ? ` · ${order.productCategory}` : ""}
+                                {order.priceRub ? ` · ${order.priceRub.toLocaleString("ru-RU")} ₽` : ""}
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-xs font-medium text-[var(--color-text)]">
+                                {renderOrderStatus(order.status, order.isPaid)}
+                              </p>
+                              <p className="mt-1 text-[11px] text-[var(--color-muted)]">
+                                {new Date(order.updatedAt).toLocaleDateString("ru-RU")}
+                              </p>
+                            </div>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="mt-3 rounded-[18px] bg-[var(--color-bg)] px-4 py-4 text-sm text-[var(--color-muted)]">
+                      Заказов пока нет.
+                    </div>
+                  )
+                ) : null}
+              </section>
+            </div>
+          )}
         </div>
 
         <div className="sticky bottom-0 z-10 border-t border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 pb-[calc(env(safe-area-inset-bottom,0px)+12px)] sm:px-5">

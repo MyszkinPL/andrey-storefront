@@ -24,7 +24,10 @@ type FilterKey = "all" | "waiting" | "review" | "active" | "support" | "closed"
 export function TicketsScreen() {
   const router = useRouter()
   const queryClient = useQueryClient()
-  const { data: ticketsData } = useQuery({ queryKey: ["tickets"], queryFn: getTickets })
+  const { data: ticketsData, isLoading, isError } = useQuery({
+    queryKey: ["tickets"],
+    queryFn: getTickets,
+  })
   const [filter, setFilter] = useState<FilterKey>("all")
 
   const quickSupport = useMutation({
@@ -98,7 +101,19 @@ export function TicketsScreen() {
         }
       />
 
-      {tickets.length === 0 ? (
+      {isLoading ? (
+        <ScreenEmpty
+          icon={<MessageSquarePlus size={32} className="text-[var(--color-muted)]" />}
+          title="Загружаю заказы"
+          subtitle="Подтягиваю историю покупок."
+        />
+      ) : isError ? (
+        <ScreenEmpty
+          icon={<MessageSquarePlus size={32} className="text-[var(--color-muted)]" />}
+          title="Заказы не загрузились"
+          subtitle="Обнови экран или попробуй позже."
+        />
+      ) : tickets.length === 0 ? (
         <ScreenEmpty
           icon={<MessageSquarePlus size={32} className="text-[var(--color-muted)]" />}
           title="Заказов пока нет"

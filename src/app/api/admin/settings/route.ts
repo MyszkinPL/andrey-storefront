@@ -6,7 +6,6 @@ import { prisma } from "@/lib/prisma"
 
 const schema = z.object({
   shopName: z.string().min(2),
-  welcomeText: z.string().min(4),
   supportIntro: z.string().min(4),
   supportUsername: z.string().optional(),
   cryptoPayEnabled: z.boolean(),
@@ -42,7 +41,6 @@ export async function POST(request: Request) {
         create: {
           id: 1,
           shopName: payload.shopName,
-          welcomeText: payload.welcomeText,
           supportIntro: payload.supportIntro,
           supportUsername: payload.supportUsername,
           cryptoPayEnabled: payload.cryptoPayEnabled,
@@ -53,7 +51,6 @@ export async function POST(request: Request) {
         },
         update: {
           shopName: payload.shopName,
-          welcomeText: payload.welcomeText,
           supportIntro: payload.supportIntro,
           supportUsername: payload.supportUsername,
           cryptoPayEnabled: payload.cryptoPayEnabled,
