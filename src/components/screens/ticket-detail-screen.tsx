@@ -129,6 +129,13 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
           ? "Отменён"
           : "Ожидает оплату"
   const adminToolsVisible = ticket.isAdmin && mode === "admin"
+  const canConfirmManualPayment =
+    adminToolsVisible &&
+    ticket.paymentMethodType === "MANUAL" &&
+    ticket.status === "PAYMENT_REVIEW" &&
+    !ticket.isPaid
+  const canRefreshCryptoPayment =
+    ticket.paymentMethodType === "CRYPTO_PAY" && !ticket.isPaid && !isClosed
   const amountLabel = ticket.cryptoInvoiceAmount
     ? `${ticket.cryptoInvoiceAmount} ${ticket.cryptoInvoiceFiat || "RUB"}`
     : null
@@ -152,21 +159,32 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
 
   const headerActions = adminToolsVisible ? (
     <div className="flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none]">
-      {!ticket.isPaid ? (
+      {canConfirmManualPayment ? (
         <button
           onClick={() => paymentMutation.mutate()}
-          disabled={ticket.status === "CANCELLED"}
+          disabled={paymentMutation.isPending}
           className="shrink-0 rounded-full bg-[var(--color-accent)] px-2.5 py-1.5 text-[11px] font-semibold text-[var(--color-accent-text)]"
         >
-          Подтвердить оплату
+          {paymentMutation.isPending ? "Подтверждаю..." : "Подтвердить оплату"}
         </button>
       ) : null}
-      {ticket.status === "PAYMENT_REVIEW" ? (
+      {ticket.status === "PAYMENT_REVIEW" && ticket.paymentMethodType === "MANUAL" ? (
         <button
           onClick={() => rejectManualPaymentMutation.mutate()}
-          className="shrink-0 rounded-full bg-[var(--color-bg)] px-2.5 py-1.5 text-[11px] font-medium text-[var(--color-text)]"
+          disabled={rejectManualPaymentMutation.isPending}
+          className="shrink-0 rounded-full bg-[var(--color-bg)] px-2.5 py-1.5 text-[11px] font-medium text-[var(--color-text)] disabled:opacity-60"
         >
-          Отклонить
+          {rejectManualPaymentMutation.isPending ? "Отклоняю..." : "Отклонить"}
+        </button>
+      ) : null}
+      {canRefreshCryptoPayment ? (
+        <button
+          onClick={() => refreshMutation.mutate()}
+          disabled={refreshMutation.isPending}
+          className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[var(--color-bg)] px-2.5 py-1.5 text-[11px] font-medium text-[var(--color-text)] disabled:opacity-60"
+        >
+          <RefreshCcw size={12} className={cn(refreshMutation.isPending && "animate-spin")} />
+          {refreshMutation.isPending ? "Проверяю" : "Проверить оплату"}
         </button>
       ) : null}
       <button
