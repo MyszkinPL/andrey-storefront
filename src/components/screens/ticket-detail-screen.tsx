@@ -39,6 +39,8 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
   const queryClient = useQueryClient()
   const { mode } = useMode()
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [isPaymentPickerOpen, setIsPaymentPickerOpen] = useState(false)
+  const [draftPaymentKey, setDraftPaymentKey] = useState<string | null>(null)
   const [copiedField, setCopiedField] = useState<"payment" | "key" | null>(null)
 
   const { data: meData } = useQuery({
@@ -97,7 +99,11 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
           ? { paymentMethodId: payload.paymentMethodId }
           : { paymentMethodType: "CRYPTO_PAY" },
       ),
-    onSuccess: invalidate,
+    onSuccess: async () => {
+      await invalidate()
+      setIsPaymentPickerOpen(false)
+      setDraftPaymentKey(null)
+    },
   })
   const deleteTicketMutation = useMutation({
     mutationFn: () => deleteAdminTicket(ticketId),
@@ -200,6 +206,8 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
       : ticket.paymentMethodType === "CRYPTO_PAY"
         ? "crypto:auto"
         : null
+  const selectedDraftPayment =
+    paymentOptions.find((option) => option.key === (draftPaymentKey || currentPaymentKey)) || null
   const stepper = [
     {
       label: "Оплата",
@@ -395,61 +403,22 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
               {canSwitchPaymentMethod ? (
                 <div className="mt-6 rounded-[24px] border border-[var(--color-border)] bg-[var(--color-bg)] p-4">
                   <div className="flex items-center justify-between gap-3">
-                    <div>
+                    <div className="min-w-0">
                       <p className="text-sm font-semibold text-[var(--color-text)]">Способ оплаты</p>
-                      <p className="mt-1 text-xs text-[var(--color-muted)]">
-                        Можно сменить до оплаты
+                      <p className="mt-1 truncate text-xs text-[var(--color-muted)]">
+                        {ticket.paymentMethodTitle || "Не выбран"}
                       </p>
                     </div>
-                    {changePaymentMethodMutation.isPending ? (
-                      <span className="text-xs text-[var(--color-muted)]">Сохраняю…</span>
-                    ) : null}
-                  </div>
-                  <div className="mt-3 grid gap-2">
-                    {paymentOptions.map((option) => {
-                      const isActive = option.key === currentPaymentKey
-
-                      return (
-                        <button
-                          key={option.key}
-                          type="button"
-                          disabled={isActive || changePaymentMethodMutation.isPending}
-                          onClick={() =>
-                            changePaymentMethodMutation.mutate(
-                              option.type === "MANUAL"
-                                ? { paymentMethodId: option.id }
-                                : { paymentMethodType: "CRYPTO_PAY" },
-                            )
-                          }
-                          className={cn(
-                            "flex items-center gap-3 rounded-[18px] border px-3 py-3 text-left transition-colors disabled:opacity-60 sm:px-4",
-                            isActive
-                              ? "border-[var(--color-accent)] bg-[color-mix(in_srgb,var(--color-accent)_10%,var(--color-bg))]"
-                              : "border-[var(--color-border)] bg-[var(--color-surface)]",
-                          )}
-                        >
-                          <PaymentMethodIcon iconDataUrl={option.iconDataUrl} title={option.title} />
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-semibold text-[var(--color-text)]">
-                              {option.title}
-                            </p>
-                            <p className="mt-1 line-clamp-2 text-xs leading-5 text-[var(--color-muted)]">
-                              {option.subtitle}
-                            </p>
-                          </div>
-                          <span
-                            className={cn(
-                              "rounded-full px-2.5 py-1 text-[11px] font-medium",
-                              isActive
-                                ? "bg-[var(--color-accent)] text-[var(--color-accent-text)]"
-                                : "bg-[var(--color-bg)] text-[var(--color-muted)]",
-                            )}
-                          >
-                            {isActive ? "Выбран" : "Выбрать"}
-                          </span>
-                        </button>
-                      )
-                    })}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDraftPaymentKey(currentPaymentKey)
+                        setIsPaymentPickerOpen(true)
+                      }}
+                      className="shrink-0 rounded-full bg-[var(--color-surface)] px-3 py-1.5 text-[11px] font-medium text-[var(--color-text)]"
+                    >
+                      Изменить
+                    </button>
                   </div>
                 </div>
               ) : null}
@@ -564,6 +533,29 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
           }}
           onConfirm={() => {
             deleteTicketMutation.mutate()
+          }}
+        />
+      ) : null}
+
+      {isPaymentPickerOpen && canSwitchPaymentMethod ? (
+        <PaymentMethodPickerModal
+          options={paymentOptions}
+          selectedKey={draftPaymentKey || currentPaymentKey}
+          currentKey={currentPaymentKey}
+          loading={changePaymentMethodMutation.isPending}
+          onSelect={setDraftPaymentKey}
+          onClose={() => {
+            if (changePaymentMethodMutation.isPending) return
+            setIsPaymentPickerOpen(false)
+            setDraftPaymentKey(null)
+          }}
+          onConfirm={() => {
+            if (!selectedDraftPayment || selectedDraftPayment.key === currentPaymentKey) return
+            changePaymentMethodMutation.mutate(
+              selectedDraftPayment.type === "MANUAL"
+                ? { paymentMethodId: selectedDraftPayment.id }
+                : { paymentMethodType: "CRYPTO_PAY" },
+            )
           }}
         />
       ) : null}
@@ -703,6 +695,126 @@ function ConfirmDeleteModal({
             className="rounded-full bg-[var(--color-destructive)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
           >
             {loading ? "Удаляю..." : "Удалить"}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function PaymentMethodPickerModal({
+  options,
+  selectedKey,
+  currentKey,
+  loading,
+  onSelect,
+  onClose,
+  onConfirm,
+}: {
+  options: Array<{
+    key: string
+    id?: string
+    type: "MANUAL" | "CRYPTO_PAY"
+    title: string
+    subtitle: string
+    iconDataUrl: string | null
+  }>
+  selectedKey: string | null
+  currentKey: string | null
+  loading: boolean
+  onSelect: (key: string) => void
+  onClose: () => void
+  onConfirm: () => void
+}) {
+  const canConfirm = Boolean(selectedKey && selectedKey !== currentKey && !loading)
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-[var(--color-overlay)] p-3 md:items-center md:p-6"
+      onClick={onClose}
+    >
+      <div
+        className="ui-card w-full max-w-lg p-4 sm:p-5"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-base font-semibold text-[var(--color-text)]">Изменить способ оплаты</p>
+            <p className="mt-1 text-sm text-[var(--color-muted)]">
+              Выбери новый способ и подтверди изменение.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[var(--color-bg)] text-[var(--color-muted)]"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        <div className="mt-4 grid max-h-[55dvh] gap-2 overflow-y-auto pr-1">
+          {options.map((option) => {
+            const isSelected = option.key === selectedKey
+
+            return (
+              <button
+                key={option.key}
+                type="button"
+                onClick={() => onSelect(option.key)}
+                className={cn(
+                  "flex items-center gap-3 rounded-[18px] border px-3 py-3 text-left transition-colors sm:px-4",
+                  isSelected
+                    ? "border-[var(--color-accent)] bg-[color-mix(in_srgb,var(--color-accent)_10%,var(--color-bg))]"
+                    : "border-[var(--color-border)] bg-[var(--color-surface)]",
+                )}
+              >
+                <PaymentMethodIcon iconDataUrl={option.iconDataUrl} title={option.title} />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <p className="truncate text-sm font-semibold text-[var(--color-text)]">
+                      {option.title}
+                    </p>
+                    <span className="rounded-full bg-[var(--color-bg)] px-2 py-0.5 text-[10px] text-[var(--color-muted)]">
+                      {option.type === "CRYPTO_PAY" ? "Авто" : "Ручная"}
+                    </span>
+                  </div>
+                  <p className="mt-1 line-clamp-2 text-xs leading-5 text-[var(--color-muted)]">
+                    {option.subtitle}
+                  </p>
+                </div>
+                <div
+                  className={cn(
+                    "flex size-5 shrink-0 items-center justify-center rounded-full border",
+                    isSelected
+                      ? "border-[var(--color-accent)] bg-[var(--color-accent)] text-[var(--color-accent-text)]"
+                      : "border-[var(--color-border)] bg-transparent text-transparent",
+                  )}
+                >
+                  <Check size={12} />
+                </div>
+              </button>
+            )
+          })}
+        </div>
+
+        <div className="mt-5 flex items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={loading}
+            className="rounded-full bg-[var(--color-bg)] px-4 py-2 text-sm font-medium text-[var(--color-text)] disabled:opacity-60"
+          >
+            Отмена
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={!canConfirm}
+            className="rounded-full bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-[var(--color-accent-text)] disabled:opacity-60"
+          >
+            {loading ? "Сохраняю..." : "Подтвердить"}
           </button>
         </div>
       </div>
