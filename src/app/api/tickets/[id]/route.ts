@@ -258,14 +258,6 @@ export async function PATCH(
             manualPaymentRequestedAt: new Date(),
           },
         })
-
-        await tx.ticketMessage.create({
-          data: {
-            ticketId: id,
-            senderId: user.id,
-            body: "Покупатель отметил заказ как оплаченный. Нужна проверка.",
-          },
-        })
       })
 
       return NextResponse.json({ ok: true })
@@ -303,14 +295,6 @@ export async function PATCH(
           data: {
             status: TicketStatus.CANCELLED,
             closedAt: new Date(),
-          },
-        })
-
-        await tx.ticketMessage.create({
-          data: {
-            ticketId: id,
-            senderId: user.id,
-            body: "Покупатель отменил заказ.",
           },
         })
       })
@@ -355,14 +339,6 @@ export async function PATCH(
           data: {
             status: TicketStatus.OPEN,
             manualPaymentRequestedAt: null,
-          },
-        })
-
-        await tx.ticketMessage.create({
-          data: {
-            ticketId: id,
-            senderId: user.id,
-            body: "Проверка оплаты отклонена. Проверь реквизиты и отправь корректный платёж.",
           },
         })
       }

@@ -69,14 +69,6 @@ export async function PATCH(
               closedAt: new Date(),
             },
           })
-
-          await tx.ticketMessage.createMany({
-            data: activeTickets.map((ticket) => ({
-              ticketId: ticket.id,
-              senderId: admin.id,
-              body: "Заказ отменён: аккаунт пользователя заблокирован.",
-            })),
-          })
         })
       }
     }

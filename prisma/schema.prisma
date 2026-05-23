@@ -44,7 +44,6 @@ model User {
   updatedAt  DateTime        @updatedAt
   tickets    Ticket[]        @relation("TicketAuthor")
   assigned   Ticket[]        @relation("TicketAssignee")
-  messages   TicketMessage[]
 }
 
 model Product {
@@ -116,19 +115,7 @@ model Ticket {
   assignedTo       User?           @relation("TicketAssignee", fields: [assignedToId], references: [id])
   product          Product?        @relation(fields: [productId], references: [id])
   paymentMethod    PaymentMethod?  @relation(fields: [paymentMethodId], references: [id], onDelete: SetNull)
-  messages         TicketMessage[]
   deliveredKey     ProductKey?
-}
-
-model TicketMessage {
-  id        String   @id @default(cuid())
-  ticketId  String
-  senderId  String
-  body      String
-  attachments Json?
-  createdAt DateTime @default(now())
-  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  sender    User     @relation(fields: [senderId], references: [id])
 }
 
 model PaymentMethod {
@@ -149,7 +136,7 @@ model ShopSettings {
   id                     Int      @id @default(1)
   shopName               String   @default("Andrey Store")
   welcomeText            String   @default("Каталог подписок, лицензий и ключей с поддержкой через Telegram.")
-  supportIntro           String   @default("Выбери товар, создай тикет и получи реквизиты. Для key-based товаров после подтверждения оплаты возможна автовыдача.")
+  supportIntro           String   @default("Поддержка доступна напрямую в Telegram после оплаты заказа.")
   supportUsername        String?
   cryptoPayEnabled       Boolean  @default(false)
   cryptoPayToken         String?

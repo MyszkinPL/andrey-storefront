@@ -182,12 +182,12 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
   if (isSupportFlow) {
     return (
       <Screen noTabBar>
-        <ScreenHeader title="Поддержка" subtitle="Внутренний чат отключён" />
+        <ScreenHeader title="Поддержка" subtitle="Поддержка перенесена в Telegram" />
         <div className="grid gap-3 px-4 pb-3">
           <section className="ui-card p-4">
             <p className="text-sm font-semibold text-[var(--color-text)]">Поддержка в Telegram</p>
             <p className="mt-2 text-sm leading-6 text-[var(--color-muted)]">
-              Внутренний чат магазина отключён. Для связи с продавцом используется Telegram.
+              Для связи с продавцом используется Telegram.
             </p>
             {supportLink ? (
               <a

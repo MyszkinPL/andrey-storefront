@@ -27,14 +27,6 @@ export async function confirmTicketPaymentFlow(
     },
   })
 
-  await tx.ticketMessage.create({
-    data: {
-      ticketId,
-      senderId: adminUserId,
-      body: "Оплата подтверждена. Начинаю выдачу.",
-    },
-  })
-
   if (ticket.product?.deliveryType !== DeliveryType.AUTO_KEY || ticket.deliveredKey) {
     return ticket
   }
@@ -53,22 +45,6 @@ export async function confirmTicketPaymentFlow(
       data: {
         issuedAt: new Date(),
         issuedToTicketId: ticketId,
-      },
-    })
-
-    await tx.ticketMessage.create({
-      data: {
-        ticketId,
-        senderId: adminUserId,
-        body: `Автовыдача ключа:\n${freeKey.value}`,
-      },
-    })
-  } else {
-    await tx.ticketMessage.create({
-      data: {
-        ticketId,
-        senderId: adminUserId,
-        body: "Оплата подтверждена, но свободных ключей сейчас нет. Пополню остаток вручную.",
       },
     })
   }

@@ -62,7 +62,7 @@ export function ProfileScreen() {
             <div>
               <p className="text-sm font-semibold text-[var(--color-text)]">Поддержка</p>
               <p className="mt-2 text-sm leading-6 text-[var(--color-muted)]">
-                {meData?.settings.supportIntro || "Связь с продавцом по заказам внутри магазина."}
+                {meData?.settings.supportIntro || "Связь с продавцом доступна напрямую в Telegram."}
               </p>
               {meData?.settings.supportUsername ? (
                 <p className="mt-2 text-sm text-[var(--color-text)]">

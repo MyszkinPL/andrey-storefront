@@ -40,7 +40,7 @@ const emptyMethod: PaymentMethodForm = {
 const templateMethod: PaymentMethodForm = {
   title: "СБП / Т-Банк",
   details:
-    "Оплата по номеру телефона: +7...\nПолучатель: ...\nПосле оплаты отправь чек в заказ.",
+    "Оплата по номеру телефона: +7...\nПолучатель: ...\nПосле оплаты нажми «Я оплатил».",
   iconDataUrl: "",
   isActive: true,
 }
@@ -263,7 +263,7 @@ export function AdminSettingsScreen() {
               <textarea
                 value={supportIntro}
                 onChange={(e) => setSupportIntro(e.target.value)}
-                placeholder="Короткий текст про поддержку и оплату"
+                placeholder="Короткий текст про поддержку в Telegram"
                 className="ui-input min-h-24"
               />
               <input
