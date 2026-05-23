@@ -2,74 +2,60 @@
 
 import Link from "next/link"
 import { useMemo, useState } from "react"
-import { useRouter } from "next/navigation"
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useQuery } from "@tanstack/react-query"
 import { formatDistanceToNow } from "date-fns"
 import { ru } from "date-fns/locale"
 import {
   CheckCheck,
   Clock3,
-  Headset,
+  ExternalLink,
   MessageSquarePlus,
   Receipt,
   Wallet,
 } from "lucide-react"
 
-import { createTicket, getTickets } from "@/lib/api"
+import { getMe, getTickets } from "@/lib/api"
 import { Screen, ScreenBody, ScreenEmpty, ScreenHeader } from "@/components/screen"
 import { cn } from "@/lib/cn"
 
-type FilterKey = "all" | "waiting" | "review" | "active" | "support" | "closed"
+type FilterKey = "all" | "waiting" | "review" | "active" | "closed"
 
 export function TicketsScreen() {
-  const router = useRouter()
-  const queryClient = useQueryClient()
   const { data: ticketsData, isLoading, isError } = useQuery({
     queryKey: ["tickets"],
     queryFn: getTickets,
   })
+  const { data: meData } = useQuery({ queryKey: ["me"], queryFn: getMe })
   const [filter, setFilter] = useState<FilterKey>("all")
+  const supportLink = meData?.settings.supportUsername
+    ? `https://t.me/${meData.settings.supportUsername.replace(/^@/, "")}`
+    : null
 
-  const quickSupport = useMutation({
-    mutationFn: () =>
-      createTicket({
-        subject: "Обращение в поддержку",
-        message: "Нужна консультация по товарам, оплате и выдаче.",
-      }),
-    onSuccess: async ({ ticketId }) => {
-      await queryClient.invalidateQueries({ queryKey: ["tickets"] })
-      router.push(`/tickets/${ticketId}`)
-    },
-  })
-
-  const tickets = useMemo(() => ticketsData?.tickets ?? [], [ticketsData?.tickets])
+  const tickets = useMemo(
+    () => (ticketsData?.tickets ?? []).filter((ticket) => !isSupport(ticket)),
+    [ticketsData?.tickets],
+  )
   const buckets = useMemo(() => {
     const waiting = tickets.filter(
       (ticket) =>
-        !isSupport(ticket) &&
         !ticket.isPaid &&
         !["CLOSED", "CANCELLED", "PAYMENT_REVIEW"].includes(ticket.status),
     )
     const active = tickets.filter(
       (ticket) =>
-        !isSupport(ticket) &&
         ticket.isPaid &&
         !["CLOSED", "CANCELLED"].includes(ticket.status),
     )
-    const review = tickets.filter(
-      (ticket) => !isSupport(ticket) && ticket.status === "PAYMENT_REVIEW",
-    )
-    const support = tickets.filter(isSupport)
+    const review = tickets.filter((ticket) => ticket.status === "PAYMENT_REVIEW")
     const closed = tickets.filter(
-      (ticket) => !isSupport(ticket) && ["CLOSED", "CANCELLED"].includes(ticket.status),
+      (ticket) => ["CLOSED", "CANCELLED"].includes(ticket.status),
     )
 
     return {
-      all: [...waiting, ...review, ...active, ...support, ...closed],
+      all: [...waiting, ...review, ...active, ...closed],
       waiting,
       review,
       active,
-      support,
       closed,
     }
   }, [tickets])
@@ -91,13 +77,20 @@ export function TicketsScreen() {
           </div>
         }
         trailing={
-          <button
-            onClick={() => quickSupport.mutate()}
-            className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-accent)] px-2.5 py-1.5 text-[11px] font-semibold text-[var(--color-accent-text)] transition-transform duration-150 active:scale-[0.97]"
+          <a
+            href={supportLink || "#"}
+            target="_blank"
+            rel="noreferrer"
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-[11px] font-semibold transition-transform duration-150 active:scale-[0.97]",
+              supportLink
+                ? "bg-[var(--color-accent)] text-[var(--color-accent-text)]"
+                : "bg-[var(--color-bg)] text-[var(--color-muted)] pointer-events-none",
+            )}
           >
-            <Headset size={13} />
+            <ExternalLink size={13} />
             Поддержка
-          </button>
+          </a>
         }
       />
 
@@ -147,12 +140,6 @@ export function TicketsScreen() {
                   label: "Активные",
                   count: buckets.active.length,
                   icon: <CheckCheck size={14} />,
-                },
-                {
-                  key: "support" as const,
-                  label: "Поддержка",
-                  count: buckets.support.length,
-                  icon: <Headset size={14} />,
                 },
                 {
                   key: "closed" as const,
@@ -212,16 +199,12 @@ export function TicketsScreen() {
                     <div
                       className={cn(
                         "flex size-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold",
-                        isSupport(ticket)
-                          ? "bg-[var(--color-bg)] text-[var(--color-text)]"
-                          : !ticket.isPaid
+                        !ticket.isPaid
                             ? "bg-[var(--color-bg)] text-[var(--color-text)]"
                             : "bg-[var(--color-accent)]/16 text-[var(--color-accent)]",
                       )}
                     >
-                      {isSupport(ticket) ? (
-                        <Headset size={16} />
-                      ) : !ticket.isPaid ? (
+                      {!ticket.isPaid ? (
                         <Wallet size={16} />
                       ) : (
                         ticket.productTitle?.slice(0, 1).toUpperCase() || "#"
@@ -249,7 +232,7 @@ export function TicketsScreen() {
                       </div>
 
                       <div className="mt-2.5 flex flex-wrap gap-1.5">
-                        <StatusPill emphasize={!isSupport(ticket) && !ticket.isPaid}>
+                        <StatusPill emphasize={!ticket.isPaid}>
                           {renderPrimaryState(ticket)}
                         </StatusPill>
                         <StatusPill>{renderStatus(ticket.status)}</StatusPill>
@@ -295,7 +278,6 @@ function renderStatus(status: string) {
 }
 
 function renderPrimaryState(ticket: Awaited<ReturnType<typeof getTickets>>["tickets"][number]) {
-  if (isSupport(ticket)) return "Поддержка"
   if (ticket.status === "PAYMENT_REVIEW") {
     return "На проверке"
   }
@@ -308,7 +290,6 @@ function renderPrimaryState(ticket: Awaited<ReturnType<typeof getTickets>>["tick
 }
 
 function renderPreview(ticket: Awaited<ReturnType<typeof getTickets>>["tickets"][number]) {
-  if (isSupport(ticket)) return ticket.lastMessage || "Открой обращение"
   if (ticket.status === "PAYMENT_REVIEW") {
     return "Платёж отмечен. Ждёт проверки админа."
   }
@@ -318,7 +299,9 @@ function renderPreview(ticket: Awaited<ReturnType<typeof getTickets>>["tickets"]
       ? `Ожидает оплату через ${ticket.paymentMethodTitle}.`
       : "Ожидает оплату."
   }
-  return ticket.lastMessage || "Открой заказ для выдачи и переписки."
+  return ticket.status === "IN_PROGRESS"
+    ? "Заказ в работе."
+    : "Открой заказ для оплаты или выдачи."
 }
 
 function StatusPill({
