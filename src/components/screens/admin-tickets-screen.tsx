@@ -103,7 +103,7 @@ export function AdminTicketsScreen() {
                 },
                 {
                   key: "work" as const,
-                  label: "В работе",
+                  label: "Выдача",
                   count: buckets.work.length,
                   icon: <ShieldCheck size={14} />,
                 },
@@ -211,7 +211,7 @@ function renderStatus(status: string) {
     case "OPEN":
       return "Открыт"
     case "IN_PROGRESS":
-      return "В работе"
+      return "Выдача"
     case "CLOSED":
       return "Закрыт"
     case "PAYMENT_REVIEW":
@@ -244,7 +244,7 @@ function renderSummary(ticket: Awaited<ReturnType<typeof getTickets>>["tickets"]
       ? `Ожидает оплату через ${ticket.paymentMethodTitle}.`
       : "Ожидает оплату."
   }
-  if (ticket.status === "IN_PROGRESS") return "Заказ обрабатывается."
+  if (ticket.status === "IN_PROGRESS") return "Идёт выдача."
   if (ticket.status === "CLOSED") return "Заказ завершён."
   return "Оплата подтверждена."
 }

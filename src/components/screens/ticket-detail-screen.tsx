@@ -52,7 +52,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
   }
 
   const statusMutation = useMutation({
-    mutationFn: (status: "OPEN" | "IN_PROGRESS" | "CLOSED") =>
+    mutationFn: (status: "OPEN" | "CLOSED") =>
       updateTicketStatus(ticketId, status),
     onSuccess: invalidate,
   })
@@ -157,60 +157,6 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
     },
   ]
 
-  const headerActions = adminToolsVisible ? (
-    <div className="flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none]">
-      {canConfirmManualPayment ? (
-        <button
-          onClick={() => paymentMutation.mutate()}
-          disabled={paymentMutation.isPending}
-          className="shrink-0 rounded-full bg-[var(--color-accent)] px-2.5 py-1.5 text-[11px] font-semibold text-[var(--color-accent-text)]"
-        >
-          {paymentMutation.isPending ? "Подтверждаю..." : "Подтвердить оплату"}
-        </button>
-      ) : null}
-      {ticket.status === "PAYMENT_REVIEW" && ticket.paymentMethodType === "MANUAL" ? (
-        <button
-          onClick={() => rejectManualPaymentMutation.mutate()}
-          disabled={rejectManualPaymentMutation.isPending}
-          className="shrink-0 rounded-full bg-[var(--color-bg)] px-2.5 py-1.5 text-[11px] font-medium text-[var(--color-text)] disabled:opacity-60"
-        >
-          {rejectManualPaymentMutation.isPending ? "Отклоняю..." : "Отклонить"}
-        </button>
-      ) : null}
-      {canRefreshCryptoPayment ? (
-        <button
-          onClick={() => refreshMutation.mutate()}
-          disabled={refreshMutation.isPending}
-          className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[var(--color-bg)] px-2.5 py-1.5 text-[11px] font-medium text-[var(--color-text)] disabled:opacity-60"
-        >
-          <RefreshCcw size={12} className={cn(refreshMutation.isPending && "animate-spin")} />
-          {refreshMutation.isPending ? "Проверяю" : "Проверить оплату"}
-        </button>
-      ) : null}
-      <button
-        onClick={() => statusMutation.mutate("IN_PROGRESS")}
-        disabled={ticket.status === "CANCELLED"}
-        className="shrink-0 rounded-full bg-[var(--color-bg)] px-2.5 py-1.5 text-[11px] font-medium text-[var(--color-text)]"
-      >
-        В работу
-      </button>
-      <button
-        onClick={() => statusMutation.mutate("CLOSED")}
-        className="shrink-0 rounded-full bg-[var(--color-bg)] px-2.5 py-1.5 text-[11px] font-medium text-[var(--color-text)]"
-      >
-        Закрыть
-      </button>
-      <button
-        onClick={() => setIsDeleteModalOpen(true)}
-        disabled={deleteTicketMutation.isPending}
-        className="inline-flex shrink-0 items-center justify-center gap-1 rounded-full bg-[var(--color-destructive)]/14 px-2.5 py-1.5 text-[11px] font-medium text-[var(--color-destructive)] disabled:opacity-60"
-      >
-        <Trash2 size={12} />
-        {deleteTicketMutation.isPending ? "Удаляю..." : "Удалить"}
-      </button>
-    </div>
-  ) : null
-
   if (isSupportFlow) {
     return (
       <Screen noTabBar>
@@ -242,12 +188,6 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
 
   return (
     <Screen noTabBar className="pt-3">
-      {adminToolsVisible ? (
-        <div className="px-4 pb-2.5">
-          <div className="ui-card p-2.5">{headerActions}</div>
-        </div>
-      ) : null}
-
       <div className="px-4 pb-4">
         <div className="mx-auto grid w-full max-w-3xl gap-3">
           <section className="ui-card overflow-hidden">
@@ -319,6 +259,82 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                 </div>
               </div>
 
+              {adminToolsVisible ? (
+                <div className="mt-6 grid gap-3">
+                  {ticket.createdBy ? (
+                    <div className="rounded-[20px] border border-[var(--color-border)] bg-[var(--color-bg)] p-4">
+                      <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-muted)]">
+                        Покупатель
+                      </p>
+                      <div className="mt-2 flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-[var(--color-text)]">
+                            {ticket.createdBy.firstName}
+                          </p>
+                          <p className="mt-0.5 truncate text-xs text-[var(--color-muted)]">
+                            {ticket.createdBy.username ? `@${ticket.createdBy.username}` : "Без username"}
+                          </p>
+                        </div>
+                        <div className="rounded-full bg-[var(--color-surface)] px-3 py-1.5 text-[11px] text-[var(--color-text)]">
+                          {ticket.paymentMethodType === "MANUAL" ? "Ручная оплата" : "Crypto Bot"}
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  <div className="rounded-[20px] border border-[var(--color-border)] bg-[var(--color-bg)] p-4">
+                    <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-muted)]">
+                      Действия
+                    </p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {canConfirmManualPayment ? (
+                        <button
+                          onClick={() => paymentMutation.mutate()}
+                          disabled={paymentMutation.isPending}
+                          className="rounded-full bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-[var(--color-accent-text)] disabled:opacity-60"
+                        >
+                          {paymentMutation.isPending ? "Подтверждаю..." : "Подтвердить оплату"}
+                        </button>
+                      ) : null}
+                      {ticket.status === "PAYMENT_REVIEW" && ticket.paymentMethodType === "MANUAL" ? (
+                        <button
+                          onClick={() => rejectManualPaymentMutation.mutate()}
+                          disabled={rejectManualPaymentMutation.isPending}
+                          className="rounded-full bg-[var(--color-surface)] px-4 py-2 text-sm font-medium text-[var(--color-text)] disabled:opacity-60"
+                        >
+                          {rejectManualPaymentMutation.isPending ? "Отклоняю..." : "Отклонить"}
+                        </button>
+                      ) : null}
+                      {canRefreshCryptoPayment ? (
+                        <button
+                          onClick={() => refreshMutation.mutate()}
+                          disabled={refreshMutation.isPending}
+                          className="inline-flex items-center gap-2 rounded-full bg-[var(--color-surface)] px-4 py-2 text-sm font-medium text-[var(--color-text)] disabled:opacity-60"
+                        >
+                          <RefreshCcw size={14} className={cn(refreshMutation.isPending && "animate-spin")} />
+                          {refreshMutation.isPending ? "Проверяю оплату" : "Проверить оплату"}
+                        </button>
+                      ) : null}
+                      <button
+                        onClick={() => statusMutation.mutate("CLOSED")}
+                        disabled={statusMutation.isPending}
+                        className="rounded-full bg-[var(--color-surface)] px-4 py-2 text-sm font-medium text-[var(--color-text)] disabled:opacity-60"
+                      >
+                        {statusMutation.isPending ? "Закрываю..." : "Закрыть заказ"}
+                      </button>
+                      <button
+                        onClick={() => setIsDeleteModalOpen(true)}
+                        disabled={deleteTicketMutation.isPending}
+                        className="inline-flex items-center gap-2 rounded-full bg-[var(--color-destructive)]/14 px-4 py-2 text-sm font-medium text-[var(--color-destructive)] disabled:opacity-60"
+                      >
+                        <Trash2 size={14} />
+                        {deleteTicketMutation.isPending ? "Удаляю..." : "Удалить"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+
               {ticket.paymentMethodTitle ? (
                 <div className="mt-6 rounded-[24px] border border-[var(--color-border)] bg-[var(--color-bg)] p-3.5 sm:p-4">
                   {ticket.paymentMethodType === "CRYPTO_PAY" && ticket.cryptoInvoiceUrl ? (
@@ -372,7 +388,9 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                 <div className="mt-5 rounded-[24px] border border-[var(--color-border)] bg-[var(--color-bg)] p-4">
                   <p className="text-sm font-semibold text-[var(--color-text)]">Платёж на проверке</p>
                   <p className="mt-2 text-sm leading-6 text-[var(--color-muted)]">
-                    Продавец вручную проверит оплату и после подтверждения продолжит выдачу.
+                    {adminToolsVisible
+                      ? "Покупатель отметил перевод. Проверь реквизиты и либо подтверди оплату, либо отклони её."
+                      : "Продавец вручную проверит оплату и после подтверждения продолжит выдачу."}
                   </p>
                 </div>
               ) : null}

@@ -14,16 +14,21 @@ export async function confirmTicketPaymentFlow(
 
   if (!ticket || ticket.isPaid) return ticket
 
+  const nextStatus =
+    ticket.product?.deliveryType === DeliveryType.AUTO_KEY
+      ? TicketStatus.CLOSED
+      : ticket.status === TicketStatus.PAYMENT_REVIEW
+        ? TicketStatus.OPEN
+        : ticket.status
+
   await tx.ticket.update({
     where: { id: ticketId },
     data: {
       isPaid: true,
       paymentConfirmedAt: new Date(),
-      status:
-        ticket.status === "OPEN" || ticket.status === "PAYMENT_REVIEW"
-          ? TicketStatus.IN_PROGRESS
-          : ticket.status,
+      status: nextStatus,
       assignedToId: adminUserId,
+      closedAt: nextStatus === TicketStatus.CLOSED ? new Date() : null,
     },
   })
 

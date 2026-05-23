@@ -267,7 +267,7 @@ function renderStatus(status: string) {
     case "PAYMENT_REVIEW":
       return "Проверка оплаты"
     case "IN_PROGRESS":
-      return "В работе"
+      return "Выдача"
     case "CLOSED":
       return "Закрыт"
     case "CANCELLED":
@@ -300,7 +300,7 @@ function renderPreview(ticket: Awaited<ReturnType<typeof getTickets>>["tickets"]
       : "Ожидает оплату."
   }
   return ticket.status === "IN_PROGRESS"
-    ? "Заказ в работе."
+    ? "Идёт выдача."
     : "Открой заказ для оплаты или выдачи."
 }
 

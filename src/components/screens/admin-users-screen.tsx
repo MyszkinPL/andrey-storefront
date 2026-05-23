@@ -503,7 +503,7 @@ function renderOrderStatus(status: string, isPaid: boolean) {
   if (status === "CANCELLED") return "Отменён"
   if (status === "CLOSED") return isPaid ? "Завершён" : "Закрыт"
   if (status === "PAYMENT_REVIEW") return "Проверка оплаты"
-  if (status === "IN_PROGRESS") return "В работе"
+  if (status === "IN_PROGRESS") return "Выдача"
   if (!isPaid) return "Ждёт оплату"
   return "Оплачен"
 }
