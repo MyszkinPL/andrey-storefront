@@ -235,15 +235,10 @@ export function TicketsScreen() {
                         <StatusPill emphasize={!ticket.isPaid}>
                           {renderPrimaryState(ticket)}
                         </StatusPill>
-                        <StatusPill>{renderStatus(ticket.status)}</StatusPill>
-                        {ticket.paymentMethodTitle ? (
+                        {showPaymentMethodPill(ticket) ? (
                           <StatusPill>{ticket.paymentMethodTitle}</StatusPill>
                         ) : null}
                       </div>
-
-                      <p className="mt-2 line-clamp-2 text-[13px] leading-5 text-[var(--color-muted)]">
-                        {renderPreview(ticket)}
-                      </p>
                     </div>
                   </div>
                 </Link>
@@ -260,23 +255,6 @@ function isSupport(ticket: Awaited<ReturnType<typeof getTickets>>["tickets"][num
   return !ticket.productTitle && !ticket.paymentMethodTitle
 }
 
-function renderStatus(status: string) {
-  switch (status) {
-    case "OPEN":
-      return "Открыт"
-    case "PAYMENT_REVIEW":
-      return "Проверка оплаты"
-    case "IN_PROGRESS":
-      return "Выдача"
-    case "CLOSED":
-      return "Закрыт"
-    case "CANCELLED":
-      return "Отменён"
-    default:
-      return status
-  }
-}
-
 function renderPrimaryState(ticket: Awaited<ReturnType<typeof getTickets>>["tickets"][number]) {
   if (ticket.status === "PAYMENT_REVIEW") {
     return "На проверке"
@@ -289,19 +267,9 @@ function renderPrimaryState(ticket: Awaited<ReturnType<typeof getTickets>>["tick
   return "Оплачен"
 }
 
-function renderPreview(ticket: Awaited<ReturnType<typeof getTickets>>["tickets"][number]) {
-  if (ticket.status === "PAYMENT_REVIEW") {
-    return "Платёж отмечен. Ждёт проверки админа."
-  }
-  if (ticket.status === "CANCELLED") return "Заказ отменён."
-  if (!ticket.isPaid) {
-    return ticket.paymentMethodTitle
-      ? `Ожидает оплату через ${ticket.paymentMethodTitle}.`
-      : "Ожидает оплату."
-  }
-  return ticket.status === "IN_PROGRESS"
-    ? "Идёт выдача."
-    : "Открой заказ для оплаты или выдачи."
+function showPaymentMethodPill(ticket: Awaited<ReturnType<typeof getTickets>>["tickets"][number]) {
+  if (!ticket.paymentMethodTitle) return false
+  return !ticket.isPaid || ticket.status === "PAYMENT_REVIEW"
 }
 
 function StatusPill({
