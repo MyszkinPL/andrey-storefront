@@ -8,7 +8,6 @@ import { prisma } from "@/lib/prisma"
 
 const schema = z.object({
   subject: z.string().min(2),
-  message: z.string().min(2),
   productId: z.string().optional(),
   paymentMethodId: z.string().optional(),
   paymentMethodType: z.nativeEnum(PaymentMethodType).optional(),
@@ -22,10 +21,6 @@ export async function GET() {
     where,
     include: {
       product: true,
-      messages: {
-        orderBy: { createdAt: "desc" },
-        take: 1,
-      },
     },
     orderBy: { updatedAt: "desc" },
   })
@@ -44,7 +39,6 @@ export async function GET() {
       paymentMethodTitle: ticket.paymentMethodTitle || null,
       paymentMethodType: ticket.paymentMethodType || null,
       manualPaymentRequestedAt: ticket.manualPaymentRequestedAt?.toISOString() || null,
-      lastMessage: ticket.messages[0]?.body || null,
     })),
   })
 }
@@ -124,12 +118,6 @@ export async function POST(request: Request) {
         paymentMethodDetails: selectedPaymentDetails,
         paymentMethodIconDataUrl: selectedPaymentIcon,
         createdById: user.id,
-        messages: {
-          create: {
-            body: payload.message,
-            senderId: user.id,
-          },
-        },
       },
     })
 

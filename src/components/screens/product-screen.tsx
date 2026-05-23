@@ -69,10 +69,6 @@ export function ProductScreen({ productId }: { productId: string }) {
         paymentMethodId: selectedPayment?.type === "MANUAL" ? selectedPayment.id : undefined,
         subject: `Покупка: ${data?.product.title || "товар"}`,
         paymentMethodType: selectedPayment?.type,
-        message:
-          data?.product.deliveryType === "AUTO_KEY"
-            ? `Хочу купить ${data?.product.title}. После оплаты нужен автоматический ключ.`
-            : `Хочу купить ${data?.product.title}. Нужны реквизиты и инструкция по активации.`,
       }),
     onSuccess: async ({ ticketId }) => {
       haptic.success()

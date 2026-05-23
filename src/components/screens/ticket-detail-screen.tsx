@@ -32,19 +32,6 @@ import { Screen, ScreenEmpty, ScreenHeader } from "@/components/screen"
 import { useBackButton } from "@/hooks/use-telegram"
 import { cn } from "@/lib/cn"
 
-const HIDDEN_SYSTEM_PREFIXES = [
-  "Выбран способ оплаты:",
-  "Crypto invoice создан.",
-  "Не удалось автоматически создать crypto invoice.",
-  "Оплата подтверждена. Начинаю выдачу.",
-  "Покупатель отметил заказ как оплаченный.",
-  "Проверка оплаты отклонена.",
-  "Покупатель отменил заказ.",
-  "Заказ отменён: аккаунт пользователя заблокирован.",
-  "Автовыдача ключа:",
-  "Оплата подтверждена, но свободных ключей сейчас нет.",
-]
-
 export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
   const router = useRouter()
   const queryClient = useQueryClient()
@@ -147,9 +134,6 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
         ? "Отменён"
         : "Ожидает оплату"
   const orderSteps = getOrderSteps(ticket)
-  const systemMessages = ticket.messages.filter((entry) =>
-    HIDDEN_SYSTEM_PREFIXES.some((prefix) => entry.body.startsWith(prefix)),
-  )
   const adminToolsVisible = ticket.isAdmin && mode === "admin"
 
   const headerActions = adminToolsVisible ? (
@@ -505,21 +489,25 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
             </section>
           ) : null}
 
-          {systemMessages.length > 0 ? (
-            <section className="ui-card p-3.5">
-              <p className="text-sm font-semibold text-[var(--color-text)]">История</p>
-              <div className="mt-3 grid gap-2">
-                {systemMessages.map((entry) => (
-                  <div key={entry.id} className="rounded-[18px] bg-[var(--color-bg)] px-3.5 py-3">
-                    <p className="text-sm text-[var(--color-text)]">{entry.body}</p>
-                    <p className="mt-1 text-[11px] text-[var(--color-muted)]">
-                      {format(new Date(entry.createdAt), "dd MMM · HH:mm", { locale: ru })}
-                    </p>
-                  </div>
-                ))}
+          <section className="ui-card p-3.5">
+            <p className="text-sm font-semibold text-[var(--color-text)]">История</p>
+            <div className="mt-3 grid gap-2">
+              <div className="rounded-[18px] bg-[var(--color-bg)] px-3.5 py-3">
+                <p className="text-sm text-[var(--color-text)]">Заказ создан</p>
+                <p className="mt-1 text-[11px] text-[var(--color-muted)]">{createdAtLabel}</p>
               </div>
-            </section>
-          ) : null}
+              {ticket.manualPaymentRequestedAt ? (
+                <div className="rounded-[18px] bg-[var(--color-bg)] px-3.5 py-3">
+                  <p className="text-sm text-[var(--color-text)]">Платёж отмечен пользователем</p>
+                  <p className="mt-1 text-[11px] text-[var(--color-muted)]">
+                    {format(new Date(ticket.manualPaymentRequestedAt), "dd MMM · HH:mm", {
+                      locale: ru,
+                    })}
+                  </p>
+                </div>
+              ) : null}
+            </div>
+          </section>
         </aside>
       </div>
 

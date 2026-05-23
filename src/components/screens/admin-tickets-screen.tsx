@@ -3,13 +3,13 @@
 import Link from "next/link"
 import { useMemo, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
-import { CircleDashed, Clock3, Headset, Receipt, ShieldCheck } from "lucide-react"
+import { CircleDashed, Clock3, Receipt, ShieldCheck } from "lucide-react"
 
 import { getMe, getTickets } from "@/lib/api"
 import { Screen, ScreenBody, ScreenEmpty, ScreenHeader } from "@/components/screen"
 import { cn } from "@/lib/cn"
 
-type FilterKey = "all" | "waiting" | "review" | "work" | "support" | "closed"
+type FilterKey = "all" | "waiting" | "review" | "work" | "closed"
 
 export function AdminTicketsScreen() {
   const { data: meData } = useQuery({ queryKey: ["me"], queryFn: getMe })
@@ -20,36 +20,28 @@ export function AdminTicketsScreen() {
   })
   const [filter, setFilter] = useState<FilterKey>("all")
 
-  const tickets = useMemo(() => data?.tickets ?? [], [data?.tickets])
+  const tickets = useMemo(() => (data?.tickets ?? []).filter((ticket) => !isSupport(ticket)), [data?.tickets])
   const buckets = useMemo(() => {
-    const support = tickets.filter(isSupport)
     const waiting = tickets.filter(
       (ticket) =>
-        !isSupport(ticket) &&
         !ticket.isPaid &&
         ticket.status !== "CLOSED" &&
         ticket.status !== "CANCELLED" &&
         ticket.status !== "PAYMENT_REVIEW",
     )
-    const review = tickets.filter(
-      (ticket) => !isSupport(ticket) && ticket.status === "PAYMENT_REVIEW",
-    )
+    const review = tickets.filter((ticket) => ticket.status === "PAYMENT_REVIEW")
     const work = tickets.filter(
       (ticket) =>
-        !isSupport(ticket) &&
         ticket.isPaid &&
         !["CLOSED", "CANCELLED"].includes(ticket.status),
     )
-    const closed = tickets.filter(
-      (ticket) => !isSupport(ticket) && ["CLOSED", "CANCELLED"].includes(ticket.status),
-    )
+    const closed = tickets.filter((ticket) => ["CLOSED", "CANCELLED"].includes(ticket.status))
 
     return {
       all: tickets,
       waiting,
       review,
       work,
-      support,
       closed,
     }
   }, [tickets])
@@ -116,12 +108,6 @@ export function AdminTicketsScreen() {
                   icon: <ShieldCheck size={14} />,
                 },
                 {
-                  key: "support" as const,
-                  label: "Поддержка",
-                  count: buckets.support.length,
-                  icon: <Headset size={14} />,
-                },
-                {
                   key: "closed" as const,
                   label: "Закрытые",
                   count: buckets.closed.length,
@@ -174,18 +160,12 @@ export function AdminTicketsScreen() {
                     <div
                       className={cn(
                         "flex size-11 shrink-0 items-center justify-center rounded-full text-sm font-semibold",
-                        isSupport(ticket)
-                          ? "bg-[var(--color-bg)] text-[var(--color-text)]"
-                          : !ticket.isPaid
+                        !ticket.isPaid
                             ? "bg-[var(--color-bg)] text-[var(--color-text)]"
                             : "bg-[var(--color-accent)]/16 text-[var(--color-accent)]",
                       )}
                     >
-                      {isSupport(ticket) ? (
-                        <Headset size={16} />
-                      ) : (
-                        ticket.productTitle?.slice(0, 1).toUpperCase() || "#"
-                      )}
+                      {ticket.productTitle?.slice(0, 1).toUpperCase() || "#"}
                     </div>
 
                     <div className="min-w-0 flex-1">
@@ -208,7 +188,7 @@ export function AdminTicketsScreen() {
                       </div>
 
                       <p className="mt-3 line-clamp-2 text-sm leading-6 text-[var(--color-muted)]">
-                        {ticket.lastMessage || "Без сообщений"}
+                        {renderSummary(ticket)}
                       </p>
                     </div>
                   </div>
@@ -244,7 +224,6 @@ function renderStatus(status: string) {
 }
 
 function renderPrimaryState(ticket: Awaited<ReturnType<typeof getTickets>>["tickets"][number]) {
-  if (isSupport(ticket)) return "Поддержка"
   if (ticket.status === "PAYMENT_REVIEW") {
     return "На проверке"
   }
@@ -254,6 +233,20 @@ function renderPrimaryState(ticket: Awaited<ReturnType<typeof getTickets>>["tick
   if (ticket.status === "IN_PROGRESS") return "Выдача"
   if (ticket.status === "CLOSED") return "Завершён"
   return "Оплачен"
+}
+
+function renderSummary(ticket: Awaited<ReturnType<typeof getTickets>>["tickets"][number]) {
+  if (ticket.status === "PAYMENT_REVIEW") return "Платёж отмечен и ждёт проверки."
+  if (ticket.status === "CANCELLED") return "Заказ отменён."
+  if (ticket.status === "CLOSED" && !ticket.isPaid) return "Заказ закрыт без оплаты."
+  if (!ticket.isPaid) {
+    return ticket.paymentMethodTitle
+      ? `Ожидает оплату через ${ticket.paymentMethodTitle}.`
+      : "Ожидает оплату."
+  }
+  if (ticket.status === "IN_PROGRESS") return "Заказ обрабатывается."
+  if (ticket.status === "CLOSED") return "Заказ завершён."
+  return "Оплата подтверждена."
 }
 
 function StatusPill({ children }: { children: React.ReactNode }) {

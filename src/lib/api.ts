@@ -22,11 +22,6 @@ export type AdminProductKey = {
   createdAt: string
 }
 
-export type TicketMessageAttachment = {
-  type: "image"
-  url: string
-}
-
 export type PaymentMethodInput = {
   id?: string
   title: string
@@ -145,7 +140,6 @@ export function getProduct(id: string) {
 
 export function createTicket(payload: {
   subject: string
-  message: string
   productId?: string
   paymentMethodId?: string
   paymentMethodType?: PaymentMethodType
@@ -171,7 +165,6 @@ export function getTickets() {
       paymentMethodTitle: string | null
       paymentMethodType: PaymentMethodType | null
       manualPaymentRequestedAt: string | null
-      lastMessage: string | null
     }>
   }>("/api/tickets")
 }
@@ -215,30 +208,8 @@ export function getTicket(id: string) {
       cryptoInvoiceAsset: string | null
       cryptoInvoiceAmount: string | null
       cryptoInvoiceExpiresAt: string | null
-      messages: Array<{
-        id: string
-        body: string
-        attachments: TicketMessageAttachment[]
-        createdAt: string
-        isMine: boolean
-        senderName: string
-        senderRole: "USER" | "ADMIN"
-      }>
     }
   }>(`/api/tickets/${id}`)
-}
-
-export function sendTicketMessage(
-  id: string,
-  payload: {
-    body?: string
-    attachments?: TicketMessageAttachment[]
-  },
-) {
-  return api<{ ok: true }>(`/api/tickets/${id}/messages`, {
-    method: "POST",
-    body: JSON.stringify(payload),
-  })
 }
 
 export function updateTicketStatus(id: string, status: TicketStatus) {
