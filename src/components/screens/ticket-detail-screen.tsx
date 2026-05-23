@@ -305,14 +305,6 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                 <div className="mt-6 rounded-[24px] border border-[var(--color-border)] bg-[var(--color-bg)] p-3.5 sm:p-4">
                   {ticket.paymentMethodType === "CRYPTO_PAY" && ticket.cryptoInvoiceUrl ? (
                     <div className="grid gap-3">
-                      <div className="rounded-[18px] bg-[var(--color-surface)] px-4 py-3 text-left">
-                        <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-muted)]">
-                          Invoice
-                        </p>
-                        <p className="mt-1 text-sm font-medium text-[var(--color-text)]">
-                          {ticket.cryptoInvoiceStatus === "paid" ? "Оплачен" : "Готов к оплате"}
-                        </p>
-                      </div>
                       {!ticket.isPaid ? (
                         <a
                           href={ticket.cryptoInvoiceUrl}
