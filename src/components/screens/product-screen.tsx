@@ -73,7 +73,7 @@ export function ProductScreen({ productId }: { productId: string }) {
     onSuccess: async ({ ticketId }) => {
       haptic.success()
       await queryClient.invalidateQueries({ queryKey: ["tickets"] })
-      router.replace(`/tickets/${ticketId}`)
+      router.replace(`/orders/${ticketId}`)
     },
   })
 

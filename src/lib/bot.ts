@@ -16,11 +16,14 @@ export function getBot() {
     })
   })
 
-  bot.command("tickets", async (ctx) => {
+  const replyWithOrders = async (ctx: any) => {
     await ctx.reply("Переход к заказам:", {
-      reply_markup: new InlineKeyboard().webApp("Открыть заказы", `${env.APP_URL}/tickets`),
+      reply_markup: new InlineKeyboard().webApp("Открыть заказы", `${env.APP_URL}/orders`),
     })
-  })
+  }
+
+  bot.command("orders", replyWithOrders)
+  bot.command("tickets", replyWithOrders)
 
   bot.command("help", async (ctx) => {
     await ctx.reply(

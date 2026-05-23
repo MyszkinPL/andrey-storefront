@@ -53,12 +53,12 @@ export function ModeSwitcher() {
 
 function resolveModePath(pathname: string, nextMode: "buyer" | "admin") {
   if (nextMode === "admin") {
-    if (pathname === "/tickets" || pathname.startsWith("/tickets/")) return "/admin/tickets"
+    if (pathname === "/orders" || pathname.startsWith("/orders/")) return "/admin/orders"
     if (pathname === "/profile") return "/admin/settings"
     return "/admin"
   }
 
-  if (pathname === "/admin/tickets") return "/tickets"
+  if (pathname === "/admin/orders") return "/orders"
   if (pathname === "/admin/settings") return "/profile"
   if (pathname === "/admin/products") return "/catalog"
   return "/catalog"

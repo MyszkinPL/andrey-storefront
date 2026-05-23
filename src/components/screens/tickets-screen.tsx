@@ -191,7 +191,7 @@ export function TicketsScreen() {
               {visibleTickets.map((ticket, index) => (
                 <Link
                   key={ticket.id}
-                  href={`/tickets/${ticket.id}`}
+                  href={`/orders/${ticket.id}`}
                   className="ui-card enter-card p-3.5"
                   style={{ ["--stagger" as string]: `${Math.min(index, 8) * 28}ms` }}
                 >

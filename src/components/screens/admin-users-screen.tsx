@@ -386,7 +386,7 @@ function UserDetailsSheet({
                       {user.orders.map((order) => (
                         <Link
                           key={order.id}
-                          href={`/tickets/${order.id}`}
+                          href={`/orders/${order.id}`}
                           className="rounded-[18px] bg-[var(--color-bg)] px-4 py-3 transition-colors hover:bg-[var(--color-surface)]"
                         >
                           <div className="flex items-start justify-between gap-3">

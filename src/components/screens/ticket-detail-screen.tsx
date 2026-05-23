@@ -80,7 +80,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
     mutationFn: () => deleteAdminTicket(ticketId),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["tickets"] })
-      router.push("/admin/tickets")
+      router.push("/admin/orders")
     },
   })
 

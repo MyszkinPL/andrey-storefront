@@ -1,5 +1,5 @@
-import { AdminTicketsScreen } from "@/components/screens/admin-tickets-screen"
+import { redirect } from "next/navigation"
 
 export default function AdminTicketsPage() {
-  return <AdminTicketsScreen />
+  redirect("/admin/orders")
 }

@@ -155,7 +155,7 @@ export function AdminTicketsScreen() {
           ) : (
             <div className="grid gap-3">
               {visibleTickets.map((ticket) => (
-                <Link key={ticket.id} href={`/tickets/${ticket.id}`} className="ui-card p-4">
+                <Link key={ticket.id} href={`/orders/${ticket.id}`} className="ui-card p-4">
                   <div className="flex items-start gap-3">
                     <div
                       className={cn(

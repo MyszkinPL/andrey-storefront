@@ -1,4 +1,4 @@
-import { TicketDetailScreen } from "@/components/screens/ticket-detail-screen"
+import { redirect } from "next/navigation"
 
 export default async function TicketPage({
   params,
@@ -6,5 +6,5 @@ export default async function TicketPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  return <TicketDetailScreen ticketId={id} />
+  redirect(`/orders/${id}`)
 }
