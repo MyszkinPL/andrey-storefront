@@ -27,7 +27,7 @@ if (appUrl && botToken) {
   await telegram("setMyCommands", {
     commands: [
       { command: "start", description: "Открыть магазин" },
-      { command: "tickets", description: "Мои тикеты" },
+      { command: "orders", description: "Мои заказы" },
       { command: "help", description: "Помощь" },
     ],
   })
@@ -108,17 +108,11 @@ async function ensureBootstrapData() {
       where: { id: 1 },
       update: {
         shopName: "snx.sell",
-        welcomeText: "Лицензии, ключи и lifetime-доступы через Telegram.",
-        supportIntro:
-          "Выбери товар, открой заказ и получи оплату или инвойс. После подтверждения продавец выдаст доступ или ключ.",
         cryptoPayFiat: "RUB",
       },
       create: {
         id: 1,
         shopName: "snx.sell",
-        welcomeText: "Лицензии, ключи и lifetime-доступы через Telegram.",
-        supportIntro:
-          "Выбери товар, открой заказ и получи оплату или инвойс. После подтверждения продавец выдаст доступ или ключ.",
         cryptoPayFiat: "RUB",
       },
     })
