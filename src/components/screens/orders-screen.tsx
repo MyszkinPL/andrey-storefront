@@ -5,16 +5,26 @@ import { useMemo, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { formatDistanceToNow } from "date-fns"
 import { ru } from "date-fns/locale"
-import {
-  Badge,
-  Button,
-  Cell,
-  Placeholder,
-  Section,
-  SegmentedControl,
-} from "@telegram-apps/telegram-ui"
 import { ExternalLink, Receipt } from "lucide-react"
 
+import { Badge } from "@/components/ui/badge"
+import { buttonVariants } from "@/components/ui/button"
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
 import { getMe, getOrders } from "@/lib/api"
 
@@ -62,74 +72,77 @@ export function OrdersScreen() {
         subtitle={`${buckets.active.length} активных · ${buckets.waiting.length} ждут оплату`}
         trailing={
           supportLink ? (
-            <Button size="s" mode="bezeled" Component="a" href={supportLink} target="_blank">
-              <span className="inline-flex items-center gap-1.5">
-                Поддержка <ExternalLink size={14} />
-              </span>
-            </Button>
+            <a
+              href={supportLink}
+              target="_blank"
+              rel="noreferrer"
+              className={buttonVariants({ size: "sm", variant: "secondary" })}
+            >
+              Поддержка
+              <ExternalLink data-icon="inline-end" />
+            </a>
           ) : null
         }
       />
 
       {isLoading ? (
-        <Placeholder header="Загружаю заказы" description="Подтягиваю историю покупок.">
-          <Receipt size={32} />
-        </Placeholder>
+        <OrdersEmpty title="Загружаю заказы" description="Подтягиваю историю покупок." />
       ) : isError ? (
-        <Placeholder header="Заказы не загрузились" description="Обнови экран или попробуй позже.">
-          <Receipt size={32} />
-        </Placeholder>
+        <OrdersEmpty title="Заказы не загрузились" description="Обнови экран или попробуй позже." />
       ) : orders.length === 0 ? (
-        <Placeholder header="Заказов пока нет" description="Открой товар и оформи покупку.">
-          <Receipt size={32} />
-        </Placeholder>
+        <OrdersEmpty title="Заказов пока нет" description="Открой товар и оформи покупку." />
       ) : (
-        <ScreenBody className="gap-3">
-          <SegmentedControl>
-            {[
-              { key: "all" as const, label: "Все" },
-              { key: "waiting" as const, label: "Оплата" },
-              { key: "review" as const, label: "Проверка" },
-              { key: "active" as const, label: "Выдача" },
-              { key: "closed" as const, label: "История" },
-            ].map((item) => (
-              <SegmentedControl.Item
-                key={item.key}
-                selected={filter === item.key}
-                onClick={() => setFilter(item.key)}
-              >
-                {item.label}
-              </SegmentedControl.Item>
-            ))}
-          </SegmentedControl>
+        <ScreenBody>
+          <Tabs value={filter} onValueChange={(value) => setFilter(value as FilterKey)}>
+            <TabsList className="w-full">
+              {[
+                { key: "all" as const, label: "Все" },
+                { key: "waiting" as const, label: "Оплата" },
+                { key: "review" as const, label: "Проверка" },
+                { key: "active" as const, label: "Выдача" },
+                { key: "closed" as const, label: "История" },
+              ].map((item) => (
+                <TabsTrigger key={item.key} value={item.key}>
+                  {item.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
 
           {visibleOrders.length === 0 ? (
-            <Placeholder header="Пусто" description="Для этого фильтра сейчас ничего нет." />
+            <OrdersEmpty title="Пусто" description="Для этого фильтра сейчас ничего нет." />
           ) : (
-            <Section>
+            <div className="flex flex-col gap-3">
               {visibleOrders.map((order) => (
                 <Link key={order.id} href={`/orders/${order.id}`}>
-                  <Cell
-                    multiline
-                    before={<OrderBadge order={order} />}
-                    subtitle={[
-                      `#${order.number}`,
-                      order.productCategory,
-                      order.paymentMethodTitle && !order.isPaid ? order.paymentMethodTitle : null,
-                    ]
-                      .filter(Boolean)
-                      .join(" · ")}
-                    description={renderPrimaryState(order)}
-                    after={formatDistanceToNow(new Date(order.updatedAt), {
-                      addSuffix: true,
-                      locale: ru,
-                    })}
-                  >
-                    {order.productTitle || order.subject}
-                  </Cell>
+                  <Card size="sm">
+                    <CardHeader>
+                      <CardTitle className="truncate">{order.productTitle || order.subject}</CardTitle>
+                      <CardDescription>
+                        #{order.number}
+                        {order.productCategory ? ` · ${order.productCategory}` : ""}
+                      </CardDescription>
+                      <CardAction>
+                        <span className="text-xs text-muted-foreground">
+                          {formatDistanceToNow(new Date(order.updatedAt), {
+                            addSuffix: true,
+                            locale: ru,
+                          })}
+                        </span>
+                      </CardAction>
+                    </CardHeader>
+                    <CardContent className="flex items-center justify-between gap-3">
+                      <Badge variant={orderBadgeVariant(order)}>{renderPrimaryState(order)}</Badge>
+                      {order.paymentMethodTitle && !order.isPaid ? (
+                        <span className="truncate text-xs text-muted-foreground">
+                          {order.paymentMethodTitle}
+                        </span>
+                      ) : null}
+                    </CardContent>
+                  </Card>
                 </Link>
               ))}
-            </Section>
+            </div>
           )}
         </ScreenBody>
       )}
@@ -137,28 +150,37 @@ export function OrdersScreen() {
   )
 }
 
-function OrderBadge({
-  order,
-}: {
-  order: Awaited<ReturnType<typeof getOrders>>["orders"][number]
-}) {
-  if (order.status === "PAYMENT_REVIEW") {
-    return <Badge type="number" mode="primary">!</Badge>
-  }
-  if (!order.isPaid) {
-    return <Badge type="number" mode="gray">₽</Badge>
-  }
-  if (order.status === "CANCELLED") {
-    return <Badge type="number" mode="critical">×</Badge>
-  }
-  return <Badge type="number" mode="secondary">✓</Badge>
+function OrdersEmpty({ title, description }: { title: string; description: string }) {
+  return (
+    <Card>
+      <CardContent>
+        <Empty>
+          <EmptyMedia variant="icon">
+            <Receipt />
+          </EmptyMedia>
+          <EmptyHeader>
+            <EmptyTitle>{title}</EmptyTitle>
+            <EmptyDescription>{description}</EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      </CardContent>
+    </Card>
+  )
+}
+
+function orderBadgeVariant(order: Awaited<ReturnType<typeof getOrders>>["orders"][number]) {
+  if (order.status === "PAYMENT_REVIEW") return "default"
+  if (order.status === "CANCELLED") return "destructive"
+  if (!order.isPaid) return "secondary"
+  if (order.status === "CLOSED") return "outline"
+  return "default"
 }
 
 function renderPrimaryState(order: Awaited<ReturnType<typeof getOrders>>["orders"][number]) {
-  if (order.status === "PAYMENT_REVIEW") return "Платёж на проверке"
+  if (order.status === "PAYMENT_REVIEW") return "Проверка оплаты"
   if (order.status === "CANCELLED") return "Отменён"
   if (order.status === "CLOSED" && !order.isPaid) return "Не оплачен"
-  if (!order.isPaid) return "Ожидает оплату"
+  if (!order.isPaid) return "Ждёт оплату"
   if (order.status === "CLOSED") return "Завершён"
   return "Оплачен"
 }

@@ -1,9 +1,23 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
-import { Cell, Placeholder, Section } from "@telegram-apps/telegram-ui"
 import { CreditCard, Package2, Receipt, ShieldCheck, Users } from "lucide-react"
 
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty"
 import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
 import { getAdminUsers, getMe, getOrders, getPaymentMethods, getProducts } from "@/lib/api"
 
@@ -72,28 +86,48 @@ export function AdminOverviewScreen() {
     <Screen>
       <ScreenHeader title="Админка" subtitle="Управление магазином" />
 
-      <ScreenBody className="gap-3">
+      <ScreenBody>
         {isLoadingProducts || isLoadingOrders || isLoadingPayments || isLoadingUsers ? (
-          <Placeholder header="Загружаю сводку" description="Собираю данные магазина.">
-            <Package2 size={32} />
-          </Placeholder>
+          <OverviewEmpty title="Загружаю сводку" description="Собираю данные магазина." />
         ) : isErrorProducts || isErrorOrders || isErrorPayments || isErrorUsers ? (
-          <Placeholder header="Сводка не загрузилась" description="Обнови экран или попробуй позже.">
-            <Package2 size={32} />
-          </Placeholder>
+          <OverviewEmpty title="Сводка не загрузилась" description="Обнови экран или попробуй позже." />
         ) : (
-          <Section header="Сводка">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
             {stats.map((item) => {
               const Icon = item.icon
               return (
-                <Cell key={item.label} before={<Icon size={24} />} after={item.value}>
-                  {item.label}
-                </Cell>
+                <Card key={item.label} size="sm">
+                  <CardHeader>
+                    <CardTitle className="text-2xl">{item.value}</CardTitle>
+                    <CardDescription>{item.label}</CardDescription>
+                    <CardAction>
+                      <Icon className="size-5 text-muted-foreground" />
+                    </CardAction>
+                  </CardHeader>
+                </Card>
               )
             })}
-          </Section>
+          </div>
         )}
       </ScreenBody>
     </Screen>
+  )
+}
+
+function OverviewEmpty({ title, description }: { title: string; description: string }) {
+  return (
+    <Card>
+      <CardContent>
+        <Empty>
+          <EmptyMedia variant="icon">
+            <Package2 />
+          </EmptyMedia>
+          <EmptyHeader>
+            <EmptyTitle>{title}</EmptyTitle>
+            <EmptyDescription>{description}</EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      </CardContent>
+    </Card>
   )
 }

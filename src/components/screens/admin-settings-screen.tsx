@@ -3,31 +3,32 @@
 import type { Dispatch, SetStateAction } from "react"
 import { useEffect, useMemo, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import {
-  Badge,
-  Button,
-  Cell,
-  FileInput,
-  Image as TgImage,
-  Input,
-  Modal,
-  Multiselect,
-  Placeholder,
-  Section,
-  Select,
-  Switch,
-  Textarea,
-} from "@telegram-apps/telegram-ui"
-import {
-  Check,
-  ImagePlus,
-  PencilLine,
-  Plus,
-  RefreshCcw,
-  ShieldCheck,
-  Trash2,
-} from "lucide-react"
+import { Check, ImagePlus, PencilLine, Plus, RefreshCcw, Trash2 } from "lucide-react"
 
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
+import { Input } from "@/components/ui/input"
+import { Switch } from "@/components/ui/switch"
+import { Textarea } from "@/components/ui/textarea"
 import { getCryptoPayCurrencies, getMe, getPaymentMethods, saveSettings } from "@/lib/api"
 import { optimizeSquareImage } from "@/lib/image"
 import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
@@ -157,25 +158,12 @@ export function AdminSettingsScreen() {
   const cryptoWebhookUrl = meData?.settings.appUrl
     ? `${meData.settings.appUrl}/api/crypto-pay/webhook`
     : ""
-  const assetOptions = useMemo(
-    () =>
-      (cryptoCurrencyData?.assets ?? []).map((asset) => ({
-        value: asset.code,
-        label: `${asset.code} · ${asset.name}`,
-      })),
-    [cryptoCurrencyData?.assets],
-  )
-  const selectedAssetOptions = selectedCryptoAssets.map((asset) => ({
-    value: asset,
-    label: asset,
-  }))
+  const assetOptions = cryptoCurrencyData?.assets ?? []
 
   if (meData && meData.user.role !== "ADMIN") {
     return (
       <Screen>
-        <Placeholder header="Доступ закрыт" description="Настройки магазина доступны только админу.">
-          <ShieldCheck size={32} />
-        </Placeholder>
+        <ScreenHeader title="Доступ закрыт" subtitle="Настройки магазина доступны только админу." />
       </Screen>
     )
   }
@@ -233,181 +221,161 @@ export function AdminSettingsScreen() {
     }
   }
 
+  function toggleAsset(asset: string) {
+    const normalized = asset.toUpperCase()
+    const next = selectedCryptoAssets.includes(normalized)
+      ? selectedCryptoAssets.filter((item) => item !== normalized)
+      : [...selectedCryptoAssets, normalized]
+    setCryptoPayDefaultAssets(next.join(","))
+  }
+
   return (
     <Screen>
       <ScreenHeader
         title="Настройки"
         subtitle="Магазин, оплата и поддержка"
         trailing={
-          <Button size="s" loading={mutation.isPending} onClick={() => mutation.mutate()}>
-            Сохранить
+          <Button size="sm" disabled={mutation.isPending} onClick={() => mutation.mutate()}>
+            {mutation.isPending ? "Сохраняю..." : "Сохранить"}
           </Button>
         }
       />
 
-      <ScreenBody className="gap-3">
-        <Section header="Магазин">
-          <Input
-            header="Название"
-            value={shopName}
-            onChange={(event) => setShopName(event.target.value)}
-            placeholder="snx.sell"
-          />
-          <Input
-            header="Поддержка"
-            value={supportUsername}
-            onChange={(event) => setSupportUsername(event.target.value)}
-            placeholder="@username"
-          />
-        </Section>
+      <ScreenBody className="mx-auto w-full max-w-3xl">
+        <Card>
+          <CardHeader>
+            <CardTitle>Магазин</CardTitle>
+            <CardDescription>Базовая информация и Telegram-поддержка.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <FieldGroup>
+              <Field>
+                <FieldLabel>Название</FieldLabel>
+                <Input value={shopName} onChange={(event) => setShopName(event.target.value)} placeholder="snx.sell" />
+              </Field>
+              <Field>
+                <FieldLabel>Поддержка</FieldLabel>
+                <Input value={supportUsername} onChange={(event) => setSupportUsername(event.target.value)} placeholder="@username" />
+              </Field>
+            </FieldGroup>
+          </CardContent>
+        </Card>
 
-        <Section
-          header="Автооплата"
-          footer="Crypto Bot создаёт invoice и подтверждает заказ через webhook."
-        >
-          <Cell
-            multiline
-            before={<TgImage size={48} src="/crypto-bot-logo.svg" alt="" />}
-            subtitle={cryptoPayEnabled ? "Включена" : "Выключена"}
-            after={
-              <Switch
-                checked={cryptoPayEnabled}
-                onChange={(event) => setCryptoPayEnabled(event.target.checked)}
-              />
-            }
-          >
-            Crypto Bot
-          </Cell>
-          <Input
-            header="API token"
-            value={cryptoPayToken}
-            onChange={(event) => setCryptoPayToken(event.target.value)}
-            placeholder="Token из Crypto Bot"
-          />
-          <Cell
-            after={
-              <Switch
-                checked={cryptoPayUseTestnet}
-                onChange={(event) => setCryptoPayUseTestnet(event.target.checked)}
-              />
-            }
-          >
-            Testnet
-          </Cell>
-          <Select
-            header="Fiat"
-            value={cryptoPayFiat}
-            onChange={(event) => setCryptoPayFiat(event.target.value)}
-          >
-            {cryptoCurrencyData?.fiats?.length ? (
-              cryptoCurrencyData.fiats.map((currency) => (
-                <option key={currency.code} value={currency.code}>
-                  {currency.code} · {currency.name}
-                </option>
-              ))
-            ) : (
-              <option value="RUB">RUB</option>
-            )}
-          </Select>
-          <Multiselect
-            header="Монеты"
-            placeholder={cryptoPayTokenValue ? "Любая доступная монета" : "Сначала API token"}
-            options={assetOptions}
-            value={selectedAssetOptions}
-            disabled={!cryptoPayTokenValue}
-            emptyText="Монеты не найдены"
-            selectedBehavior="highlight"
-            onChange={(options) =>
-              setCryptoPayDefaultAssets(
-                options.map((option) => String(option.value).toUpperCase()).join(","),
-              )
-            }
-          />
-          <Cell
-            multiline
-            subtitle={cryptoWebhookUrl || "Появится после открытия на домене деплоя"}
-            after={
-              cryptoWebhookUrl ? (
-                <Button
-                  size="s"
-                  mode="bezeled"
-                  before={<Check size={14} />}
-                  onClick={() => void navigator.clipboard.writeText(cryptoWebhookUrl)}
-                >
-                  Копировать
-                </Button>
-              ) : null
-            }
-          >
-            Webhook
-          </Cell>
-          <Cell
-            after={
+        <Card>
+          <CardHeader>
+            <MethodPreview iconDataUrl="/crypto-bot-logo.svg" title="Crypto Bot" />
+            <CardTitle>Crypto Bot</CardTitle>
+            <CardDescription>Автооплата через invoice и webhook.</CardDescription>
+            <CardAction>
+              <Switch checked={cryptoPayEnabled} onCheckedChange={setCryptoPayEnabled} />
+            </CardAction>
+          </CardHeader>
+          <CardContent>
+            <FieldGroup>
+              <Field>
+                <FieldLabel>API token</FieldLabel>
+                <Input value={cryptoPayToken} onChange={(event) => setCryptoPayToken(event.target.value)} placeholder="Token из Crypto Bot" />
+              </Field>
+              <div className="flex items-center justify-between gap-3">
+                <FieldLabel>Testnet</FieldLabel>
+                <Switch checked={cryptoPayUseTestnet} onCheckedChange={setCryptoPayUseTestnet} />
+              </div>
+              <Field>
+                <FieldLabel>Fiat</FieldLabel>
+                <Input value={cryptoPayFiat} onChange={(event) => setCryptoPayFiat(event.target.value.toUpperCase())} placeholder="RUB" />
+              </Field>
+              <Field>
+                <FieldLabel>Монеты</FieldLabel>
+                <div className="flex flex-wrap gap-2">
+                  {assetOptions.length > 0 ? (
+                    assetOptions.map((asset) => (
+                      <Button
+                        key={asset.code}
+                        size="sm"
+                        variant={selectedCryptoAssets.includes(asset.code) ? "default" : "secondary"}
+                        onClick={() => toggleAsset(asset.code)}
+                      >
+                        {selectedCryptoAssets.includes(asset.code) ? <Check data-icon="inline-start" /> : null}
+                        {asset.code}
+                      </Button>
+                    ))
+                  ) : (
+                    <Badge variant="secondary">
+                      {cryptoPayTokenValue ? "Нажми обновить" : "Сначала API token"}
+                    </Badge>
+                  )}
+                </div>
+              </Field>
+              <Field>
+                <FieldLabel>Webhook</FieldLabel>
+                <div className="flex gap-2">
+                  <Input readOnly value={cryptoWebhookUrl || "Появится после открытия на домене деплоя"} />
+                  {cryptoWebhookUrl ? (
+                    <Button variant="secondary" onClick={() => void navigator.clipboard.writeText(cryptoWebhookUrl)}>
+                      Копировать
+                    </Button>
+                  ) : null}
+                </div>
+              </Field>
               <Button
-                size="s"
-                mode="gray"
-                loading={isFetchingCurrencies}
-                before={<RefreshCcw size={14} />}
+                variant="secondary"
                 disabled={!cryptoPayTokenValue}
                 onClick={() => void refetchCurrencies()}
               >
-                Обновить
+                <RefreshCcw data-icon="inline-start" />
+                {isFetchingCurrencies ? "Обновляю..." : "Обновить валюты"}
               </Button>
-            }
-          >
-            Список валют
-          </Cell>
-        </Section>
+            </FieldGroup>
+          </CardContent>
+        </Card>
 
-        <Section
-          header="Ручная оплата"
-          footer={`${paymentMethods.length} всего · ${activeCount} активных`}
-        >
-          {paymentMethods.map((method, index) => (
-            <Cell
-              key={method.id || `${method.title}-${index}`}
-              multiline
-              before={<MethodPreview iconDataUrl={method.iconDataUrl} title={method.title} />}
-              subtitle={method.details || "Без реквизитов"}
-              titleBadge={
-                method.isActive ? undefined : (
-                  <Badge type="number" mode="gray">
-                    Скрыт
-                  </Badge>
-                )
-              }
-              after={
-                <Button
-                  size="s"
-                  mode="bezeled"
-                  before={<PencilLine size={14} />}
-                  onClick={() => openEditModal(index)}
-                >
+        <Card>
+          <CardHeader>
+            <CardTitle>Ручная оплата</CardTitle>
+            <CardDescription>{paymentMethods.length} всего · {activeCount} активных</CardDescription>
+            <CardAction>
+              <Button size="sm" onClick={() => openCreateModal()}>
+                <Plus data-icon="inline-start" />
+                Добавить
+              </Button>
+            </CardAction>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            {paymentMethods.map((method, index) => (
+              <div key={method.id || `${method.title}-${index}`} className="flex items-center gap-3 rounded-3xl bg-input/50 p-3">
+                <MethodPreview iconDataUrl={method.iconDataUrl} title={method.title} />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="truncate text-sm font-medium">{method.title}</span>
+                    {!method.isActive ? <Badge variant="secondary">Скрыт</Badge> : null}
+                  </div>
+                  <div className="truncate text-xs text-muted-foreground">{method.details || "Без реквизитов"}</div>
+                </div>
+                <Button size="sm" variant="secondary" onClick={() => openEditModal(index)}>
+                  <PencilLine data-icon="inline-start" />
                   Править
                 </Button>
-              }
-            >
-              {method.title}
-            </Cell>
-          ))}
-          {paymentMethods.length === 0 ? (
-            <Cell subtitle="Добавь СБП, карту или другой ручной способ.">
-              Способов оплаты пока нет
-            </Cell>
-          ) : null}
-          <div className="grid gap-2 px-4 py-3 sm:grid-cols-2">
-            <Button mode="gray" before={<Plus size={14} />} onClick={() => openCreateModal(templateMethod)}>
+              </div>
+            ))}
+            {paymentMethods.length === 0 ? (
+              <div className="text-sm text-muted-foreground">Добавь СБП, карту или другой ручной способ.</div>
+            ) : null}
+          </CardContent>
+          <CardFooter className="gap-2">
+            <Button variant="secondary" onClick={() => openCreateModal(templateMethod)}>
+              <Plus data-icon="inline-start" />
               Шаблон
             </Button>
-            <Button before={<Plus size={14} />} onClick={() => openCreateModal()}>
-              Добавить
+            <Button onClick={() => openCreateModal()}>
+              <Plus data-icon="inline-start" />
+              Новый
             </Button>
-          </div>
-        </Section>
+          </CardFooter>
+        </Card>
       </ScreenBody>
 
       {editorDraft ? (
-        <MethodEditorModal
+        <MethodEditorDialog
           open={Boolean(editorDraft)}
           draft={editorDraft}
           uploadingIcon={uploadingIcon}
@@ -423,7 +391,7 @@ export function AdminSettingsScreen() {
   )
 }
 
-function MethodEditorModal({
+function MethodEditorDialog({
   open,
   draft,
   uploadingIcon,
@@ -445,81 +413,74 @@ function MethodEditorModal({
   canDelete: boolean
 }) {
   return (
-    <Modal
-      open={open}
-      onOpenChange={(nextOpen) => {
-        if (!nextOpen) onClose()
-      }}
-      header={<Modal.Header>{canDelete ? "Способ оплаты" : "Новый способ"}</Modal.Header>}
-    >
-      <Section header="Иконка">
-        <Cell
-          multiline
-          before={<MethodPreview iconDataUrl={draft.iconDataUrl} title={draft.title || "PM"} />}
-          subtitle={uploadingIcon ? "Обработка изображения..." : "Квадратная иконка платежки"}
-        >
-          Превью
-        </Cell>
-        <div className="px-4 pb-3">
-          <FileInput
-            label="Загрузить иконку"
-            accept="image/*"
-            onChange={(event) => onUpload(event.currentTarget.files?.[0] || null)}
-          />
-        </div>
-      </Section>
+    <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && onClose()}>
+      <DialogContent className="max-h-[92dvh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{canDelete ? "Способ оплаты" : "Новый способ"}</DialogTitle>
+          <DialogDescription>Название, иконка и реквизиты ручной оплаты.</DialogDescription>
+        </DialogHeader>
+        <FieldGroup>
+          <Card size="sm">
+            <CardHeader>
+              <MethodPreview iconDataUrl={draft.iconDataUrl} title={draft.title || "PM"} />
+              <CardTitle>Иконка</CardTitle>
+              <CardDescription>{uploadingIcon ? "Обработка изображения..." : "Квадратная иконка платежки"}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Input
+                type="file"
+                accept="image/*"
+                onChange={(event) => onUpload(event.currentTarget.files?.[0] || null)}
+              />
+            </CardContent>
+          </Card>
 
-      <Section header="Реквизиты">
-        <Input
-          header="Название"
-          value={draft.title}
-          onChange={(event) =>
-            onChange((prev) => (prev ? { ...prev, title: event.target.value } : prev))
-          }
-          placeholder="СБП / Т-Банк"
-        />
-        <Textarea
-          header="Данные для оплаты"
-          value={draft.details}
-          onChange={(event) =>
-            onChange((prev) => (prev ? { ...prev, details: event.target.value } : prev))
-          }
-          placeholder="Номер, получатель или инструкция"
-        />
-        <Cell
-          after={
+          <Field>
+            <FieldLabel>Название</FieldLabel>
+            <Input
+              value={draft.title}
+              onChange={(event) =>
+                onChange((prev) => (prev ? { ...prev, title: event.target.value } : prev))
+              }
+              placeholder="СБП / Т-Банк"
+            />
+          </Field>
+          <Field>
+            <FieldLabel>Данные для оплаты</FieldLabel>
+            <Textarea
+              value={draft.details}
+              onChange={(event) =>
+                onChange((prev) => (prev ? { ...prev, details: event.target.value } : prev))
+              }
+              placeholder="Номер, получатель или инструкция"
+            />
+          </Field>
+          <div className="flex items-center justify-between gap-3">
+            <FieldLabel>Показывать покупателю</FieldLabel>
             <Switch
               checked={draft.isActive}
-              onChange={(event) =>
-                onChange((prev) => (prev ? { ...prev, isActive: event.target.checked } : prev))
+              onCheckedChange={(checked) =>
+                onChange((prev) => (prev ? { ...prev, isActive: checked } : prev))
               }
             />
-          }
-        >
-          Показывать покупателю
-        </Cell>
-      </Section>
-
-      <Section footer="Покупатель увидит этот способ только до оплаты заказа.">
-        <Cell before={<ShieldCheck size={18} />} subtitle="Название, иконка и реквизиты">
-          Ручная оплата
-        </Cell>
-      </Section>
-
-      <div className="grid gap-2 p-4">
-        <Button stretched onClick={onSave} disabled={!draft.title.trim()}>
-          Сохранить способ
-        </Button>
-        {canDelete ? (
-          <Button stretched mode="outline" before={<Trash2 size={14} />} onClick={onDelete}>
-            Удалить
+          </div>
+        </FieldGroup>
+        <DialogFooter>
+          {canDelete ? (
+            <Button variant="destructive" onClick={onDelete}>
+              <Trash2 data-icon="inline-start" />
+              Удалить
+            </Button>
+          ) : null}
+          <Button variant="secondary" onClick={onClose}>
+            Отмена
           </Button>
-        ) : null}
-        <Button stretched mode="plain" onClick={onClose}>
-          Отмена
-        </Button>
-      </div>
-    </Modal>
+          <Button onClick={onSave} disabled={!draft.title.trim()}>
+            Сохранить
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }
 
@@ -531,11 +492,11 @@ function MethodPreview({
   title: string
 }) {
   return (
-    <TgImage
-      size={48}
-      src={iconDataUrl || undefined}
-      alt=""
-      fallbackIcon={title ? <span>{title.slice(0, 2).toUpperCase()}</span> : <ImagePlus size={18} />}
-    />
+    <Avatar size="lg">
+      {iconDataUrl ? <AvatarImage src={iconDataUrl} alt={title} /> : null}
+      <AvatarFallback>
+        {title ? title.slice(0, 2).toUpperCase() : <ImagePlus className="size-4" />}
+      </AvatarFallback>
+    </Avatar>
   )
 }

@@ -1,23 +1,8 @@
 "use client"
 
-import Image from "next/image"
 import type { Dispatch, SetStateAction } from "react"
 import { useMemo, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import {
-  Badge,
-  Button,
-  Cell,
-  FileInput,
-  Image as TgImage,
-  Input,
-  Modal,
-  Placeholder,
-  Section,
-  SegmentedControl,
-  Switch,
-  Textarea,
-} from "@telegram-apps/telegram-ui"
 import {
   CopyPlus,
   ImagePlus,
@@ -28,6 +13,38 @@ import {
   Trash2,
 } from "lucide-react"
 
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty"
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
+import { Input } from "@/components/ui/input"
+import { Switch } from "@/components/ui/switch"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Textarea } from "@/components/ui/textarea"
 import { getMe, getProduct, getProducts, saveAdminProduct, updateAdminProduct } from "@/lib/api"
 import { optimizeSquareImage } from "@/lib/image"
 import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
@@ -177,71 +194,61 @@ export function AdminProductsScreen() {
         title="Товары"
         subtitle={`${products.length} в каталоге`}
         trailing={
-          <Button size="s" before={<PackagePlus size={14} />} onClick={openCreateEditor}>
+          <Button size="sm" onClick={openCreateEditor}>
+            <PackagePlus data-icon="inline-start" />
             Новый
           </Button>
         }
       />
 
-      <ScreenBody className="gap-3">
+      <ScreenBody>
         {products.length === 0 ? (
-          <Placeholder header="Товаров пока нет" description="Создай первую карточку магазина.">
-            <PackagePlus size={32} />
-            <Button size="m" onClick={openCreateEditor}>
-              Создать товар
-            </Button>
-          </Placeholder>
+          <Card>
+            <CardContent>
+              <Empty>
+                <EmptyMedia variant="icon">
+                  <PackagePlus />
+                </EmptyMedia>
+                <EmptyHeader>
+                  <EmptyTitle>Товаров пока нет</EmptyTitle>
+                  <EmptyDescription>Создай первую карточку магазина.</EmptyDescription>
+                </EmptyHeader>
+                <Button onClick={openCreateEditor}>Создать товар</Button>
+              </Empty>
+            </CardContent>
+          </Card>
         ) : (
-          <Section header="Каталог">
+          <div className="grid gap-3 lg:grid-cols-2">
             {products.map((product) => (
-              <Cell
-                key={product.id}
-                multiline
-                before={
-                  <ProductImage
-                    imageDataUrl={product.imageDataUrl}
-                    title={product.title}
-                    size={48}
-                  />
-                }
-                subtitle={`${product.category || "Без категории"} · ${product.priceRub.toLocaleString("ru-RU")} ₽`}
-                description={product.description}
-                titleBadge={
-                  !product.isActive ? (
-                    <Badge type="number" mode="gray">
-                      Скрыт
-                    </Badge>
-                  ) : undefined
-                }
-                after={
-                  <div className="flex gap-2">
-                    <Button
-                      size="s"
-                      mode="bezeled"
-                      before={<PencilLine size={14} />}
-                      onClick={() => openEditEditor(product)}
-                    >
-                      Править
-                    </Button>
-                    <Button
-                      size="s"
-                      mode="gray"
-                      before={<CopyPlus size={14} />}
-                      onClick={() => openDuplicateEditor(product)}
-                    >
-                      Копия
-                    </Button>
-                  </div>
-                }
-              >
-                {product.title}
-              </Cell>
+              <Card key={product.id} size="sm">
+                <CardHeader>
+                  <ProductImage imageDataUrl={product.imageDataUrl} title={product.title} />
+                  <CardTitle className="truncate">{product.title}</CardTitle>
+                  <CardDescription>
+                    {product.category || "Без категории"} · {product.priceRub.toLocaleString("ru-RU")} ₽
+                  </CardDescription>
+                  <CardAction>{!product.isActive ? <Badge variant="secondary">Скрыт</Badge> : null}</CardAction>
+                </CardHeader>
+                <CardContent>
+                  <p className="line-clamp-2 text-sm text-muted-foreground">{product.description}</p>
+                </CardContent>
+                <CardFooter className="gap-2">
+                  <Button size="sm" variant="secondary" onClick={() => openEditEditor(product)}>
+                    <PencilLine data-icon="inline-start" />
+                    Править
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => openDuplicateEditor(product)}>
+                    <CopyPlus data-icon="inline-start" />
+                    Копия
+                  </Button>
+                </CardFooter>
+              </Card>
             ))}
-          </Section>
+          </div>
         )}
       </ScreenBody>
 
-      <ProductEditorModal
+      <ProductEditorDialog
         open={isEditorOpen}
         form={form}
         categoryOptions={categoryOptions}
@@ -256,7 +263,7 @@ export function AdminProductsScreen() {
   )
 }
 
-function ProductEditorModal({
+function ProductEditorDialog({
   open,
   form,
   categoryOptions,
@@ -293,185 +300,190 @@ function ProductEditorModal({
     !saving
 
   return (
-    <Modal
+    <Dialog
       open={open}
       onOpenChange={(nextOpen) => {
         if (!saving && !nextOpen) onClose()
       }}
-      header={<Modal.Header>{form.id ? "Редактирование товара" : "Новый товар"}</Modal.Header>}
     >
-      <Section header="Обложка">
-        <Cell
-          multiline
-          before={
-            <ProductImage imageDataUrl={form.imageDataUrl} title={form.title || "Товар"} size={96} />
-          }
-          subtitle={uploading ? "Обработка изображения..." : "Квадратная картинка товара"}
-        >
-          Изображение
-        </Cell>
-        <div className="px-4 pb-3">
-          <FileInput
-            label="Загрузить изображение"
-            accept="image/*"
-            onChange={(event) => onImageChange(event.currentTarget.files?.[0] || null)}
-          />
-        </div>
-      </Section>
+      <DialogContent className="max-h-[92dvh] overflow-y-auto sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>{form.id ? "Редактирование товара" : "Новый товар"}</DialogTitle>
+          <DialogDescription>Карточка, выдача и пул ключей.</DialogDescription>
+        </DialogHeader>
 
-      <Section header="Карточка">
-        <Input
-          header="Название"
-          value={form.title}
-          onChange={(event) => onChange((prev) => ({ ...prev, title: event.target.value }))}
-          placeholder="DRIP LITE LIFETIME"
-        />
-        <Input
-          header="Категория"
-          value={form.category}
-          onChange={(event) => onChange((prev) => ({ ...prev, category: event.target.value }))}
-          placeholder="Новая или существующая"
-        />
-        {categoryOptions.length > 0 ? (
-          <div className="flex gap-2 overflow-x-auto px-4 py-2">
-            {categoryOptions.map((category) => (
-              <Button
-                key={category}
-                size="s"
-                mode={form.category.trim() === category ? "filled" : "gray"}
-                onClick={() => onChange((prev) => ({ ...prev, category }))}
-              >
-                {category}
-              </Button>
-            ))}
+        <FieldGroup>
+          <Card size="sm">
+            <CardHeader>
+              <ProductImage imageDataUrl={form.imageDataUrl} title={form.title || "Товар"} large />
+              <CardTitle>Обложка</CardTitle>
+              <CardDescription>
+                {uploading ? "Обработка изображения..." : "Квадратная картинка товара"}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Input
+                type="file"
+                accept="image/*"
+                onChange={(event) => onImageChange(event.currentTarget.files?.[0] || null)}
+              />
+            </CardContent>
+          </Card>
+
+          <Field>
+            <FieldLabel>Название</FieldLabel>
+            <Input
+              value={form.title}
+              onChange={(event) => onChange((prev) => ({ ...prev, title: event.target.value }))}
+              placeholder="DRIP LITE LIFETIME"
+            />
+          </Field>
+
+          <Field>
+            <FieldLabel>Категория</FieldLabel>
+            <Input
+              value={form.category}
+              onChange={(event) => onChange((prev) => ({ ...prev, category: event.target.value }))}
+              placeholder="Новая или существующая"
+            />
+            {categoryOptions.length > 0 ? (
+              <div className="flex gap-2 overflow-x-auto py-1">
+                {categoryOptions.map((category) => (
+                  <Button
+                    key={category}
+                    size="sm"
+                    variant={form.category.trim() === category ? "default" : "secondary"}
+                    onClick={() => onChange((prev) => ({ ...prev, category }))}
+                  >
+                    {category}
+                  </Button>
+                ))}
+              </div>
+            ) : null}
+          </Field>
+
+          <Field>
+            <FieldLabel>Цена, RUB</FieldLabel>
+            <Input
+              value={form.priceRub}
+              type="number"
+              onChange={(event) => onChange((prev) => ({ ...prev, priceRub: event.target.value }))}
+              placeholder="4990"
+            />
+          </Field>
+
+          <Field>
+            <FieldLabel>Описание</FieldLabel>
+            <Textarea
+              value={form.description}
+              onChange={(event) => onChange((prev) => ({ ...prev, description: event.target.value }))}
+              placeholder="Краткое описание товара"
+            />
+          </Field>
+
+          <div className="flex items-center justify-between gap-3">
+            <FieldLabel>Показывать в магазине</FieldLabel>
+            <Switch
+              checked={form.isActive}
+              onCheckedChange={(checked) => onChange((prev) => ({ ...prev, isActive: checked }))}
+            />
           </div>
-        ) : null}
-        <Input
-          header="Цена, RUB"
-          value={form.priceRub}
-          type="number"
-          onChange={(event) => onChange((prev) => ({ ...prev, priceRub: event.target.value }))}
-          placeholder="4990"
-        />
-        <Textarea
-          header="Описание"
-          value={form.description}
-          onChange={(event) => onChange((prev) => ({ ...prev, description: event.target.value }))}
-          placeholder="Краткое описание товара"
-        />
-        <Cell after={<Switch checked={form.isActive} onChange={(event) => onChange((prev) => ({ ...prev, isActive: event.target.checked }))} />}>
-          Показывать в магазине
-        </Cell>
-      </Section>
 
-      <Section header="Выдача">
-        <SegmentedControl>
-          <SegmentedControl.Item
-            selected={form.deliveryType === "MANUAL"}
-            onClick={() => onChange((prev) => ({ ...prev, deliveryType: "MANUAL" }))}
-          >
-            Ручная
-          </SegmentedControl.Item>
-          <SegmentedControl.Item
-            selected={form.deliveryType === "AUTO_KEY"}
-            onClick={() => onChange((prev) => ({ ...prev, deliveryType: "AUTO_KEY" }))}
-          >
-            Автоключи
-          </SegmentedControl.Item>
-        </SegmentedControl>
-      </Section>
+          <Tabs value={form.deliveryType} onValueChange={(value) => onChange((prev) => ({ ...prev, deliveryType: value as ProductForm["deliveryType"] }))}>
+            <TabsList className="w-full">
+              <TabsTrigger value="MANUAL">Ручная выдача</TabsTrigger>
+              <TabsTrigger value="AUTO_KEY">Автоключи</TabsTrigger>
+            </TabsList>
+          </Tabs>
 
-      <Section
-        header="Характеристики"
-        footer="Пустые строки не сохраняются и не показываются в карточке товара."
-      >
-        {form.specs.map((spec, index) => (
-          <SpecEditor
-            key={`${index}-${form.id || "new"}`}
-            spec={spec}
-            index={index}
-            canRemove={form.specs.length > 1}
-            onChange={onChange}
-          />
-        ))}
-        <Cell
-          after={
-            <Button
-              size="s"
-              mode="bezeled"
-              before={<Plus size={14} />}
-              onClick={() =>
-                onChange((prev) => ({
-                  ...prev,
-                  specs: [...prev.specs, { label: "", value: "" }],
-                }))
-              }
-            >
-              Добавить
-            </Button>
-          }
-        >
-          Новый пункт
-        </Cell>
-      </Section>
-
-      {form.deliveryType === "AUTO_KEY" ? (
-        <Section header="Пул ключей" footer="Новые ключи добавляются по одному на строку.">
-          {form.id ? (
-            <>
-              <Cell
-                subtitle={
-                  form.removeKeyIds.length > 0
-                    ? `К удалению: ${form.removeKeyIds.length}`
-                    : "Без изменений"
-                }
-              >
-                {visibleKeys.length} ключей в наличии
-              </Cell>
-              {visibleKeys.map((key) => (
-                <Cell
-                  key={key.id}
-                  multiline
-                  before={<KeyRound size={18} />}
-                  subtitle={<code className="break-all">{key.value}</code>}
-                  after={
-                    <Button
-                      size="s"
-                      mode="gray"
-                      onClick={() =>
-                        onChange((prev) => ({
-                          ...prev,
-                          removeKeyIds: [...prev.removeKeyIds, key.id],
-                        }))
-                      }
-                    >
-                      Убрать
-                    </Button>
+          <Card size="sm">
+            <CardHeader>
+              <CardTitle>Характеристики</CardTitle>
+              <CardAction>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() =>
+                    onChange((prev) => ({
+                      ...prev,
+                      specs: [...prev.specs, { label: "", value: "" }],
+                    }))
                   }
                 >
-                  Ключ
-                </Cell>
+                  <Plus data-icon="inline-start" />
+                  Добавить
+                </Button>
+              </CardAction>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-3">
+              {form.specs.map((spec, index) => (
+                <SpecEditor
+                  key={`${index}-${form.id || "new"}`}
+                  spec={spec}
+                  index={index}
+                  canRemove={form.specs.length > 1}
+                  onChange={onChange}
+                />
               ))}
-            </>
-          ) : null}
-          <Textarea
-            header="Добавить новые"
-            value={form.keyPoolText}
-            onChange={(event) => onChange((prev) => ({ ...prev, keyPoolText: event.target.value }))}
-            placeholder="Один ключ на строку"
-          />
-        </Section>
-      ) : null}
+            </CardContent>
+          </Card>
 
-      <div className="grid gap-2 p-4">
-        <Button stretched loading={saving} disabled={!canSave} onClick={onSave}>
-          {form.id ? "Сохранить изменения" : "Создать товар"}
-        </Button>
-        <Button stretched mode="plain" onClick={onClose}>
-          Отмена
-        </Button>
-      </div>
-    </Modal>
+          {form.deliveryType === "AUTO_KEY" ? (
+            <Card size="sm">
+              <CardHeader>
+                <CardTitle>Пул ключей</CardTitle>
+                <CardDescription>Новые ключи добавляются по одному на строку.</CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-3">
+                {form.id ? (
+                  <>
+                    <div className="text-sm text-muted-foreground">
+                      {visibleKeys.length} ключей в наличии
+                      {form.removeKeyIds.length > 0 ? ` · к удалению ${form.removeKeyIds.length}` : ""}
+                    </div>
+                    {visibleKeys.map((key) => (
+                      <div key={key.id} className="flex items-center gap-2 rounded-3xl bg-input/50 p-3">
+                        <KeyRound className="size-4 text-muted-foreground" />
+                        <code className="min-w-0 flex-1 truncate text-sm">{key.value}</code>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() =>
+                            onChange((prev) => ({
+                              ...prev,
+                              removeKeyIds: [...prev.removeKeyIds, key.id],
+                            }))
+                          }
+                        >
+                          Убрать
+                        </Button>
+                      </div>
+                    ))}
+                  </>
+                ) : null}
+                <Field>
+                  <FieldLabel>Добавить новые</FieldLabel>
+                  <Textarea
+                    value={form.keyPoolText}
+                    onChange={(event) => onChange((prev) => ({ ...prev, keyPoolText: event.target.value }))}
+                    placeholder="Один ключ на строку"
+                  />
+                </Field>
+              </CardContent>
+            </Card>
+          ) : null}
+        </FieldGroup>
+
+        <DialogFooter>
+          <Button variant="secondary" onClick={onClose}>
+            Отмена
+          </Button>
+          <Button disabled={!canSave} onClick={onSave}>
+            {saving ? "Сохраняю..." : form.id ? "Сохранить изменения" : "Создать товар"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }
 
@@ -487,30 +499,26 @@ function SpecEditor({
   onChange: Dispatch<SetStateAction<ProductForm>>
 }) {
   return (
-    <div className="grid gap-2 px-4 py-3">
-      <Cell
-        after={
-          <Button
-            size="s"
-            mode="gray"
-            before={<Trash2 size={14} />}
-            onClick={() =>
-              onChange((prev) => ({
-                ...prev,
-                specs: canRemove
-                  ? prev.specs.filter((_, itemIndex) => itemIndex !== index)
-                  : [{ label: "", value: "" }],
-              }))
-            }
-          >
-            Убрать
-          </Button>
-        }
-      >
-        Характеристика {index + 1}
-      </Cell>
+    <div className="grid gap-2 rounded-3xl bg-input/50 p-3">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-sm font-medium">Характеристика {index + 1}</span>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() =>
+            onChange((prev) => ({
+              ...prev,
+              specs: canRemove
+                ? prev.specs.filter((_, itemIndex) => itemIndex !== index)
+                : [{ label: "", value: "" }],
+            }))
+          }
+        >
+          <Trash2 data-icon="inline-start" />
+          Убрать
+        </Button>
+      </div>
       <Input
-        header="Название"
         value={spec.label}
         onChange={(event) =>
           onChange((prev) => ({
@@ -523,7 +531,6 @@ function SpecEditor({
         placeholder="Support versions"
       />
       <Input
-        header="Значение"
         value={spec.value}
         onChange={(event) =>
           onChange((prev) => ({
@@ -542,27 +549,18 @@ function SpecEditor({
 function ProductImage({
   imageDataUrl,
   title,
-  size,
+  large = false,
 }: {
   imageDataUrl?: string | null
   title: string
-  size: 48 | 96
+  large?: boolean
 }) {
-  if (imageDataUrl) {
-    return (
-      <TgImage
-        size={size}
-        src={imageDataUrl}
-        alt=""
-      />
-    )
-  }
-
   return (
-    <TgImage
-      size={size}
-      alt=""
-      fallbackIcon={title ? <span>{title.slice(0, 2).toUpperCase()}</span> : <ImagePlus size={20} />}
-    />
+    <Avatar className={large ? "size-20 rounded-3xl" : "size-12 rounded-2xl"}>
+      {imageDataUrl ? <AvatarImage src={imageDataUrl} alt={title} className="rounded-[inherit]" /> : null}
+      <AvatarFallback className="rounded-[inherit]">
+        {title ? title.slice(0, 2).toUpperCase() : <ImagePlus className="size-4" />}
+      </AvatarFallback>
+    </Avatar>
   )
 }

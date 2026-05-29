@@ -2,8 +2,9 @@
 
 import { Shield, ShoppingBag } from "lucide-react"
 import { usePathname, useRouter } from "next/navigation"
-import { SegmentedControl } from "@telegram-apps/telegram-ui"
 
+import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
 import { useMode } from "@/components/mode-provider"
 import { useHaptic } from "@/hooks/use-telegram"
 
@@ -16,37 +17,35 @@ export function ModeSwitcher() {
   if (!canSwitch) return null
 
   return (
-    <div className="px-4 pb-2 pt-2">
-      <SegmentedControl>
-        <SegmentedControl.Item
-          selected={mode === "buyer"}
-          onClick={() => {
-            if (mode === "buyer") return
-            haptic.select()
-            setMode("buyer")
-            router.replace(resolveModePath(pathname, "buyer"))
-          }}
-        >
-          <span className="inline-flex items-center gap-1.5">
-            <ShoppingBag size={15} />
+    <div className="mx-auto w-full max-w-5xl px-4 pt-3">
+      <Card size="sm">
+        <CardContent className="grid grid-cols-2 gap-2">
+          <Button
+            variant={mode === "buyer" ? "default" : "ghost"}
+            onClick={() => {
+              if (mode === "buyer") return
+              haptic.select()
+              setMode("buyer")
+              router.replace(resolveModePath(pathname, "buyer"))
+            }}
+          >
+            <ShoppingBag data-icon="inline-start" />
             Покупатель
-          </span>
-        </SegmentedControl.Item>
-        <SegmentedControl.Item
-          selected={mode === "admin"}
-          onClick={() => {
-            if (mode === "admin") return
-            haptic.select()
-            setMode("admin")
-            router.replace(resolveModePath(pathname, "admin"))
-          }}
-        >
-          <span className="inline-flex items-center gap-1.5">
-            <Shield size={15} />
+          </Button>
+          <Button
+            variant={mode === "admin" ? "default" : "ghost"}
+            onClick={() => {
+              if (mode === "admin") return
+              haptic.select()
+              setMode("admin")
+              router.replace(resolveModePath(pathname, "admin"))
+            }}
+          >
+            <Shield data-icon="inline-start" />
             Админ
-          </span>
-        </SegmentedControl.Item>
-      </SegmentedControl>
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   )
 }

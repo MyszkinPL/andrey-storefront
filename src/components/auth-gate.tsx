@@ -1,8 +1,15 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Placeholder, Spinner } from "@telegram-apps/telegram-ui"
+import { LoaderCircle } from "lucide-react"
 
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty"
 import { authenticateWithTelegram } from "@/lib/api"
 import { useTelegram } from "@/hooks/use-telegram"
 
@@ -54,37 +61,45 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   if (state === "loading") {
     return (
       <div className="flex min-h-dvh items-center justify-center">
-        <Spinner size="m" />
+        <LoaderCircle className="size-7 animate-spin text-muted-foreground" />
       </div>
     )
   }
 
   if (state === "outside") {
     return (
-      <div className="flex min-h-dvh items-center justify-center px-6 text-center">
-        <Placeholder
-          header="Открой магазин из Telegram"
-          description="Авторизация идёт через Telegram initData. Для локальной разработки можно включить dev auth."
-        />
-      </div>
+      <AuthState
+        title="Открой магазин из Telegram"
+        description="Авторизация идёт через Telegram initData. Для локальной разработки можно включить dev auth."
+      />
     )
   }
 
   if (state === "error") {
-    const banned = error.toLowerCase().includes("заблок")
-    return (
-      <div className="flex min-h-dvh items-center justify-center px-6 text-center">
-        {banned ? (
-          <Placeholder
-            header="Доступ ограничен"
-            description={error}
-          />
-        ) : (
-          <Placeholder header="Ошибка авторизации" description={error} />
-        )}
-      </div>
-    )
+    return <AuthState title="Доступ ограничен" description={error} />
   }
 
   return <>{children}</>
+}
+
+function AuthState({
+  title,
+  description,
+}: {
+  title: string
+  description: string
+}) {
+  return (
+    <div className="flex min-h-dvh items-center justify-center p-6">
+      <Empty className="max-w-sm">
+        <EmptyMedia variant="icon">
+          <LoaderCircle />
+        </EmptyMedia>
+        <EmptyHeader>
+          <EmptyTitle>{title}</EmptyTitle>
+          <EmptyDescription>{description}</EmptyDescription>
+        </EmptyHeader>
+      </Empty>
+    </div>
+  )
 }

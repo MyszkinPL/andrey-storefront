@@ -3,16 +3,28 @@
 import { useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import {
-  Button,
-  Cell,
-  Image as TgImage,
-  Placeholder,
-  Radio,
-  Section,
-} from "@telegram-apps/telegram-ui"
-import { PackageSearch } from "lucide-react"
+import { Check, KeyRound, PackageSearch, ShoppingBag } from "lucide-react"
 
+import { Avatar, AvatarBadge, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import {
+  Empty,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Separator } from "@/components/ui/separator"
 import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
 import { useBackButton, useHaptic, useMainButton } from "@/hooks/use-telegram"
 import { createOrder, getPaymentMethods, getProduct } from "@/lib/api"
@@ -94,9 +106,18 @@ export function ProductScreen({ productId }: { productId: string }) {
   if (!data?.product) {
     return (
       <Screen noTabBar>
-        <Placeholder header="Загружаю товар">
-          <PackageSearch size={32} />
-        </Placeholder>
+        <Card>
+          <CardContent>
+            <Empty>
+              <EmptyMedia variant="icon">
+                <PackageSearch />
+              </EmptyMedia>
+              <EmptyHeader>
+                <EmptyTitle>Загружаю товар</EmptyTitle>
+              </EmptyHeader>
+            </Empty>
+          </CardContent>
+        </Card>
       </Screen>
     )
   }
@@ -109,94 +130,129 @@ export function ProductScreen({ productId }: { productId: string }) {
     <Screen noTabBar>
       <ScreenHeader title={product.title} subtitle={`${category} · ${deliveryLabel}`} />
 
-      <ScreenBody>
-        <Section header="Товар">
-          <Cell
-            multiline
-            before={
-              <TgImage
-                size={96}
-                src={product.imageDataUrl || undefined}
-                alt=""
-                fallbackIcon={<PackageSearch size={32} />}
-              />
-            }
-            subtitle={category}
-            description={product.description}
-            after={`${product.priceRub.toLocaleString("ru-RU")} ₽`}
-          >
-            {product.title}
-          </Cell>
-          <Cell subtitle={deliveryLabel}>
-            Выдача
-          </Cell>
-        </Section>
+      <ScreenBody className="mx-auto w-full max-w-4xl lg:grid lg:grid-cols-[minmax(0,1fr)_360px]">
+        <Card className="gap-0 py-0">
+          <ProductImage imageDataUrl={product.imageDataUrl} title={product.title} />
+          <CardHeader>
+            <CardTitle>{product.title}</CardTitle>
+            <CardDescription>{category}</CardDescription>
+            <CardAction>
+              <Badge variant="secondary">{product.priceRub.toLocaleString("ru-RU")} ₽</Badge>
+            </CardAction>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            <p className="text-sm leading-6 text-muted-foreground">{product.description}</p>
+            <Separator />
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2 text-sm">
+                <KeyRound className="size-4 text-muted-foreground" />
+                {deliveryLabel}
+              </div>
+              {product.deliveryType === "AUTO_KEY" ? (
+                <Badge variant="outline">{product.availableKeyCount ?? 0} ключей</Badge>
+              ) : null}
+            </div>
+          </CardContent>
+        </Card>
 
-        {product.specs.length > 0 ? (
-          <Section header="Характеристики">
-            {product.specs.map((spec) => (
-              <Cell key={`${spec.label}-${spec.value}`} subtitle={spec.value} multiline>
-                {spec.label}
-              </Cell>
-            ))}
-          </Section>
-        ) : null}
+        <div className="flex flex-col gap-3">
+          {product.specs.length > 0 ? (
+            <Card size="sm">
+              <CardHeader>
+                <CardTitle>Характеристики</CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-3">
+                {product.specs.map((spec) => (
+                  <div key={`${spec.label}-${spec.value}`} className="flex items-start justify-between gap-4 text-sm">
+                    <span className="text-muted-foreground">{spec.label}</span>
+                    <span className="text-right font-medium">{spec.value}</span>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          ) : null}
 
-        <Section
-          header="Оплата"
-          footer={
-            product.deliveryType === "AUTO_KEY"
-              ? `${product.availableKeyCount ?? 0} ключей в наличии`
-              : "После оплаты продавец выдаст доступ"
-          }
-        >
-          {paymentOptions.map((option) => {
-            const checked = selectedPayment?.key === option.key
-            return (
-              <Cell
-                key={option.key}
-                multiline
-                before={<PaymentMethodIcon iconDataUrl={option.iconDataUrl} title={option.title} />}
-                subtitle={option.subtitle}
-                after={<Radio checked={checked} readOnly />}
-                onClick={() => setSelectedPaymentKey(option.key)}
+          <Card size="sm">
+            <CardHeader>
+              <CardTitle>Оплата</CardTitle>
+              <CardDescription>Выбери способ перед созданием заказа.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <RadioGroup
+                value={selectedPayment?.key}
+                onValueChange={(value) => setSelectedPaymentKey(value)}
               >
-                {option.title}
-              </Cell>
-            )
-          })}
-        </Section>
-
-        {orderMutation.error ? (
-          <Section>
-            <Cell multiline description={orderMutation.error.message}>
-              Не удалось создать заказ
-            </Cell>
-          </Section>
-        ) : null}
-
-        <Section>
-          <Cell
-            after={
+                {paymentOptions.map((option) => (
+                  <label
+                    key={option.key}
+                    className="flex cursor-pointer items-center gap-3 rounded-3xl bg-input/50 p-3"
+                  >
+                    <PaymentIcon iconDataUrl={option.iconDataUrl} title={option.title} />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-medium">{option.title}</span>
+                      <span className="block truncate text-xs text-muted-foreground">
+                        {option.subtitle}
+                      </span>
+                    </span>
+                    <RadioGroupItem value={option.key} />
+                  </label>
+                ))}
+              </RadioGroup>
+            </CardContent>
+            <CardFooter>
               <Button
-                size="s"
-                loading={orderMutation.isPending}
+                className="w-full"
                 disabled={!selectedPayment || orderMutation.isPending}
                 onClick={() => orderMutation.mutate()}
               >
-                Оформить
+                {orderMutation.isPending ? (
+                  "Создаём..."
+                ) : (
+                  <>
+                    <ShoppingBag data-icon="inline-start" />
+                    Оформить заказ
+                  </>
+                )}
               </Button>
-            }
-          >
-            Создать заказ
-          </Cell>
-        </Section>
+            </CardFooter>
+          </Card>
+
+          {orderMutation.error ? (
+            <Card size="sm">
+              <CardHeader>
+                <CardTitle>Не удалось создать заказ</CardTitle>
+                <CardDescription>{orderMutation.error.message}</CardDescription>
+              </CardHeader>
+            </Card>
+          ) : null}
+        </div>
       </ScreenBody>
     </Screen>
   )
 }
 
-function PaymentMethodIcon({
+function ProductImage({
+  imageDataUrl,
+  title,
+}: {
+  imageDataUrl: string | null
+  title: string
+}) {
+  return (
+    <div className="aspect-square overflow-hidden bg-muted">
+      {imageDataUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={imageDataUrl} alt={title} className="size-full object-cover" />
+      ) : (
+        <div className="flex size-full items-center justify-center text-muted-foreground">
+          <PackageSearch className="size-10" />
+        </div>
+      )}
+    </div>
+  )
+}
+
+function PaymentIcon({
   iconDataUrl,
   title,
 }: {
@@ -204,11 +260,12 @@ function PaymentMethodIcon({
   title: string
 }) {
   return (
-    <TgImage
-      size={48}
-      src={iconDataUrl || undefined}
-      alt=""
-      fallbackIcon={<span>{title.slice(0, 2).toUpperCase()}</span>}
-    />
+    <Avatar size="lg">
+      {iconDataUrl ? <AvatarImage src={iconDataUrl} alt={title} /> : null}
+      <AvatarFallback>{title.slice(0, 2).toUpperCase()}</AvatarFallback>
+      <AvatarBadge>
+        <Check />
+      </AvatarBadge>
+    </Avatar>
   )
 }

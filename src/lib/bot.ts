@@ -1,4 +1,4 @@
-import { Bot, InlineKeyboard } from "grammy"
+import { Bot, InlineKeyboard, type Context } from "grammy"
 
 import { getServerEnv } from "@/lib/env"
 
@@ -16,7 +16,7 @@ export function getBot() {
     })
   })
 
-  const replyWithOrders = async (ctx: any) => {
+  const replyWithOrders = async (ctx: Context) => {
     await ctx.reply("Переход к заказам:", {
       reply_markup: new InlineKeyboard().webApp("Открыть заказы", `${env.APP_URL}/orders`),
     })

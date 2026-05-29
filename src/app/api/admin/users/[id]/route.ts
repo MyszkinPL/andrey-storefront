@@ -15,7 +15,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const admin = await requireAdmin()
+    await requireAdmin()
     const { id } = await params
     const payload = schema.parse(await request.json())
 

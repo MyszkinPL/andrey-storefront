@@ -1,9 +1,24 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
-import { Avatar, Cell, Image as TgImage, Placeholder, Section } from "@telegram-apps/telegram-ui"
-import { CreditCard } from "lucide-react"
+import { CreditCard, LifeBuoy } from "lucide-react"
 
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty"
 import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
 import { getMe, getPaymentMethods } from "@/lib/api"
 
@@ -36,78 +51,109 @@ export function ProfileScreen() {
               : "Покупатель"
         }
         trailing={
-          <Avatar
-            size={40}
-            src={meData?.user.photoUrl || undefined}
-            acronym={(meData?.user.firstName || "S").slice(0, 1).toUpperCase()}
-            alt={meData?.user.firstName || "Профиль"}
-          />
+          <Avatar size="lg">
+            {meData?.user.photoUrl ? (
+              <AvatarImage src={meData.user.photoUrl} alt={meData.user.firstName} />
+            ) : null}
+            <AvatarFallback>{(meData?.user.firstName || "S").slice(0, 1)}</AvatarFallback>
+          </Avatar>
         }
       />
 
-      <ScreenBody className="gap-3">
+      <ScreenBody>
         {isLoadingMe || isLoadingPayments ? (
-          <Placeholder header="Загружаю профиль" description="Подтягиваю данные магазина и оплаты.">
-            <CreditCard size={32} />
-          </Placeholder>
+          <ProfileEmpty title="Загружаю профиль" description="Подтягиваю данные магазина и оплаты." />
         ) : isErrorMe || isErrorPayments ? (
-          <Placeholder header="Профиль не загрузился" description="Обнови экран или попробуй позже.">
-            <CreditCard size={32} />
-          </Placeholder>
-        ) : methods.length === 0 && !hasCryptoPay ? (
-          <Placeholder header="Реквизитов пока нет" description="Админ добавит способы оплаты позже.">
-            <CreditCard size={32} />
-          </Placeholder>
+          <ProfileEmpty title="Профиль не загрузился" description="Обнови экран или попробуй позже." />
         ) : (
-          <Section header="Способы оплаты">
-            {methods.map((method) => (
-              <Cell
-                key={method.id}
-                multiline
-                before={<PaymentMethodIcon iconDataUrl={method.iconDataUrl} title={method.title} />}
-                subtitle={method.details}
-              >
-                {method.title}
-              </Cell>
-            ))}
-            {hasCryptoPay ? (
-              <Cell
-                multiline
-                before={
-                  <PaymentMethodIcon
-                    iconDataUrl={paymentData?.cryptoPay.iconDataUrl || null}
-                    title="CR"
-                  />
-                }
-                subtitle={
-                  paymentData?.cryptoPay.acceptedAssets
-                    ? `Автооплата · ${paymentData.cryptoPay.acceptedAssets}`
-                    : "Автооплата через invoice"
-                }
-              >
-                {paymentData?.cryptoPay.title || "Crypto Bot"}
-              </Cell>
-            ) : null}
-          </Section>
+          <>
+            <Card size="sm">
+              <CardHeader>
+                <CardTitle>Аккаунт</CardTitle>
+                <CardDescription>
+                  {meData?.user.role === "ADMIN" ? "Администратор" : "Покупатель"}
+                </CardDescription>
+                <CardAction>
+                  <LifeBuoy className="size-5 text-muted-foreground" />
+                </CardAction>
+              </CardHeader>
+            </Card>
+
+            {methods.length === 0 && !hasCryptoPay ? (
+              <ProfileEmpty title="Реквизитов пока нет" description="Админ добавит способы оплаты позже." />
+            ) : (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Способы оплаты</CardTitle>
+                  <CardDescription>Доступны при оформлении заказа.</CardDescription>
+                </CardHeader>
+                <CardContent className="flex flex-col gap-3">
+                  {methods.map((method) => (
+                    <PaymentMethodRow
+                      key={method.id}
+                      iconDataUrl={method.iconDataUrl}
+                      title={method.title}
+                      subtitle={method.details}
+                    />
+                  ))}
+                  {hasCryptoPay ? (
+                    <PaymentMethodRow
+                      iconDataUrl={paymentData?.cryptoPay.iconDataUrl || null}
+                      title={paymentData?.cryptoPay.title || "Crypto Bot"}
+                      subtitle={
+                        paymentData?.cryptoPay.acceptedAssets
+                          ? `Автооплата · ${paymentData.cryptoPay.acceptedAssets}`
+                          : "Автооплата через invoice"
+                      }
+                    />
+                  ) : null}
+                </CardContent>
+              </Card>
+            )}
+          </>
         )}
       </ScreenBody>
     </Screen>
   )
 }
 
-function PaymentMethodIcon({
+function PaymentMethodRow({
   iconDataUrl,
   title,
+  subtitle,
 }: {
   iconDataUrl: string | null
   title: string
+  subtitle: string
 }) {
   return (
-    <TgImage
-      size={48}
-      src={iconDataUrl || undefined}
-      alt=""
-      fallbackIcon={<span>{title.slice(0, 2).toUpperCase()}</span>}
-    />
+    <div className="flex items-center gap-3">
+      <Avatar size="lg">
+        {iconDataUrl ? <AvatarImage src={iconDataUrl} alt={title} /> : null}
+        <AvatarFallback>{title.slice(0, 2).toUpperCase()}</AvatarFallback>
+      </Avatar>
+      <div className="min-w-0">
+        <div className="truncate text-sm font-medium">{title}</div>
+        <div className="truncate text-xs text-muted-foreground">{subtitle}</div>
+      </div>
+    </div>
+  )
+}
+
+function ProfileEmpty({ title, description }: { title: string; description: string }) {
+  return (
+    <Card>
+      <CardContent>
+        <Empty>
+          <EmptyMedia variant="icon">
+            <CreditCard />
+          </EmptyMedia>
+          <EmptyHeader>
+            <EmptyTitle>{title}</EmptyTitle>
+            <EmptyDescription>{description}</EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      </CardContent>
+    </Card>
   )
 }

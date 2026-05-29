@@ -3,18 +3,37 @@
 import Link from "next/link"
 import { useMemo, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import {
-  Badge,
-  Button,
-  Cell,
-  Input,
-  Modal,
-  Placeholder,
-  Section,
-  SegmentedControl,
-} from "@telegram-apps/telegram-ui"
 import { Ban, History, Search, ShieldCheck } from "lucide-react"
 
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty"
+import { Input } from "@/components/ui/input"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
 import { getAdminUser, getAdminUsers, getMe, updateAdminUserModeration } from "@/lib/api"
 
@@ -58,90 +77,90 @@ export function AdminUsersScreen() {
     <Screen>
       <ScreenHeader title="Модерация" subtitle="Баны и доступ покупателей" />
 
-      <ScreenBody className="gap-3">
-        <Section>
-          <Input
-            value={search}
-            before={<Search size={18} />}
-            placeholder="Имя, username или Telegram ID"
-            onChange={(event) => {
-              setSearch(event.target.value)
-              setPage(1)
-            }}
-          />
-        </Section>
+      <ScreenBody>
+        <Card size="sm">
+          <CardContent>
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={search}
+                className="pl-9"
+                placeholder="Имя, username или Telegram ID"
+                onChange={(event) => {
+                  setSearch(event.target.value)
+                  setPage(1)
+                }}
+              />
+            </div>
+          </CardContent>
+        </Card>
 
-        <SegmentedControl>
-          {[
-            { key: "all" as const, label: "Все" },
-            { key: "buyers" as const, label: "Покупатели" },
-            { key: "admins" as const, label: "Админы" },
-            { key: "banned" as const, label: "Бан" },
-          ].map((item) => (
-            <SegmentedControl.Item
-              key={item.key}
-              selected={filter === item.key}
-              onClick={() => {
-                setFilter(item.key)
-                setPage(1)
-              }}
-            >
-              {item.label}
-            </SegmentedControl.Item>
-          ))}
-        </SegmentedControl>
+        <Tabs value={filter} onValueChange={(value) => {
+          setFilter(value as typeof filter)
+          setPage(1)
+        }}>
+          <TabsList className="w-full">
+            {[
+              { key: "all" as const, label: "Все" },
+              { key: "buyers" as const, label: "Покупатели" },
+              { key: "admins" as const, label: "Админы" },
+              { key: "banned" as const, label: "Бан" },
+            ].map((item) => (
+              <TabsTrigger key={item.key} value={item.key}>
+                {item.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
 
         {isLoading ? (
-          <Placeholder header="Загружаю пользователей" description="Подтягиваю модерацию.">
-            <ShieldCheck size={32} />
-          </Placeholder>
+          <UsersEmpty title="Загружаю пользователей" description="Подтягиваю модерацию." />
         ) : isError ? (
-          <Placeholder header="Список не загрузился" description="Обнови экран или попробуй позже.">
-            <ShieldCheck size={32} />
-          </Placeholder>
+          <UsersEmpty title="Список не загрузился" description="Обнови экран или попробуй позже." />
         ) : users.length === 0 ? (
-          <Placeholder header="Никого не найдено" description="Смени фильтр или запрос.">
-            <ShieldCheck size={32} />
-          </Placeholder>
+          <UsersEmpty title="Никого не найдено" description="Смени фильтр или запрос." />
         ) : (
-          <Section
-            footer={
-              data?.summary
-                ? `Всего: ${data.summary.total} · покупатели: ${data.summary.buyers} · админы: ${data.summary.admins} · бан: ${data.summary.banned}`
-                : undefined
-            }
-          >
+          <div className="grid gap-3 lg:grid-cols-2">
             {users.map((user) => (
-              <Cell
-                key={user.id}
-                multiline
-                titleBadge={
-                  user.isBanned ? (
-                    <Badge type="number" mode="critical">Бан</Badge>
-                  ) : user.role === "ADMIN" ? (
-                    <Badge type="number" mode="secondary">Админ</Badge>
-                  ) : undefined
-                }
-                subtitle={user.username ? `@${user.username}` : `tg:${user.telegramId}`}
-                description={`${user.activeOrderCount} активных заказов`}
-                after={<Button size="s" mode="bezeled">Открыть</Button>}
-                onClick={() => setSelectedUserId(user.id)}
-              >
-                {[user.firstName, user.lastName || ""].join(" ").trim()}
-              </Cell>
+              <Card key={user.id} size="sm">
+                <CardHeader>
+                  <Avatar size="lg">
+                    {user.photoUrl ? <AvatarImage src={user.photoUrl} alt={user.firstName} /> : null}
+                    <AvatarFallback>{user.firstName.slice(0, 1)}</AvatarFallback>
+                  </Avatar>
+                  <CardTitle className="truncate">{[user.firstName, user.lastName || ""].join(" ").trim()}</CardTitle>
+                  <CardDescription>{user.username ? `@${user.username}` : `tg:${user.telegramId}`}</CardDescription>
+                  <CardAction>
+                    {user.isBanned ? (
+                      <Badge variant="destructive">Бан</Badge>
+                    ) : user.role === "ADMIN" ? (
+                      <Badge variant="secondary">Админ</Badge>
+                    ) : null}
+                  </CardAction>
+                </CardHeader>
+                <CardContent className="flex items-center justify-between text-sm text-muted-foreground">
+                  <span>{user.activeOrderCount} активных заказов</span>
+                  <span>ID {user.telegramId}</span>
+                </CardContent>
+                <CardFooter>
+                  <Button size="sm" variant="secondary" onClick={() => setSelectedUserId(user.id)}>
+                    Открыть
+                  </Button>
+                </CardFooter>
+              </Card>
             ))}
-          </Section>
+          </div>
         )}
 
         {data?.pageInfo?.hasMore ? (
-          <Button stretched mode="bezeled" onClick={() => setPage((current) => current + 1)}>
+          <Button variant="secondary" onClick={() => setPage((current) => current + 1)}>
             Показать ещё
           </Button>
         ) : null}
       </ScreenBody>
 
       {selectedUser ? (
-        <UserDetailsSheet
+        <UserDetailsDialog
           userId={selectedUser.id}
           fallbackUser={selectedUser}
           moderationPending={moderationMutation.isPending}
@@ -160,40 +179,46 @@ export function AdminUsersScreen() {
         />
       ) : null}
 
-      <Modal
+      <Dialog
         open={Boolean(banDraft)}
         onOpenChange={(open) => {
           if (!open && !moderationMutation.isPending) setBanDraft(null)
         }}
-        header={<Modal.Header>Блокировка пользователя</Modal.Header>}
       >
-        <Section footer="Все активные неоплаченные заказы пользователя будут отменены.">
-          <Cell before={<Ban size={24} />} subtitle={banDraft?.name}>
-            Забанить пользователя?
-          </Cell>
-        </Section>
-        <div className="grid gap-2 p-4 sm:grid-cols-2">
-          <Button stretched mode="gray" onClick={() => setBanDraft(null)}>
-            Отмена
-          </Button>
-          <Button
-            stretched
-            mode="outline"
-            loading={moderationMutation.isPending}
-            onClick={() => {
-              if (!banDraft) return
-              moderationMutation.mutate({ id: banDraft.id, isBanned: true })
-            }}
-          >
-            Забанить
-          </Button>
-        </div>
-      </Modal>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Блокировка пользователя</DialogTitle>
+            <DialogDescription>Все активные неоплаченные заказы пользователя будут отменены.</DialogDescription>
+          </DialogHeader>
+          <Card size="sm">
+            <CardHeader>
+              <Ban className="size-5 text-muted-foreground" />
+              <CardTitle>Забанить пользователя?</CardTitle>
+              <CardDescription>{banDraft?.name}</CardDescription>
+            </CardHeader>
+          </Card>
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setBanDraft(null)}>
+              Отмена
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={moderationMutation.isPending}
+              onClick={() => {
+                if (!banDraft) return
+                moderationMutation.mutate({ id: banDraft.id, isBanned: true })
+              }}
+            >
+              Забанить
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Screen>
   )
 }
 
-function UserDetailsSheet({
+function UserDetailsDialog({
   userId,
   fallbackUser,
   moderationPending,
@@ -215,66 +240,93 @@ function UserDetailsSheet({
   const user = detailedUser ?? fallbackUser
 
   return (
-    <Modal open onOpenChange={(open) => !open && onClose()} header={<Modal.Header>{[user.firstName, user.lastName || ""].join(" ").trim()}</Modal.Header>}>
-      {userQuery.isLoading && !detailedUser ? (
-        <Placeholder header="Загружаю пользователя" />
-      ) : (
-        <>
-          <Section header="Профиль">
-            <Cell subtitle={user.username ? `@${user.username}` : `tg:${user.telegramId}`}>
-              Telegram
-            </Cell>
-            <Cell
-              titleBadge={user.isBanned ? <Badge type="number" mode="critical">Бан</Badge> : undefined}
-              subtitle={user.role === "ADMIN" ? "Администратор" : "Покупатель"}
-            >
-              Доступ
-            </Cell>
-            <Cell subtitle={String(user.activeOrderCount)}>Активные заказы</Cell>
-          </Section>
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-h-[92dvh] overflow-y-auto sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>{[user.firstName, user.lastName || ""].join(" ").trim()}</DialogTitle>
+          <DialogDescription>{user.username ? `@${user.username}` : `tg:${user.telegramId}`}</DialogDescription>
+        </DialogHeader>
+        {userQuery.isLoading && !detailedUser ? (
+          <UsersEmpty title="Загружаю пользователя" description="Подтягиваю профиль и историю." />
+        ) : (
+          <>
+            <Card size="sm">
+              <CardHeader>
+                <Avatar size="lg">
+                  {user.photoUrl ? <AvatarImage src={user.photoUrl} alt={user.firstName} /> : null}
+                  <AvatarFallback>{user.firstName.slice(0, 1)}</AvatarFallback>
+                </Avatar>
+                <CardTitle>Профиль</CardTitle>
+                <CardDescription>
+                  {user.role === "ADMIN" ? "Администратор" : "Покупатель"} · {user.activeOrderCount} активных заказов
+                </CardDescription>
+                <CardAction>
+                  {user.isBanned ? <Badge variant="destructive">Бан</Badge> : null}
+                </CardAction>
+              </CardHeader>
+            </Card>
 
-          <Section header="История заказов">
-            {user.orders.length > 0 ? (
-              user.orders.map((order) => (
-                <Link key={order.id} href={`/orders/${order.id}`}>
-                  <Cell
-                    multiline
-                    before={<History size={22} />}
-                    subtitle={[
-                      `#${order.number}`,
-                      order.productCategory,
-                      order.priceRub ? `${order.priceRub.toLocaleString("ru-RU")} ₽` : null,
-                    ]
-                      .filter(Boolean)
-                      .join(" · ")}
-                    after={renderOrderStatus(order.status, order.isPaid)}
-                  >
-                    {order.productTitle || `Заказ #${order.number}`}
-                  </Cell>
-                </Link>
-              ))
-            ) : (
-              <Cell>Заказов пока нет</Cell>
-            )}
-          </Section>
+            <Card size="sm">
+              <CardHeader>
+                <CardTitle>История заказов</CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-2">
+                {user.orders.length > 0 ? (
+                  user.orders.map((order) => (
+                    <Link key={order.id} href={`/orders/${order.id}`} className="rounded-3xl bg-input/50 p-3">
+                      <div className="flex items-center gap-2 text-sm font-medium">
+                        <History className="size-4 text-muted-foreground" />
+                        {order.productTitle || `Заказ #${order.number}`}
+                      </div>
+                      <div className="mt-1 text-xs text-muted-foreground">
+                        #{order.number}
+                        {order.productCategory ? ` · ${order.productCategory}` : ""}
+                        {order.priceRub ? ` · ${order.priceRub.toLocaleString("ru-RU")} ₽` : ""}
+                        {" · "}
+                        {renderOrderStatus(order.status, order.isPaid)}
+                      </div>
+                    </Link>
+                  ))
+                ) : (
+                  <div className="text-sm text-muted-foreground">Заказов пока нет</div>
+                )}
+              </CardContent>
+            </Card>
 
-          <div className="grid gap-2 p-4 sm:grid-cols-2">
-            <Button stretched mode="gray" onClick={onClose}>
-              Закрыть
-            </Button>
-            <Button
-              stretched
-              mode={user.isBanned ? "bezeled" : "outline"}
-              loading={moderationPending}
-              disabled={user.role === "ADMIN"}
-              onClick={onToggleBan}
-            >
-              {user.role === "ADMIN" ? "Админ" : user.isBanned ? "Снять бан" : "Забанить"}
-            </Button>
-          </div>
-        </>
-      )}
-    </Modal>
+            <DialogFooter>
+              <Button variant="secondary" onClick={onClose}>
+                Закрыть
+              </Button>
+              <Button
+                variant={user.isBanned ? "secondary" : "destructive"}
+                disabled={moderationPending || user.role === "ADMIN"}
+                onClick={onToggleBan}
+              >
+                {user.role === "ADMIN" ? "Админ" : user.isBanned ? "Снять бан" : "Забанить"}
+              </Button>
+            </DialogFooter>
+          </>
+        )}
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function UsersEmpty({ title, description }: { title: string; description: string }) {
+  return (
+    <Card>
+      <CardContent>
+        <Empty>
+          <EmptyMedia variant="icon">
+            <ShieldCheck />
+          </EmptyMedia>
+          <EmptyHeader>
+            <EmptyTitle>{title}</EmptyTitle>
+            <EmptyDescription>{description}</EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      </CardContent>
+    </Card>
   )
 }
 

@@ -1,8 +1,5 @@
 "use client"
 
-import "@telegram-apps/telegram-ui/dist/styles.css"
-
-import { AppRoot } from "@telegram-apps/telegram-ui"
 import {
   backButton,
   init,
@@ -27,7 +24,6 @@ const TelegramContext = createContext<TelegramContextValue>({
 
 export function TelegramProvider({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false)
-  const [appearance, setAppearance] = useState<"dark" | "light">("dark")
 
   useEffect(() => {
     const telegram = isTMA()
@@ -40,6 +36,10 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
 
       if (telegram && themeParams.bindCssVars.isAvailable()) {
         themeParams.bindCssVars()
+      }
+
+      if (telegram && miniApp.bindCssVars.isAvailable()) {
+        miniApp.bindCssVars()
       }
 
       if (telegram && miniApp.mount.isAvailable()) {
@@ -80,11 +80,7 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      if (themeParams.isDark()) {
-        setAppearance("dark")
-      } else {
-        setAppearance("light")
-      }
+      document.documentElement.classList.toggle("dark", !telegram || themeParams.isDark())
     } finally {
       setReady(true)
     }
@@ -104,9 +100,7 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <TelegramContext.Provider value={value}>
-      <AppRoot appearance={appearance} platform="base">
-        {children}
-      </AppRoot>
+      {children}
     </TelegramContext.Provider>
   )
 }

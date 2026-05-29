@@ -3,9 +3,25 @@
 import Link from "next/link"
 import { useMemo, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
-import { Badge, Cell, Placeholder, Section, SegmentedControl } from "@telegram-apps/telegram-ui"
 import { Clock3, Receipt } from "lucide-react"
 
+import { Badge } from "@/components/ui/badge"
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
 import { getMe, getOrders } from "@/lib/api"
 
@@ -51,65 +67,77 @@ export function AdminOrdersScreen() {
       <ScreenHeader title="Заказы" subtitle="Очередь продавца" />
 
       {isLoading ? (
-        <Placeholder header="Загружаю заказы" description="Подтягиваю очередь продавца.">
-          <Clock3 size={32} />
-        </Placeholder>
+        <OrdersEmpty title="Загружаю заказы" description="Подтягиваю очередь продавца." />
       ) : isError ? (
-        <Placeholder header="Очередь не загрузилась" description="Обнови экран или попробуй позже.">
-          <Clock3 size={32} />
-        </Placeholder>
+        <OrdersEmpty title="Очередь не загрузилась" description="Обнови экран или попробуй позже." />
       ) : orders.length === 0 ? (
-        <Placeholder header="Заказов нет" description="Новые покупки появятся здесь.">
-          <Clock3 size={32} />
-        </Placeholder>
+        <OrdersEmpty title="Заказов нет" description="Новые покупки появятся здесь." />
       ) : (
-        <ScreenBody className="gap-3">
-          <SegmentedControl>
-            {[
-              { key: "all" as const, label: "Все" },
-              { key: "waiting" as const, label: "Оплата" },
-              { key: "review" as const, label: "Проверка" },
-              { key: "work" as const, label: "Выдача" },
-              { key: "closed" as const, label: "История" },
-            ].map((item) => (
-              <SegmentedControl.Item
-                key={item.key}
-                selected={filter === item.key}
-                onClick={() => setFilter(item.key)}
-              >
-                {item.label}
-              </SegmentedControl.Item>
-            ))}
-          </SegmentedControl>
+        <ScreenBody>
+          <Tabs value={filter} onValueChange={(value) => setFilter(value as FilterKey)}>
+            <TabsList className="w-full">
+              {[
+                { key: "all" as const, label: "Все" },
+                { key: "waiting" as const, label: "Оплата" },
+                { key: "review" as const, label: "Проверка" },
+                { key: "work" as const, label: "Выдача" },
+                { key: "closed" as const, label: "История" },
+              ].map((item) => (
+                <TabsTrigger key={item.key} value={item.key}>
+                  {item.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
 
           {visibleOrders.length === 0 ? (
-            <Placeholder header="Пусто" description="Для этого фильтра сейчас ничего нет." />
+            <OrdersEmpty title="Пусто" description="Для этого фильтра сейчас ничего нет." />
           ) : (
-            <Section>
+            <div className="flex flex-col gap-3">
               {visibleOrders.map((order) => (
                 <Link key={order.id} href={`/orders/${order.id}`}>
-                  <Cell
-                    multiline
-                    before={<Receipt size={24} />}
-                    titleBadge={<OrderBadge order={order} />}
-                    subtitle={[
-                      `#${order.number}`,
-                      order.productCategory,
-                      order.paymentMethodTitle,
-                    ]
-                      .filter(Boolean)
-                      .join(" · ")}
-                    description={renderSummary(order)}
-                  >
-                    {order.productTitle || order.subject}
-                  </Cell>
+                  <Card size="sm">
+                    <CardHeader>
+                      <CardTitle className="truncate">{order.productTitle || order.subject}</CardTitle>
+                      <CardDescription>
+                        #{order.number}
+                        {order.productCategory ? ` · ${order.productCategory}` : ""}
+                        {order.paymentMethodTitle ? ` · ${order.paymentMethodTitle}` : ""}
+                      </CardDescription>
+                      <CardAction>
+                        <OrderBadge order={order} />
+                      </CardAction>
+                    </CardHeader>
+                    <CardContent className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Receipt className="size-4" />
+                      {renderSummary(order)}
+                    </CardContent>
+                  </Card>
                 </Link>
               ))}
-            </Section>
+            </div>
           )}
         </ScreenBody>
       )}
     </Screen>
+  )
+}
+
+function OrdersEmpty({ title, description }: { title: string; description: string }) {
+  return (
+    <Card>
+      <CardContent>
+        <Empty>
+          <EmptyMedia variant="icon">
+            <Clock3 />
+          </EmptyMedia>
+          <EmptyHeader>
+            <EmptyTitle>{title}</EmptyTitle>
+            <EmptyDescription>{description}</EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      </CardContent>
+    </Card>
   )
 }
 
@@ -118,10 +146,10 @@ function OrderBadge({
 }: {
   order: Awaited<ReturnType<typeof getOrders>>["orders"][number]
 }) {
-  if (order.status === "PAYMENT_REVIEW") return <Badge type="number" mode="primary">!</Badge>
-  if (order.status === "CANCELLED") return <Badge type="number" mode="critical">×</Badge>
-  if (!order.isPaid) return <Badge type="number" mode="gray">₽</Badge>
-  return <Badge type="number" mode="secondary">✓</Badge>
+  if (order.status === "PAYMENT_REVIEW") return <Badge>Проверка</Badge>
+  if (order.status === "CANCELLED") return <Badge variant="destructive">Отменён</Badge>
+  if (!order.isPaid) return <Badge variant="secondary">Оплата</Badge>
+  return <Badge variant="outline">Оплачен</Badge>
 }
 
 function renderSummary(order: Awaited<ReturnType<typeof getOrders>>["orders"][number]) {

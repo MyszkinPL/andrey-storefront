@@ -31,8 +31,8 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="ru" suppressHydrationWarning>
-      <body className="min-h-dvh bg-[var(--tgui--bg_color)]">
+    <html lang="ru" suppressHydrationWarning className="dark font-sans">
+      <body className="min-h-dvh bg-background text-foreground">
         <Script
           src="https://telegram.org/js/telegram-web-app.js"
           strategy="beforeInteractive"
