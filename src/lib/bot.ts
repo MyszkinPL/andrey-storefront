@@ -23,7 +23,6 @@ export function getBot() {
   }
 
   bot.command("orders", replyWithOrders)
-  bot.command("tickets", replyWithOrders)
 
   bot.command("help", async (ctx) => {
     await ctx.reply(

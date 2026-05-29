@@ -1,5 +1,5 @@
-import { TicketsScreen } from "@/components/screens/tickets-screen"
+import { OrdersScreen } from "@/components/screens/orders-screen"
 
 export default function OrdersPage() {
-  return <TicketsScreen />
+  return <OrdersScreen />
 }

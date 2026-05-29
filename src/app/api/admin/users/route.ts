@@ -47,7 +47,7 @@ export async function GET(request: Request) {
         skip: (query.page - 1) * query.limit,
         take: query.limit,
         include: {
-          tickets: {
+          orders: {
             where: {
               productId: { not: null },
             },
@@ -111,20 +111,20 @@ export async function GET(request: Request) {
         isBanned: user.isBanned,
         bannedAt: user.bannedAt?.toISOString() || null,
         banReason: user.banReason,
-        activeOrderCount: user.tickets.filter(
-          (ticket) => !["CLOSED", "CANCELLED"].includes(ticket.status),
+        activeOrderCount: user.orders.filter(
+          (order) => !["CLOSED", "CANCELLED"].includes(order.status),
         ).length,
         createdAt: user.createdAt.toISOString(),
-        orders: user.tickets.map((ticket) => ({
-          id: ticket.id,
-          number: ticket.number,
-          status: ticket.status,
-          isPaid: ticket.isPaid,
-          createdAt: ticket.createdAt.toISOString(),
-          updatedAt: ticket.updatedAt.toISOString(),
-          productTitle: ticket.product?.title || null,
-          productCategory: ticket.product?.category || null,
-          priceRub: ticket.product?.priceRub || null,
+        orders: user.orders.map((order) => ({
+          id: order.id,
+          number: order.number,
+          status: order.status,
+          isPaid: order.isPaid,
+          createdAt: order.createdAt.toISOString(),
+          updatedAt: order.updatedAt.toISOString(),
+          productTitle: order.product?.title || null,
+          productCategory: order.product?.category || null,
+          priceRub: order.product?.priceRub || null,
         })),
       })),
     })

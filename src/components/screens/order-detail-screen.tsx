@@ -18,23 +18,23 @@ import {
 } from "lucide-react"
 
 import {
-  cancelOwnTicket,
-  changeTicketPaymentMethod,
-  confirmTicketPayment,
-  deleteAdminTicket,
+  cancelOwnOrder,
+  changeOrderPaymentMethod,
+  confirmOrderPayment,
+  deleteAdminOrder,
   getMe,
   getPaymentMethods,
-  getTicket,
-  markManualTicketPaid,
-  rejectManualTicketPayment,
+  getOrder,
+  markManualOrderPaid,
+  rejectManualOrderPayment,
   refreshCryptoInvoice,
 } from "@/lib/api"
 import { useMode } from "@/components/mode-provider"
-import { Screen, ScreenEmpty, ScreenHeader } from "@/components/screen"
+import { Screen, ScreenEmpty } from "@/components/screen"
 import { useBackButton } from "@/hooks/use-telegram"
 import { cn } from "@/lib/cn"
 
-export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
+export function OrderDetailScreen({ orderId }: { orderId: string }) {
   const router = useRouter()
   const queryClient = useQueryClient()
   const { mode } = useMode()
@@ -53,14 +53,14 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
     enabled: true,
   })
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["ticket", ticketId],
-    queryFn: () => getTicket(ticketId),
+    queryKey: ["order", orderId],
+    queryFn: () => getOrder(orderId),
     refetchInterval: 10_000,
   })
 
   async function invalidate() {
-    await queryClient.invalidateQueries({ queryKey: ["ticket", ticketId] })
-    await queryClient.invalidateQueries({ queryKey: ["tickets"] })
+    await queryClient.invalidateQueries({ queryKey: ["order", orderId] })
+    await queryClient.invalidateQueries({ queryKey: ["orders"] })
   }
 
   async function copyValue(value: string, field: "payment" | "key") {
@@ -72,29 +72,29 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
   }
 
   const paymentMutation = useMutation({
-    mutationFn: () => confirmTicketPayment(ticketId),
+    mutationFn: () => confirmOrderPayment(orderId),
     onSuccess: invalidate,
   })
   const rejectManualPaymentMutation = useMutation({
-    mutationFn: () => rejectManualTicketPayment(ticketId),
+    mutationFn: () => rejectManualOrderPayment(orderId),
     onSuccess: invalidate,
   })
   const cancelOrderMutation = useMutation({
-    mutationFn: () => cancelOwnTicket(ticketId),
+    mutationFn: () => cancelOwnOrder(orderId),
     onSuccess: invalidate,
   })
   const refreshMutation = useMutation({
-    mutationFn: () => refreshCryptoInvoice(ticketId),
+    mutationFn: () => refreshCryptoInvoice(orderId),
     onSuccess: invalidate,
   })
   const markManualPaidMutation = useMutation({
-    mutationFn: () => markManualTicketPaid(ticketId),
+    mutationFn: () => markManualOrderPaid(orderId),
     onSuccess: invalidate,
   })
   const changePaymentMethodMutation = useMutation({
     mutationFn: (payload: { paymentMethodId?: string; paymentMethodType?: PaymentMethodType }) =>
-      changeTicketPaymentMethod(
-        ticketId,
+      changeOrderPaymentMethod(
+        orderId,
         payload.paymentMethodId
           ? { paymentMethodId: payload.paymentMethodId }
           : { paymentMethodType: "CRYPTO_PAY" },
@@ -105,10 +105,10 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
       setDraftPaymentKey(null)
     },
   })
-  const deleteTicketMutation = useMutation({
-    mutationFn: () => deleteAdminTicket(ticketId),
+  const deleteOrderMutation = useMutation({
+    mutationFn: () => deleteAdminOrder(orderId),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["tickets"] })
+      await queryClient.invalidateQueries({ queryKey: ["orders"] })
       router.push("/admin/orders")
     },
   })
@@ -153,7 +153,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
     )
   }
 
-  if (isError || !data?.ticket) {
+  if (isError || !data?.order) {
     return (
       <Screen noTabBar>
         <ScreenEmpty
@@ -165,45 +165,44 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
     )
   }
 
-  const ticket = data.ticket
-  const isSupportFlow = !ticket.productTitle && !ticket.paymentMethodTitle
+  const order = data.order
   const isBuyerView = mode === "buyer"
-  const isRealBuyerView = isBuyerView && ticket.isOwner
-  const isClosed = ["CLOSED", "CANCELLED"].includes(ticket.status)
+  const isRealBuyerView = isBuyerView && order.isOwner
+  const isClosed = ["CLOSED", "CANCELLED"].includes(order.status)
   const supportLink = meData?.settings.supportUsername
     ? `https://t.me/${meData.settings.supportUsername.replace(/^@/, "")}`
     : null
-  const createdAtLabel = format(new Date(ticket.createdAt), "dd MMMM · HH:mm", {
+  const createdAtLabel = format(new Date(order.createdAt), "dd MMMM · HH:mm", {
     locale: ru,
   })
-  const paymentStateLabel = ticket.isPaid
+  const paymentStateLabel = order.isPaid
     ? "Оплачено"
-    : ticket.status === "PAYMENT_REVIEW"
+    : order.status === "PAYMENT_REVIEW"
       ? "На проверке"
-        : ticket.status === "CANCELLED"
+        : order.status === "CANCELLED"
           ? "Отменён"
           : "Ожидает оплату"
-  const adminToolsVisible = ticket.isAdmin && mode === "admin"
+  const adminToolsVisible = order.isAdmin && mode === "admin"
   const canConfirmManualPayment =
     adminToolsVisible &&
-    ticket.paymentMethodType === "MANUAL" &&
-    ticket.status === "PAYMENT_REVIEW" &&
-    !ticket.isPaid
+    order.paymentMethodType === "MANUAL" &&
+    order.status === "PAYMENT_REVIEW" &&
+    !order.isPaid
   const canRefreshCryptoPayment =
-    ticket.paymentMethodType === "CRYPTO_PAY" && !ticket.isPaid && !isClosed
+    order.paymentMethodType === "CRYPTO_PAY" && !order.isPaid && !isClosed
   const canSwitchPaymentMethod =
     isRealBuyerView &&
-    !ticket.isPaid &&
+    !order.isPaid &&
     !isClosed &&
-    !ticket.manualPaymentRequestedAt &&
+    !order.manualPaymentRequestedAt &&
     paymentOptions.length > 1
-  const amountLabel = ticket.cryptoInvoiceAmount
-    ? `${ticket.cryptoInvoiceAmount} ${ticket.cryptoInvoiceFiat || "RUB"}`
+  const amountLabel = order.cryptoInvoiceAmount
+    ? `${order.cryptoInvoiceAmount} ${order.cryptoInvoiceFiat || "RUB"}`
     : null
   const currentPaymentKey =
-    ticket.paymentMethodType === "MANUAL" && ticket.paymentMethodId
-      ? `manual:${ticket.paymentMethodId}`
-      : ticket.paymentMethodType === "CRYPTO_PAY"
+    order.paymentMethodType === "MANUAL" && order.paymentMethodId
+      ? `manual:${order.paymentMethodId}`
+      : order.paymentMethodType === "CRYPTO_PAY"
         ? "crypto:auto"
         : null
   const selectedDraftPayment =
@@ -212,51 +211,25 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
     {
       label: "Оплата",
       active: true,
-      done: ticket.isPaid,
+      done: order.isPaid,
     },
     {
-      label: ticket.deliveredKey ? "Ключ" : "Выдача",
-      active: ticket.isPaid,
-      done: Boolean(ticket.deliveredKey) || ticket.status === "CLOSED",
+      label: order.deliveredKey ? "Ключ" : "Выдача",
+      active: order.isPaid,
+      done: Boolean(order.deliveredKey) || order.status === "CLOSED",
     },
     {
       label: "Готово",
-      active: ticket.status === "CLOSED" || Boolean(ticket.deliveredKey),
-      done: ticket.status === "CLOSED" || Boolean(ticket.deliveredKey),
+      active: order.status === "CLOSED" || Boolean(order.deliveredKey),
+      done: order.status === "CLOSED" || Boolean(order.deliveredKey),
     },
   ]
 
-  if (isSupportFlow) {
-    return (
-      <Screen noTabBar>
-        <ScreenHeader title="Поддержка" subtitle="Поддержка перенесена в Telegram" />
-        <div className="grid gap-3 px-4 pb-3">
-          <section className="ui-card p-4">
-            <p className="text-sm font-semibold text-[var(--color-text)]">Поддержка в Telegram</p>
-            <p className="mt-2 text-sm leading-6 text-[var(--color-muted)]">
-              Для связи с продавцом используется Telegram.
-            </p>
-            {supportLink ? (
-              <a
-                href={supportLink}
-                target="_blank"
-                rel="noreferrer"
-                className="mt-4 inline-flex items-center justify-center rounded-[18px] bg-[var(--color-accent)] px-4 py-2.5 text-sm font-semibold text-[var(--color-accent-text)]"
-              >
-                Открыть Telegram
-              </a>
-            ) : null}
-          </section>
-        </div>
-      </Screen>
-    )
-  }
-
   const showManualWaitingCard =
-    ticket.paymentMethodType === "MANUAL" && ticket.manualPaymentRequestedAt && !ticket.isPaid
+    order.paymentMethodType === "MANUAL" && order.manualPaymentRequestedAt && !order.isPaid
   const showPaymentDetailsCard =
-    (ticket.paymentMethodType === "CRYPTO_PAY" && Boolean(ticket.cryptoInvoiceUrl) && !ticket.isPaid) ||
-    (ticket.paymentMethodType === "MANUAL" && Boolean(ticket.paymentMethodDetails) && !ticket.isPaid)
+    (order.paymentMethodType === "CRYPTO_PAY" && Boolean(order.cryptoInvoiceUrl) && !order.isPaid) ||
+    (order.paymentMethodType === "MANUAL" && Boolean(order.paymentMethodDetails) && !order.isPaid)
 
   return (
     <Screen noTabBar className="pt-3">
@@ -266,22 +239,22 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
             <div className="px-5 py-6 sm:px-8 sm:py-8">
               <div className="flex flex-col items-center text-center">
                 <p className="text-2xl font-semibold tracking-[-0.03em] text-[var(--color-text)]">
-                  {ticket.productTitle || ticket.subject}
+                  {order.productTitle || order.subject}
                 </p>
                 <div className="mt-2">
                   <HeaderMetaRow
                     items={[
-                      `#${ticket.number}`,
+                      `#${order.number}`,
                       createdAtLabel,
-                      ticket.productCategory || null,
+                      order.productCategory || null,
                     ]}
                   />
                 </div>
 
                 <div className="mt-5">
                   <PaymentMethodIcon
-                    iconDataUrl={ticket.paymentMethodIconDataUrl}
-                    title={ticket.paymentMethodTitle || "PM"}
+                    iconDataUrl={order.paymentMethodIconDataUrl}
+                    title={order.paymentMethodTitle || "PM"}
                     large
                   />
                 </div>
@@ -290,7 +263,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                   {paymentStateLabel}
                 </p>
                 <p className="mt-2 text-sm text-[var(--color-muted)]">
-                  {ticket.paymentMethodTitle || "Способ оплаты"}
+                  {order.paymentMethodTitle || "Способ оплаты"}
                 </p>
                 {amountLabel ? (
                   <p className="mt-3 text-3xl font-semibold leading-none text-[var(--color-text)] sm:text-[2.6rem]">
@@ -333,7 +306,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
 
               {adminToolsVisible ? (
                 <div className="mt-6 grid gap-3">
-                  {ticket.createdBy ? (
+                  {order.createdBy ? (
                     <div className="rounded-[20px] border border-[var(--color-border)] bg-[var(--color-bg)] p-4">
                       <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-muted)]">
                         Покупатель
@@ -341,14 +314,14 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                       <div className="mt-2 flex items-center justify-between gap-3">
                         <div className="min-w-0">
                           <p className="truncate text-sm font-semibold text-[var(--color-text)]">
-                            {ticket.createdBy.firstName}
+                            {order.createdBy.firstName}
                           </p>
                           <p className="mt-0.5 truncate text-xs text-[var(--color-muted)]">
-                            {ticket.createdBy.username ? `@${ticket.createdBy.username}` : "Без username"}
+                            {order.createdBy.username ? `@${order.createdBy.username}` : "Без username"}
                           </p>
                         </div>
                         <div className="rounded-full bg-[var(--color-surface)] px-3 py-1.5 text-[11px] text-[var(--color-text)]">
-                          {ticket.paymentMethodType === "MANUAL" ? "Ручная оплата" : "Crypto Bot"}
+                          {order.paymentMethodType === "MANUAL" ? "Ручная оплата" : "Crypto Bot"}
                         </div>
                       </div>
                     </div>
@@ -368,7 +341,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                           {paymentMutation.isPending ? "Подтверждаю..." : "Подтвердить оплату"}
                         </button>
                       ) : null}
-                      {ticket.status === "PAYMENT_REVIEW" && ticket.paymentMethodType === "MANUAL" ? (
+                      {order.status === "PAYMENT_REVIEW" && order.paymentMethodType === "MANUAL" ? (
                         <button
                           onClick={() => rejectManualPaymentMutation.mutate()}
                           disabled={rejectManualPaymentMutation.isPending}
@@ -389,11 +362,11 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                       ) : null}
                       <button
                         onClick={() => setIsDeleteModalOpen(true)}
-                        disabled={deleteTicketMutation.isPending}
+                        disabled={deleteOrderMutation.isPending}
                         className="inline-flex items-center gap-2 rounded-full bg-[var(--color-destructive)]/14 px-4 py-2 text-sm font-medium text-[var(--color-destructive)] disabled:opacity-60"
                       >
                         <Trash2 size={14} />
-                        {deleteTicketMutation.isPending ? "Удаляю..." : "Удалить"}
+                        {deleteOrderMutation.isPending ? "Удаляю..." : "Удалить"}
                       </button>
                     </div>
                   </div>
@@ -406,7 +379,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                     <div className="min-w-0">
                       <p className="text-sm font-semibold text-[var(--color-text)]">Способ оплаты</p>
                       <p className="mt-1 truncate text-xs text-[var(--color-muted)]">
-                        {ticket.paymentMethodTitle || "Не выбран"}
+                        {order.paymentMethodTitle || "Не выбран"}
                       </p>
                     </div>
                     <button
@@ -425,11 +398,11 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
 
               {showPaymentDetailsCard ? (
                 <div className="mt-6 rounded-[24px] border border-[var(--color-border)] bg-[var(--color-bg)] p-3.5 sm:p-4">
-                  {ticket.paymentMethodType === "CRYPTO_PAY" && ticket.cryptoInvoiceUrl ? (
+                  {order.paymentMethodType === "CRYPTO_PAY" && order.cryptoInvoiceUrl ? (
                     <div className="grid gap-3">
-                      {!ticket.isPaid ? (
+                      {!order.isPaid ? (
                         <a
-                          href={ticket.cryptoInvoiceUrl}
+                          href={order.cryptoInvoiceUrl}
                           target="_blank"
                           rel="noreferrer"
                           className="flex min-h-12 items-center justify-center gap-2 rounded-[18px] bg-[var(--color-accent)] px-4 py-3 text-sm font-semibold text-[var(--color-accent-text)]"
@@ -439,21 +412,21 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                         </a>
                       ) : null}
                     </div>
-                  ) : ticket.paymentMethodDetails && !ticket.isPaid ? (
+                  ) : order.paymentMethodDetails && !order.isPaid ? (
                     <div className="grid gap-3">
                       <div className="flex items-center justify-between gap-3">
                         <p className="text-sm font-semibold text-[var(--color-text)]">Реквизиты</p>
                         <CopyButton
                           copied={copiedField === "payment"}
-                          onClick={() => copyValue(ticket.paymentMethodDetails || "", "payment")}
+                          onClick={() => copyValue(order.paymentMethodDetails || "", "payment")}
                         />
                       </div>
                       <p className="break-all rounded-[18px] bg-[var(--color-surface)] px-4 py-4 text-sm leading-6 text-[var(--color-text)]">
-                        {ticket.paymentMethodDetails}
+                        {order.paymentMethodDetails}
                       </p>
-                      {ticket.paymentMethodType === "MANUAL" &&
-                      !ticket.isPaid &&
-                      !ticket.manualPaymentRequestedAt &&
+                      {order.paymentMethodType === "MANUAL" &&
+                      !order.isPaid &&
+                      !order.manualPaymentRequestedAt &&
                       isRealBuyerView &&
                       !isClosed ? (
                         <button
@@ -470,17 +443,17 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                 </div>
               ) : null}
 
-              {ticket.deliveredKey ? (
+              {order.deliveredKey ? (
                 <div className="mt-5 rounded-[24px] border border-[var(--color-border)] bg-[var(--color-bg)] p-4">
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-sm font-semibold text-[var(--color-text)]">Выданный ключ</p>
                     <CopyButton
                       copied={copiedField === "key"}
-                      onClick={() => copyValue(ticket.deliveredKey || "", "key")}
+                      onClick={() => copyValue(order.deliveredKey || "", "key")}
                     />
                   </div>
                   <p className="mt-3 break-all rounded-[18px] bg-[var(--color-surface)] px-4 py-4 font-mono text-sm text-[var(--color-text)]">
-                    {ticket.deliveredKey}
+                    {order.deliveredKey}
                   </p>
                 </div>
               ) : null}
@@ -497,7 +470,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
               ) : null}
 
               <div className="mt-5 grid gap-2 sm:grid-cols-2">
-                {ticket.isPaid && supportLink && isRealBuyerView ? (
+                {order.isPaid && supportLink && isRealBuyerView ? (
                   <a
                     href={supportLink}
                     target="_blank"
@@ -508,7 +481,7 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
                   </a>
                 ) : null}
 
-                {isRealBuyerView && !ticket.isPaid && !isClosed ? (
+                {isRealBuyerView && !order.isPaid && !isClosed ? (
                   <button
                     type="button"
                     onClick={() => cancelOrderMutation.mutate()}
@@ -526,13 +499,13 @@ export function TicketDetailScreen({ ticketId }: { ticketId: string }) {
 
       {isDeleteModalOpen ? (
         <ConfirmDeleteModal
-          loading={deleteTicketMutation.isPending}
+          loading={deleteOrderMutation.isPending}
           onClose={() => {
-            if (deleteTicketMutation.isPending) return
+            if (deleteOrderMutation.isPending) return
             setIsDeleteModalOpen(false)
           }}
           onConfirm={() => {
-            deleteTicketMutation.mutate()
+            deleteOrderMutation.mutate()
           }}
         />
       ) : null}

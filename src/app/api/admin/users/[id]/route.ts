@@ -45,7 +45,7 @@ export async function PATCH(
     })
 
     if (payload.isBanned) {
-      const activeTickets = await prisma.ticket.findMany({
+      const activeOrders = await prisma.order.findMany({
         where: {
           createdById: id,
           productId: { not: null },
@@ -56,9 +56,9 @@ export async function PATCH(
         },
       })
 
-      if (activeTickets.length > 0) {
+      if (activeOrders.length > 0) {
         await prisma.$transaction(async (tx) => {
-          await tx.ticket.updateMany({
+          await tx.order.updateMany({
             where: {
               createdById: id,
               productId: { not: null },
@@ -93,7 +93,7 @@ export async function GET(
     const user = await prisma.user.findUnique({
       where: { id },
       include: {
-        tickets: {
+        orders: {
           where: {
             productId: { not: null },
           },
@@ -107,7 +107,7 @@ export async function GET(
         },
         _count: {
           select: {
-            tickets: {
+            orders: {
               where: {
                 productId: { not: null },
                 status: { notIn: ["CLOSED", "CANCELLED"] },
@@ -133,17 +133,17 @@ export async function GET(
         role: user.role,
         isBanned: user.isBanned,
         bannedAt: user.bannedAt?.toISOString() ?? null,
-        activeOrderCount: user._count.tickets,
+        activeOrderCount: user._count.orders,
         createdAt: user.createdAt.toISOString(),
-        orders: user.tickets.map((ticket) => ({
-          id: ticket.id,
-          number: ticket.number,
-          status: ticket.status,
-          isPaid: ticket.isPaid,
-          updatedAt: ticket.updatedAt.toISOString(),
-          productTitle: ticket.product?.title || null,
-          productCategory: ticket.product?.category || null,
-          priceRub: ticket.product?.priceRub || null,
+        orders: user.orders.map((order) => ({
+          id: order.id,
+          number: order.number,
+          status: order.status,
+          isPaid: order.isPaid,
+          updatedAt: order.updatedAt.toISOString(),
+          productTitle: order.product?.title || null,
+          productCategory: order.product?.category || null,
+          priceRub: order.product?.priceRub || null,
         })),
       },
     })

@@ -1,6 +1,6 @@
 "use client"
 
-import { Home, LifeBuoy, Settings, Shield, Store, Ticket, Users } from "lucide-react"
+import { Home, LifeBuoy, Receipt, Settings, Shield, Store, Users } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
@@ -10,7 +10,7 @@ import { cn } from "@/lib/cn"
 
 const BUYER_TABS = [
   { href: "/catalog", label: "Каталог", icon: Store },
-  { href: "/orders", label: "Заказы", icon: Ticket },
+  { href: "/orders", label: "Заказы", icon: Receipt },
   { href: "/profile", label: "Профиль", icon: LifeBuoy },
 ]
 

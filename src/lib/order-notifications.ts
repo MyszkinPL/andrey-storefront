@@ -12,7 +12,7 @@ function escapeHtml(value: string) {
 
 async function getOrderContext(orderId: string) {
   const [order, admins] = await Promise.all([
-    prisma.ticket.findUnique({
+    prisma.order.findUnique({
       where: { id: orderId },
       include: {
         product: true,

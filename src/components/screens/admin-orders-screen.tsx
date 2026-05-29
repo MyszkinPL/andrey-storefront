@@ -5,48 +5,48 @@ import { useMemo, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { CircleDashed, Clock3, Receipt, ShieldCheck } from "lucide-react"
 
-import { getMe, getTickets } from "@/lib/api"
+import { getMe, getOrders } from "@/lib/api"
 import { Screen, ScreenBody, ScreenEmpty, ScreenHeader } from "@/components/screen"
 import { cn } from "@/lib/cn"
 
 type FilterKey = "all" | "waiting" | "review" | "work" | "closed"
 
-export function AdminTicketsScreen() {
+export function AdminOrdersScreen() {
   const { data: meData } = useQuery({ queryKey: ["me"], queryFn: getMe })
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["tickets", "all"],
-    queryFn: () => getTickets({ scope: "all" }),
+    queryKey: ["orders", "all"],
+    queryFn: () => getOrders({ scope: "all" }),
     refetchInterval: 10_000,
   })
   const [filter, setFilter] = useState<FilterKey>("all")
 
-  const tickets = useMemo(() => (data?.tickets ?? []).filter((ticket) => !isSupport(ticket)), [data?.tickets])
+  const orders = useMemo(() => data?.orders ?? [], [data?.orders])
   const buckets = useMemo(() => {
-    const waiting = tickets.filter(
-      (ticket) =>
-        !ticket.isPaid &&
-        ticket.status !== "CLOSED" &&
-        ticket.status !== "CANCELLED" &&
-        ticket.status !== "PAYMENT_REVIEW",
+    const waiting = orders.filter(
+      (order) =>
+        !order.isPaid &&
+        order.status !== "CLOSED" &&
+        order.status !== "CANCELLED" &&
+        order.status !== "PAYMENT_REVIEW",
     )
-    const review = tickets.filter((ticket) => ticket.status === "PAYMENT_REVIEW")
-    const work = tickets.filter(
-      (ticket) =>
-        ticket.isPaid &&
-        !["CLOSED", "CANCELLED"].includes(ticket.status),
+    const review = orders.filter((order) => order.status === "PAYMENT_REVIEW")
+    const work = orders.filter(
+      (order) =>
+        order.isPaid &&
+        !["CLOSED", "CANCELLED"].includes(order.status),
     )
-    const closed = tickets.filter((ticket) => ["CLOSED", "CANCELLED"].includes(ticket.status))
+    const closed = orders.filter((order) => ["CLOSED", "CANCELLED"].includes(order.status))
 
     return {
-      all: tickets,
+      all: orders,
       waiting,
       review,
       work,
       closed,
     }
-  }, [tickets])
+  }, [orders])
 
-  const visibleTickets = buckets[filter]
+  const visibleOrders = buckets[filter]
 
   if (meData && meData.user.role !== "ADMIN") {
     return (
@@ -72,7 +72,7 @@ export function AdminTicketsScreen() {
           subtitle="Обнови экран или попробуй позже."
           icon={<Clock3 size={28} className="text-[var(--color-muted)]" />}
         />
-      ) : tickets.length === 0 ? (
+      ) : orders.length === 0 ? (
         <ScreenEmpty
           title="Активных заказов нет"
           subtitle="Новые покупки появятся здесь."
@@ -145,7 +145,7 @@ export function AdminTicketsScreen() {
             </div>
           </section>
 
-          {visibleTickets.length === 0 ? (
+          {visibleOrders.length === 0 ? (
             <section className="ui-card px-4 py-10 text-center">
               <p className="text-sm font-medium text-[var(--color-text)]">Пусто</p>
               <p className="mt-1 text-sm text-[var(--color-muted)]">
@@ -154,41 +154,41 @@ export function AdminTicketsScreen() {
             </section>
           ) : (
             <div className="grid gap-3">
-              {visibleTickets.map((ticket) => (
-                <Link key={ticket.id} href={`/orders/${ticket.id}`} className="ui-card p-4">
+              {visibleOrders.map((order) => (
+                <Link key={order.id} href={`/orders/${order.id}`} className="ui-card p-4">
                   <div className="flex items-start gap-3">
                     <div
                       className={cn(
                         "flex size-11 shrink-0 items-center justify-center rounded-full text-sm font-semibold",
-                        !ticket.isPaid
+                        !order.isPaid
                             ? "bg-[var(--color-bg)] text-[var(--color-text)]"
                             : "bg-[var(--color-accent)]/16 text-[var(--color-accent)]",
                       )}
                     >
-                      {ticket.productTitle?.slice(0, 1).toUpperCase() || "#"}
+                      {order.productTitle?.slice(0, 1).toUpperCase() || "#"}
                     </div>
 
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <p className="truncate text-base font-semibold text-[var(--color-text)]">
-                            {ticket.productTitle || ticket.subject}
+                            {order.productTitle || order.subject}
                           </p>
                           <p className="mt-1 text-sm text-[var(--color-muted)]">
-                            #{ticket.number}
-                            {ticket.productCategory ? ` · ${ticket.productCategory}` : ""}
-                            {ticket.paymentMethodTitle ? ` · ${ticket.paymentMethodTitle}` : ""}
+                            #{order.number}
+                            {order.productCategory ? ` · ${order.productCategory}` : ""}
+                            {order.paymentMethodTitle ? ` · ${order.paymentMethodTitle}` : ""}
                           </p>
                         </div>
 
                         <div className="flex flex-wrap justify-end gap-2">
-                          <StatusPill>{renderPrimaryState(ticket)}</StatusPill>
-                          <StatusPill>{renderStatus(ticket.status)}</StatusPill>
+                          <StatusPill>{renderPrimaryState(order)}</StatusPill>
+                          <StatusPill>{renderStatus(order.status)}</StatusPill>
                         </div>
                       </div>
 
                       <p className="mt-3 line-clamp-2 text-sm leading-6 text-[var(--color-muted)]">
-                        {renderSummary(ticket)}
+                        {renderSummary(order)}
                       </p>
                     </div>
                   </div>
@@ -202,16 +202,10 @@ export function AdminTicketsScreen() {
   )
 }
 
-function isSupport(ticket: Awaited<ReturnType<typeof getTickets>>["tickets"][number]) {
-  return !ticket.productTitle && !ticket.paymentMethodTitle
-}
-
 function renderStatus(status: string) {
   switch (status) {
     case "OPEN":
       return "Открыт"
-    case "IN_PROGRESS":
-      return "Выдача"
     case "CLOSED":
       return "Закрыт"
     case "PAYMENT_REVIEW":
@@ -223,29 +217,27 @@ function renderStatus(status: string) {
   }
 }
 
-function renderPrimaryState(ticket: Awaited<ReturnType<typeof getTickets>>["tickets"][number]) {
-  if (ticket.status === "PAYMENT_REVIEW") {
+function renderPrimaryState(order: Awaited<ReturnType<typeof getOrders>>["orders"][number]) {
+  if (order.status === "PAYMENT_REVIEW") {
     return "На проверке"
   }
-  if (ticket.status === "CANCELLED") return "Отменён"
-  if (ticket.status === "CLOSED" && !ticket.isPaid) return "Не оплачен"
-  if (!ticket.isPaid) return "Ждёт оплату"
-  if (ticket.status === "IN_PROGRESS") return "Выдача"
-  if (ticket.status === "CLOSED") return "Завершён"
+  if (order.status === "CANCELLED") return "Отменён"
+  if (order.status === "CLOSED" && !order.isPaid) return "Не оплачен"
+  if (!order.isPaid) return "Ждёт оплату"
+  if (order.status === "CLOSED") return "Завершён"
   return "Оплачен"
 }
 
-function renderSummary(ticket: Awaited<ReturnType<typeof getTickets>>["tickets"][number]) {
-  if (ticket.status === "PAYMENT_REVIEW") return "Платёж отмечен и ждёт проверки."
-  if (ticket.status === "CANCELLED") return "Заказ отменён."
-  if (ticket.status === "CLOSED" && !ticket.isPaid) return "Заказ закрыт без оплаты."
-  if (!ticket.isPaid) {
-    return ticket.paymentMethodTitle
-      ? `Ожидает оплату через ${ticket.paymentMethodTitle}.`
+function renderSummary(order: Awaited<ReturnType<typeof getOrders>>["orders"][number]) {
+  if (order.status === "PAYMENT_REVIEW") return "Платёж отмечен и ждёт проверки."
+  if (order.status === "CANCELLED") return "Заказ отменён."
+  if (order.status === "CLOSED" && !order.isPaid) return "Заказ закрыт без оплаты."
+  if (!order.isPaid) {
+    return order.paymentMethodTitle
+      ? `Ожидает оплату через ${order.paymentMethodTitle}.`
       : "Ожидает оплату."
   }
-  if (ticket.status === "IN_PROGRESS") return "Идёт выдача."
-  if (ticket.status === "CLOSED") return "Заказ завершён."
+  if (order.status === "CLOSED") return "Заказ завершён."
   return "Оплата подтверждена."
 }
 

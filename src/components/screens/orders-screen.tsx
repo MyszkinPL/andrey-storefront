@@ -14,16 +14,16 @@ import {
   Wallet,
 } from "lucide-react"
 
-import { getMe, getTickets } from "@/lib/api"
+import { getMe, getOrders } from "@/lib/api"
 import { Screen, ScreenBody, ScreenEmpty, ScreenHeader } from "@/components/screen"
 import { cn } from "@/lib/cn"
 
 type FilterKey = "all" | "waiting" | "review" | "active" | "closed"
 
-export function TicketsScreen() {
-  const { data: ticketsData, isLoading, isError } = useQuery({
-    queryKey: ["tickets"],
-    queryFn: () => getTickets(),
+export function OrdersScreen() {
+  const { data: ordersData, isLoading, isError } = useQuery({
+    queryKey: ["orders"],
+    queryFn: () => getOrders(),
   })
   const { data: meData } = useQuery({ queryKey: ["me"], queryFn: getMe })
   const [filter, setFilter] = useState<FilterKey>("all")
@@ -31,24 +31,21 @@ export function TicketsScreen() {
     ? `https://t.me/${meData.settings.supportUsername.replace(/^@/, "")}`
     : null
 
-  const tickets = useMemo(
-    () => (ticketsData?.tickets ?? []).filter((ticket) => !isSupport(ticket)),
-    [ticketsData?.tickets],
-  )
+  const orders = useMemo(() => ordersData?.orders ?? [], [ordersData?.orders])
   const buckets = useMemo(() => {
-    const waiting = tickets.filter(
-      (ticket) =>
-        !ticket.isPaid &&
-        !["CLOSED", "CANCELLED", "PAYMENT_REVIEW"].includes(ticket.status),
+    const waiting = orders.filter(
+      (order) =>
+        !order.isPaid &&
+        !["CLOSED", "CANCELLED", "PAYMENT_REVIEW"].includes(order.status),
     )
-    const active = tickets.filter(
-      (ticket) =>
-        ticket.isPaid &&
-        !["CLOSED", "CANCELLED"].includes(ticket.status),
+    const active = orders.filter(
+      (order) =>
+        order.isPaid &&
+        !["CLOSED", "CANCELLED"].includes(order.status),
     )
-    const review = tickets.filter((ticket) => ticket.status === "PAYMENT_REVIEW")
-    const closed = tickets.filter(
-      (ticket) => ["CLOSED", "CANCELLED"].includes(ticket.status),
+    const review = orders.filter((order) => order.status === "PAYMENT_REVIEW")
+    const closed = orders.filter(
+      (order) => ["CLOSED", "CANCELLED"].includes(order.status),
     )
 
     return {
@@ -58,9 +55,9 @@ export function TicketsScreen() {
       active,
       closed,
     }
-  }, [tickets])
+  }, [orders])
 
-  const visibleTickets = buckets[filter]
+  const visibleOrders = buckets[filter]
 
   return (
     <Screen>
@@ -106,7 +103,7 @@ export function TicketsScreen() {
           title="Заказы не загрузились"
           subtitle="Обнови экран или попробуй позже."
         />
-      ) : tickets.length === 0 ? (
+      ) : orders.length === 0 ? (
         <ScreenEmpty
           icon={<MessageSquarePlus size={32} className="text-[var(--color-muted)]" />}
           title="Заказов пока нет"
@@ -179,7 +176,7 @@ export function TicketsScreen() {
             </div>
           </section>
 
-          {visibleTickets.length === 0 ? (
+          {visibleOrders.length === 0 ? (
             <section className="ui-card px-4 py-10 text-center">
               <p className="text-sm font-medium text-[var(--color-text)]">Пусто</p>
               <p className="mt-1 text-sm text-[var(--color-muted)]">
@@ -188,10 +185,10 @@ export function TicketsScreen() {
             </section>
           ) : (
             <div className="grid gap-3">
-              {visibleTickets.map((ticket, index) => (
+              {visibleOrders.map((order, index) => (
                 <Link
-                  key={ticket.id}
-                  href={`/orders/${ticket.id}`}
+                  key={order.id}
+                  href={`/orders/${order.id}`}
                   className="ui-card enter-card p-3.5"
                   style={{ ["--stagger" as string]: `${Math.min(index, 8) * 28}ms` }}
                 >
@@ -199,15 +196,15 @@ export function TicketsScreen() {
                     <div
                       className={cn(
                         "flex size-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold",
-                        !ticket.isPaid
+                        !order.isPaid
                             ? "bg-[var(--color-bg)] text-[var(--color-text)]"
                             : "bg-[var(--color-accent)]/16 text-[var(--color-accent)]",
                       )}
                     >
-                      {!ticket.isPaid ? (
+                      {!order.isPaid ? (
                         <Wallet size={16} />
                       ) : (
-                        ticket.productTitle?.slice(0, 1).toUpperCase() || "#"
+                        order.productTitle?.slice(0, 1).toUpperCase() || "#"
                       )}
                     </div>
 
@@ -215,16 +212,16 @@ export function TicketsScreen() {
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <p className="truncate text-[15px] font-semibold text-[var(--color-text)]">
-                            {ticket.productTitle || ticket.subject}
+                            {order.productTitle || order.subject}
                           </p>
                           <p className="mt-0.5 text-xs text-[var(--color-muted)]">
-                            #{ticket.number}
-                            {ticket.productCategory ? ` · ${ticket.productCategory}` : ""}
+                            #{order.number}
+                            {order.productCategory ? ` · ${order.productCategory}` : ""}
                           </p>
                         </div>
 
                         <span className="shrink-0 text-[11px] text-[var(--color-muted)]">
-                          {formatDistanceToNow(new Date(ticket.updatedAt), {
+                          {formatDistanceToNow(new Date(order.updatedAt), {
                             addSuffix: true,
                             locale: ru,
                           })}
@@ -232,11 +229,11 @@ export function TicketsScreen() {
                       </div>
 
                       <div className="mt-2.5 flex flex-wrap gap-1.5">
-                        <StatusPill emphasize={!ticket.isPaid}>
-                          {renderPrimaryState(ticket)}
+                        <StatusPill emphasize={!order.isPaid}>
+                          {renderPrimaryState(order)}
                         </StatusPill>
-                        {showPaymentMethodPill(ticket) ? (
-                          <StatusPill>{ticket.paymentMethodTitle}</StatusPill>
+                        {showPaymentMethodPill(order) ? (
+                          <StatusPill>{order.paymentMethodTitle}</StatusPill>
                         ) : null}
                       </div>
                     </div>
@@ -251,25 +248,20 @@ export function TicketsScreen() {
   )
 }
 
-function isSupport(ticket: Awaited<ReturnType<typeof getTickets>>["tickets"][number]) {
-  return !ticket.productTitle && !ticket.paymentMethodTitle
-}
-
-function renderPrimaryState(ticket: Awaited<ReturnType<typeof getTickets>>["tickets"][number]) {
-  if (ticket.status === "PAYMENT_REVIEW") {
+function renderPrimaryState(order: Awaited<ReturnType<typeof getOrders>>["orders"][number]) {
+  if (order.status === "PAYMENT_REVIEW") {
     return "На проверке"
   }
-  if (ticket.status === "CANCELLED") return "Отменён"
-  if (ticket.status === "CLOSED" && !ticket.isPaid) return "Не оплачен"
-  if (!ticket.isPaid) return "Ждёт оплату"
-  if (ticket.status === "IN_PROGRESS") return "Выдача"
-  if (ticket.status === "CLOSED") return "Завершён"
+  if (order.status === "CANCELLED") return "Отменён"
+  if (order.status === "CLOSED" && !order.isPaid) return "Не оплачен"
+  if (!order.isPaid) return "Ждёт оплату"
+  if (order.status === "CLOSED") return "Завершён"
   return "Оплачен"
 }
 
-function showPaymentMethodPill(ticket: Awaited<ReturnType<typeof getTickets>>["tickets"][number]) {
-  if (!ticket.paymentMethodTitle) return false
-  return !ticket.isPaid || ticket.status === "PAYMENT_REVIEW"
+function showPaymentMethodPill(order: Awaited<ReturnType<typeof getOrders>>["orders"][number]) {
+  if (!order.paymentMethodTitle) return false
+  return !order.isPaid || order.status === "PAYMENT_REVIEW"
 }
 
 function StatusPill({

@@ -41,7 +41,6 @@ export async function GET() {
           }
         : {
             shopName: settings.shopName,
-            supportIntro: settings.supportIntro,
             supportUsername: settings.supportUsername,
           },
   })

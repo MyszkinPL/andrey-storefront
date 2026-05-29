@@ -118,7 +118,6 @@ export function AdminSettingsScreen() {
     mutationFn: () =>
       saveSettings({
         shopName,
-        supportIntro: meData?.settings.supportIntro || "",
         supportUsername,
         cryptoPayEnabled,
         cryptoPayToken,

@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Check, Expand, KeyRound, X } from "lucide-react"
 
-import { createTicket, getPaymentMethods, getProduct } from "@/lib/api"
+import { createOrder, getPaymentMethods, getProduct } from "@/lib/api"
 import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
 import { useBackButton, useHaptic, useMainButton } from "@/hooks/use-telegram"
 import { cn } from "@/lib/cn"
@@ -62,28 +62,28 @@ export function ProductScreen({ productId }: { productId: string }) {
     (option) => option.key === (selectedPaymentKey || paymentOptions[0]?.key),
   )
 
-  const ticketMutation = useMutation({
+  const orderMutation = useMutation({
     mutationFn: () =>
-      createTicket({
+      createOrder({
         productId,
         paymentMethodId: selectedPayment?.type === "MANUAL" ? selectedPayment.id : undefined,
         subject: `Покупка: ${data?.product.title || "товар"}`,
         paymentMethodType: selectedPayment?.type,
       }),
-    onSuccess: async ({ ticketId }) => {
+    onSuccess: async ({ orderId }) => {
       haptic.success()
-      await queryClient.invalidateQueries({ queryKey: ["tickets"] })
-      router.replace(`/orders/${ticketId}`)
+      await queryClient.invalidateQueries({ queryKey: ["orders"] })
+      router.replace(`/orders/${orderId}`)
     },
   })
 
   useBackButton(() => router.back())
   useMainButton({
-    text: ticketMutation.isPending ? "Создаём..." : "Оформить заказ",
-    onClick: () => ticketMutation.mutate(),
+    text: orderMutation.isPending ? "Создаём..." : "Оформить заказ",
+    onClick: () => orderMutation.mutate(),
     visible: true,
-    enabled: !ticketMutation.isPending && Boolean(data?.product) && Boolean(selectedPayment),
-    progress: ticketMutation.isPending,
+    enabled: !orderMutation.isPending && Boolean(data?.product) && Boolean(selectedPayment),
+    progress: orderMutation.isPending,
   })
 
   if (!data?.product) return null
@@ -268,9 +268,9 @@ export function ProductScreen({ productId }: { productId: string }) {
               })}
             </div>
 
-            {ticketMutation.error ? (
+            {orderMutation.error ? (
               <div className="mt-3 rounded-[18px] bg-[var(--color-bg)] px-4 py-3 text-sm text-[var(--color-destructive)]">
-                {ticketMutation.error.message}
+                {orderMutation.error.message}
               </div>
             ) : null}
           </section>

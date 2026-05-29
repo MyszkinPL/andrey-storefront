@@ -1,14 +1,14 @@
 "use client"
 import { useQuery } from "@tanstack/react-query"
-import { CreditCard, Package2, ShieldCheck, Ticket, Users } from "lucide-react"
+import { CreditCard, Package2, Receipt, ShieldCheck, Users } from "lucide-react"
 
-import { getAdminUsers, getMe, getPaymentMethods, getProducts, getTickets } from "@/lib/api"
+import { getAdminUsers, getMe, getPaymentMethods, getProducts, getOrders } from "@/lib/api"
 import { Screen, ScreenBody, ScreenEmpty, ScreenHeader } from "@/components/screen"
 
 export function AdminOverviewScreen() {
   const { data: meData } = useQuery({ queryKey: ["me"], queryFn: getMe })
   const { data: productsData, isLoading: isLoadingProducts, isError: isErrorProducts } = useQuery({ queryKey: ["products"], queryFn: getProducts })
-  const { data: ticketsData, isLoading: isLoadingTickets, isError: isErrorTickets } = useQuery({ queryKey: ["tickets", "all"], queryFn: () => getTickets({ scope: "all" }) })
+  const { data: ordersData, isLoading: isLoadingOrders, isError: isErrorOrders } = useQuery({ queryKey: ["orders", "all"], queryFn: () => getOrders({ scope: "all" }) })
   const { data: paymentData, isLoading: isLoadingPayments, isError: isErrorPayments } = useQuery({
     queryKey: ["payment-methods"],
     queryFn: getPaymentMethods,
@@ -35,8 +35,8 @@ export function AdminOverviewScreen() {
     {
       label: "Активные заказы",
       value:
-        ticketsData?.tickets.filter((item) => !["CLOSED", "CANCELLED"].includes(item.status)).length || 0,
-      icon: Ticket,
+        ordersData?.orders.filter((item) => !["CLOSED", "CANCELLED"].includes(item.status)).length || 0,
+      icon: Receipt,
     },
     {
       label: "Ключи в наличии",
@@ -64,13 +64,13 @@ export function AdminOverviewScreen() {
       <ScreenHeader title="Админка" subtitle="Управление магазином" />
 
       <ScreenBody className="gap-3">
-        {isLoadingProducts || isLoadingTickets || isLoadingPayments || isLoadingUsers ? (
+        {isLoadingProducts || isLoadingOrders || isLoadingPayments || isLoadingUsers ? (
           <ScreenEmpty
             icon={<Package2 size={28} className="text-[var(--color-muted)]" />}
             title="Загружаю сводку"
             subtitle="Собираю данные магазина."
           />
-        ) : isErrorProducts || isErrorTickets || isErrorPayments || isErrorUsers ? (
+        ) : isErrorProducts || isErrorOrders || isErrorPayments || isErrorUsers ? (
           <ScreenEmpty
             icon={<Package2 size={28} className="text-[var(--color-muted)]" />}
             title="Сводка не загрузилась"

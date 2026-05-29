@@ -8,7 +8,7 @@ import {
 } from "@/lib/crypto-pay"
 import { notifyOrderPaid } from "@/lib/order-notifications"
 import { prisma } from "@/lib/prisma"
-import { confirmTicketPaymentFlow } from "@/lib/ticket-payment"
+import { confirmOrderPaymentFlow } from "@/lib/order-payment"
 
 export async function GET() {
   return NextResponse.json({ ok: true })
@@ -39,17 +39,17 @@ export async function POST(request: Request) {
     }
 
     const invoice = mapCryptoInvoicePayload(update.payload)
-    const ticket = await prisma.ticket.findFirst({
+    const order = await prisma.order.findFirst({
       where: { cryptoInvoiceId: invoice.invoiceId },
       select: { id: true, isPaid: true },
     })
 
-    if (!ticket) {
+    if (!order) {
       return NextResponse.json({ ok: true, ignored: true })
     }
 
-    await prisma.ticket.update({
-      where: { id: ticket.id },
+    await prisma.order.update({
+      where: { id: order.id },
       data: {
         cryptoInvoiceUrl: invoice.url,
         cryptoInvoiceStatus: invoice.status || "paid",
@@ -59,7 +59,7 @@ export async function POST(request: Request) {
       },
     })
 
-    if (!ticket.isPaid) {
+    if (!order.isPaid) {
       const admin = await prisma.user.findFirst({
         where: { role: Role.ADMIN },
         select: { id: true },
@@ -68,9 +68,9 @@ export async function POST(request: Request) {
 
       if (admin) {
         await prisma.$transaction((tx) =>
-          confirmTicketPaymentFlow(tx, ticket.id, admin.id),
+          confirmOrderPaymentFlow(tx, order.id, admin.id),
         )
-        await notifyOrderPaid(ticket.id)
+        await notifyOrderPaid(order.id)
       }
     }
 

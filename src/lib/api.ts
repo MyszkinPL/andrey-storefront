@@ -1,6 +1,6 @@
 "use client"
 
-import type { PaymentMethodType, TicketStatus } from "@prisma/client"
+import type { PaymentMethodType, OrderStatus } from "@prisma/client"
 
 export class ApiError extends Error {
   status: number
@@ -33,7 +33,6 @@ export type PaymentMethodInput = {
 
 export type ShopSettingsPayload = {
   shopName: string
-  supportIntro: string
   supportUsername?: string
   cryptoPayEnabled: boolean
   cryptoPayToken?: string
@@ -89,7 +88,6 @@ export function getMe() {
     }
     settings: {
       shopName: string
-      supportIntro: string
       supportUsername: string | null
       cryptoPayEnabled?: boolean
       cryptoPayToken?: string | null
@@ -138,28 +136,28 @@ export function getProduct(id: string) {
   }>(`/api/products/${id}`)
 }
 
-export function createTicket(payload: {
+export function createOrder(payload: {
   subject: string
   productId?: string
   paymentMethodId?: string
   paymentMethodType?: PaymentMethodType
 }) {
-  return api<{ ticketId: string }>("/api/orders", {
+  return api<{ orderId: string }>("/api/orders", {
     method: "POST",
     body: JSON.stringify(payload),
   })
 }
 
-export function getTickets(params?: { scope?: "all" }) {
+export function getOrders(params?: { scope?: "all" }) {
   const query = new URLSearchParams()
   if (params?.scope) query.set("scope", params.scope)
 
   return api<{
-    tickets: Array<{
+    orders: Array<{
       id: string
       number: number
       subject: string
-      status: TicketStatus
+      status: OrderStatus
       createdAt: string
       updatedAt: string
       isPaid: boolean
@@ -172,13 +170,13 @@ export function getTickets(params?: { scope?: "all" }) {
   }>(`/api/orders${query.size ? `?${query.toString()}` : ""}`)
 }
 
-export function getTicket(id: string) {
+export function getOrder(id: string) {
   return api<{
-    ticket: {
+    order: {
       id: string
       number: number
       subject: string
-      status: TicketStatus
+      status: OrderStatus
       createdAt: string
       isPaid: boolean
       productTitle: string | null
@@ -217,14 +215,7 @@ export function getTicket(id: string) {
   }>(`/api/orders/${id}`)
 }
 
-export function updateTicketStatus(id: string, status: TicketStatus) {
-  return api<{ ok: true }>(`/api/orders/${id}`, {
-    method: "PATCH",
-    body: JSON.stringify({ status }),
-  })
-}
-
-export function confirmTicketPayment(id: string) {
+export function confirmOrderPayment(id: string) {
   return api<{ ok: true }>(`/api/orders/${id}`, {
     method: "PATCH",
     body: JSON.stringify({ confirmPayment: true }),
@@ -238,14 +229,14 @@ export function refreshCryptoInvoice(id: string) {
   })
 }
 
-export function markManualTicketPaid(id: string) {
+export function markManualOrderPaid(id: string) {
   return api<{ ok: true }>(`/api/orders/${id}`, {
     method: "PATCH",
     body: JSON.stringify({ markManualPaid: true }),
   })
 }
 
-export function changeTicketPaymentMethod(
+export function changeOrderPaymentMethod(
   id: string,
   payload:
     | { paymentMethodId: string; paymentMethodType?: undefined }
@@ -257,21 +248,21 @@ export function changeTicketPaymentMethod(
   })
 }
 
-export function rejectManualTicketPayment(id: string) {
+export function rejectManualOrderPayment(id: string) {
   return api<{ ok: true }>(`/api/orders/${id}`, {
     method: "PATCH",
     body: JSON.stringify({ rejectManualPayment: true }),
   })
 }
 
-export function cancelOwnTicket(id: string) {
+export function cancelOwnOrder(id: string) {
   return api<{ ok: true }>(`/api/orders/${id}`, {
     method: "PATCH",
     body: JSON.stringify({ cancelByUser: true }),
   })
 }
 
-export function deleteAdminTicket(id: string) {
+export function deleteAdminOrder(id: string) {
   return api<{ ok: true }>(`/api/orders/${id}`, {
     method: "DELETE",
   })
@@ -328,7 +319,7 @@ export function getAdminUsers(params?: {
       orders: Array<{
         id: string
         number: number
-        status: TicketStatus
+        status: OrderStatus
         isPaid: boolean
         createdAt: string
         updatedAt: string
@@ -357,7 +348,7 @@ export function getAdminUser(id: string) {
       orders: Array<{
         id: string
         number: number
-        status: TicketStatus
+        status: OrderStatus
         isPaid: boolean
         updatedAt: string
         productTitle: string | null

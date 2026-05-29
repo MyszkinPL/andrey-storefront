@@ -1,5 +1,5 @@
-import { AdminTicketsScreen } from "@/components/screens/admin-tickets-screen"
+import { AdminOrdersScreen } from "@/components/screens/admin-orders-screen"
 
 export default function AdminOrdersPage() {
-  return <AdminTicketsScreen />
+  return <AdminOrdersScreen />
 }

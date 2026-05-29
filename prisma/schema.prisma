@@ -11,10 +11,9 @@ enum Role {
   ADMIN
 }
 
-enum TicketStatus {
+enum OrderStatus {
   OPEN
   PAYMENT_REVIEW
-  IN_PROGRESS
   CLOSED
   CANCELLED
 }
@@ -42,8 +41,8 @@ model User {
   banReason  String?
   createdAt  DateTime        @default(now())
   updatedAt  DateTime        @updatedAt
-  tickets    Ticket[]        @relation("TicketAuthor")
-  assigned   Ticket[]        @relation("TicketAssignee")
+  orders    Order[]        @relation("OrderAuthor")
+  assigned   Order[]        @relation("OrderAssignee")
 }
 
 model Product {
@@ -59,7 +58,7 @@ model Product {
   sortOrder    Int          @default(0)
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
-  tickets      Ticket[]
+  orders      Order[]
   keys         ProductKey[]
   specs        ProductSpec[]
 }
@@ -81,16 +80,16 @@ model ProductKey {
   value           String
   createdAt       DateTime  @default(now())
   issuedAt        DateTime?
-  issuedToTicketId String?  @unique
+  issuedToOrderId String?  @unique
   product         Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
-  issuedToTicket   Ticket?   @relation(fields: [issuedToTicketId], references: [id])
+  issuedToOrder   Order?   @relation(fields: [issuedToOrderId], references: [id])
 }
 
-model Ticket {
+model Order {
   id               String          @id @default(cuid())
   number           Int             @unique @default(autoincrement())
   subject          String
-  status           TicketStatus    @default(OPEN)
+  status           OrderStatus    @default(OPEN)
   createdById      String
   assignedToId     String?
   productId        String?
@@ -111,8 +110,8 @@ model Ticket {
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
   closedAt         DateTime?
-  createdBy        User            @relation("TicketAuthor", fields: [createdById], references: [id])
-  assignedTo       User?           @relation("TicketAssignee", fields: [assignedToId], references: [id])
+  createdBy        User            @relation("OrderAuthor", fields: [createdById], references: [id])
+  assignedTo       User?           @relation("OrderAssignee", fields: [assignedToId], references: [id])
   product          Product?        @relation(fields: [productId], references: [id])
   paymentMethod    PaymentMethod?  @relation(fields: [paymentMethodId], references: [id], onDelete: SetNull)
   deliveredKey     ProductKey?
@@ -129,14 +128,12 @@ model PaymentMethod {
   sortOrder            Int               @default(0)
   createdAt            DateTime          @default(now())
   updatedAt            DateTime          @updatedAt
-  tickets              Ticket[]
+  orders              Order[]
 }
 
 model ShopSettings {
   id                     Int      @id @default(1)
   shopName               String   @default("Andrey Store")
-  welcomeText            String   @default("Каталог подписок, лицензий и ключей с поддержкой через Telegram.")
-  supportIntro           String   @default("Поддержка доступна напрямую в Telegram после оплаты заказа.")
   supportUsername        String?
   cryptoPayEnabled       Boolean  @default(false)
   cryptoPayToken         String?

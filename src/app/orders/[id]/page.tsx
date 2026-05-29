@@ -1,4 +1,4 @@
-import { TicketDetailScreen } from "@/components/screens/ticket-detail-screen"
+import { OrderDetailScreen } from "@/components/screens/order-detail-screen"
 
 export default async function OrderPage({
   params,
@@ -6,5 +6,5 @@ export default async function OrderPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  return <TicketDetailScreen ticketId={id} />
+  return <OrderDetailScreen orderId={id} />
 }

@@ -8,12 +8,12 @@ import { useTelegram } from "@/hooks/use-telegram"
 function resolveStartTarget(raw: string | null) {
   const value = (raw || "").trim()
   if (!value || value === "catalog") return "/catalog"
-  if (value === "orders" || value === "tickets") return "/orders"
+  if (value === "orders") return "/orders"
   if (value === "profile") return "/profile"
   const product = /^product_(.+)$/.exec(value)
   if (product) return `/product/${product[1]}`
-  const order = /^(order|ticket)_(.+)$/.exec(value)
-  if (order) return `/orders/${order[2]}`
+  const order = /^order_(.+)$/.exec(value)
+  if (order) return `/orders/${order[1]}`
   return "/catalog"
 }
 
