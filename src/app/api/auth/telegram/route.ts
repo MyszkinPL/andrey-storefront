@@ -8,19 +8,21 @@ import { validateInitData } from "@/lib/telegram-auth"
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const env = getServerEnv()
 
     let user
     if (body.dev) {
-      if (!env.ALLOW_DEV_AUTH || !env.DEV_TELEGRAM_ID) {
+      if (!isDevAuthAllowed(request)) {
         return NextResponse.json({ error: "Dev auth disabled" }, { status: 403 })
       }
+      const devTelegramId = getDevTelegramId()
       user = {
-        id: Number(env.DEV_TELEGRAM_ID),
-        first_name: "Dev",
-        username: "dev_user",
+        id: devTelegramId,
+        first_name: process.env.DEV_TELEGRAM_FIRST_NAME || "Dev",
+        username: process.env.DEV_TELEGRAM_USERNAME || "dev_user",
+        photo_url: process.env.DEV_TELEGRAM_PHOTO_URL,
       }
     } else {
+      const env = getServerEnv()
       user = validateInitData(body.initData, env.BOT_TOKEN).user
     }
 
@@ -38,4 +40,30 @@ export async function POST(request: Request) {
       { status: 400 },
     )
   }
+}
+
+function isDevAuthAllowed(request: Request) {
+  if (process.env.NODE_ENV !== "production") return true
+  if (process.env.ALLOW_DEV_AUTH !== "true" || !process.env.DEV_TELEGRAM_ID) return false
+
+  const host = request.headers.get("host") || ""
+  return host.startsWith("localhost") || host.startsWith("127.0.0.1")
+}
+
+function getDevTelegramId() {
+  const explicitId = process.env.DEV_TELEGRAM_ID || getFirstAdminTelegramId()
+  const telegramId = Number(explicitId || "900000001")
+
+  if (!Number.isFinite(telegramId) || telegramId <= 0) {
+    throw new Error("Invalid dev telegram id")
+  }
+
+  return telegramId
+}
+
+function getFirstAdminTelegramId() {
+  return (process.env.ADMIN_TELEGRAM_IDS || "")
+    .split(",")
+    .map((value) => value.trim())
+    .find(Boolean)
 }

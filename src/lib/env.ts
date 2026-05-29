@@ -20,3 +20,11 @@ export function getServerEnv() {
   if (!cached) cached = schema.parse(process.env)
   return cached
 }
+
+export function getSessionSecret() {
+  if (process.env.SESSION_SECRET) return process.env.SESSION_SECRET
+  if (process.env.NODE_ENV !== "production") {
+    return "local-dev-session-secret-for-telegram-mock-only"
+  }
+  return getServerEnv().SESSION_SECRET
+}

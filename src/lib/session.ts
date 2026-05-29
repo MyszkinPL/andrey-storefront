@@ -2,7 +2,7 @@ import crypto from "node:crypto"
 
 import { cookies } from "next/headers"
 
-import { getServerEnv } from "@/lib/env"
+import { getSessionSecret } from "@/lib/env"
 
 const COOKIE_NAME = "andrey_session"
 
@@ -14,7 +14,7 @@ type SessionPayload = {
 
 function sign(value: string) {
   return crypto
-    .createHmac("sha256", getServerEnv().SESSION_SECRET)
+    .createHmac("sha256", getSessionSecret())
     .update(value)
     .digest("base64url")
 }
