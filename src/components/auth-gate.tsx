@@ -35,17 +35,9 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
       }
 
       if (!isTelegram) {
-        if (process.env.NEXT_PUBLIC_ALLOW_DEV_AUTH === "true") {
-          authenticateWithTelegram("", true)
-            .then(() => setState("ok"))
-            .catch((err: unknown) => {
-              setError(err instanceof Error ? err.message : "Dev auth failed")
-              setState("error")
-            })
-          return
-        }
-
-        setState("outside")
+        authenticateWithTelegram("", true)
+          .then(() => setState("ok"))
+          .catch(() => setState("outside"))
         return
       }
 
