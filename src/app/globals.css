@@ -1,59 +1,23 @@
 @import "tailwindcss";
 
 :root {
-  --color-bg: var(--tg-theme-bg-color, #17212b);
-  --color-surface: var(--tg-theme-secondary-bg-color, #232e3c);
-  --color-surface-2: var(--tg-theme-section-bg-color, var(--tg-theme-secondary-bg-color, #232e3c));
-  --color-text: var(--tg-theme-text-color, #ffffff);
-  --color-muted: var(--tg-theme-hint-color, #708499);
-  --color-accent: var(--tg-theme-button-color, #5288c1);
-  --color-accent-text: var(--tg-theme-button-text-color, #ffffff);
-  --color-link: var(--tg-theme-link-color, #6ab3f3);
-  --color-destructive: var(--tg-theme-destructive-text-color, #ec3942);
-  --color-border: color-mix(in srgb, var(--color-text) 8%, transparent);
-  --color-overlay: color-mix(in srgb, var(--color-bg) 84%, transparent);
-
-  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
-  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
-  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
-}
-
-@keyframes enter-card {
-  from {
-    opacity: 0;
-    transform: translateY(6px) scale(0.985);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-.enter-card {
-  animation: enter-card 320ms var(--ease-out) both;
-  animation-delay: var(--stagger, 0ms);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .enter-card {
-    animation: none;
-  }
+  color-scheme: dark;
 }
 
 @theme inline {
-  --color-background: var(--color-bg);
-  --color-foreground: var(--color-text);
-  --color-card: var(--color-surface);
-  --color-muted: var(--color-muted);
-  --color-primary: var(--color-accent);
-  --color-primary-foreground: var(--color-accent-text);
-  --color-destructive: var(--color-destructive);
+  --color-background: var(--tgui--bg_color);
+  --color-foreground: var(--tgui--text_color);
+  --color-card: var(--tgui--section_bg_color);
+  --color-muted: var(--tgui--hint_color);
+  --color-primary: var(--tgui--button_color);
+  --color-primary-foreground: var(--tgui--button_text_color);
+  --color-destructive: var(--tgui--destructive_text_color);
 }
 
 html,
 body {
-  background: var(--color-bg);
-  color: var(--color-text);
+  background: var(--tgui--bg_color, #17212b);
+  color: var(--tgui--text_color, #ffffff);
   overscroll-behavior: none;
   -webkit-tap-highlight-color: transparent;
   font-family:
@@ -78,56 +42,6 @@ body {
   margin: 0;
 }
 
-.ui-card {
-  border: 1px solid var(--color-border);
-  border-radius: 24px;
-  background: var(--color-surface);
-  box-shadow: 0 1px 0 color-mix(in srgb, var(--color-text) 3%, transparent) inset;
-}
-
-.ui-card-soft {
-  border: 1px solid var(--color-border);
-  border-radius: 20px;
-  background: var(--color-surface-2);
-}
-
-.ui-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  border-radius: 999px;
-  background: var(--color-surface-2);
-  padding: 6px 10px;
-  font-size: 11px;
-  line-height: 1;
-  color: var(--color-muted);
-}
-
-.ui-input {
-  width: 100%;
-  border: 1px solid transparent;
-  border-radius: 18px;
-  background: var(--color-bg);
-  color: var(--color-text);
-  padding: 14px 16px;
-  outline: none;
-  transition:
-    border-color 180ms var(--ease-out),
-    transform 120ms var(--ease-out);
-}
-
-.ui-input::placeholder {
-  color: var(--color-muted);
-}
-
-.ui-input:focus {
-  border-color: color-mix(in srgb, var(--color-accent) 45%, transparent);
-}
-
-.ui-input:active {
-  transform: scale(0.995);
-}
-
 body,
 button,
 [role="button"],
@@ -142,4 +56,26 @@ textarea,
 [contenteditable="true"] {
   -webkit-user-select: text;
   user-select: text;
+}
+
+.scrollbar-none {
+  scrollbar-width: none;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
 }

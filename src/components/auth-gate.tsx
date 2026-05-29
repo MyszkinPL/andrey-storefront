@@ -80,7 +80,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
             description={error}
           />
         ) : (
-          <p className="text-base font-medium text-[var(--color-destructive)]">{error}</p>
+          <Placeholder header="Ошибка авторизации" description={error} />
         )}
       </div>
     )

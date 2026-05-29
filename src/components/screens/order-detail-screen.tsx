@@ -1,38 +1,40 @@
 "use client"
 
 import type { PaymentMethodType } from "@prisma/client"
-import Image from "next/image"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { format } from "date-fns"
 import { ru } from "date-fns/locale"
 import {
-  Check,
-  CircleDashed,
-  Copy,
-  ExternalLink,
-  RefreshCcw,
-  Trash2,
-  X,
-} from "lucide-react"
+  Badge,
+  Button,
+  Cell,
+  Image as TgImage,
+  Modal,
+  Placeholder,
+  Radio,
+  Section,
+  Steps,
+  Title,
+} from "@telegram-apps/telegram-ui"
+import { Check, CircleDashed, Copy, ExternalLink, RefreshCcw, Trash2 } from "lucide-react"
 
+import { Screen, ScreenBody } from "@/components/screen"
+import { useMode } from "@/components/mode-provider"
+import { useBackButton } from "@/hooks/use-telegram"
 import {
   cancelOwnOrder,
   changeOrderPaymentMethod,
   confirmOrderPayment,
   deleteAdminOrder,
   getMe,
-  getPaymentMethods,
   getOrder,
+  getPaymentMethods,
   markManualOrderPaid,
-  rejectManualOrderPayment,
   refreshCryptoInvoice,
+  rejectManualOrderPayment,
 } from "@/lib/api"
-import { useMode } from "@/components/mode-provider"
-import { Screen, ScreenEmpty } from "@/components/screen"
-import { useBackButton } from "@/hooks/use-telegram"
-import { cn } from "@/lib/cn"
 
 export function OrderDetailScreen({ orderId }: { orderId: string }) {
   const router = useRouter()
@@ -43,14 +45,10 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
   const [draftPaymentKey, setDraftPaymentKey] = useState<string | null>(null)
   const [copiedField, setCopiedField] = useState<"payment" | "key" | null>(null)
 
-  const { data: meData } = useQuery({
-    queryKey: ["me"],
-    queryFn: getMe,
-  })
+  const { data: meData } = useQuery({ queryKey: ["me"], queryFn: getMe })
   const { data: paymentData } = useQuery({
     queryKey: ["payment-methods"],
     queryFn: getPaymentMethods,
-    enabled: true,
   })
   const { data, isLoading, isError } = useQuery({
     queryKey: ["order", orderId],
@@ -68,10 +66,10 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
     setCopiedField(field)
     window.setTimeout(() => {
       setCopiedField((current) => (current === field ? null : current))
-    }, 1500)
+    }, 1400)
   }
 
-  const paymentMutation = useMutation({
+  const confirmMutation = useMutation({
     mutationFn: () => confirmOrderPayment(orderId),
     onSuccess: invalidate,
   })
@@ -131,10 +129,9 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
             id: undefined,
             type: "CRYPTO_PAY" as const,
             title: paymentData.cryptoPay.title || "Crypto Bot",
-            subtitle:
-              paymentData.cryptoPay.acceptedAssets
-                ? `Автооплата · ${paymentData.cryptoPay.acceptedAssets}`
-                : "Автооплата через invoice",
+            subtitle: paymentData.cryptoPay.acceptedAssets
+              ? `Автооплата · ${paymentData.cryptoPay.acceptedAssets}`
+              : "Автооплата через invoice",
             iconDataUrl: paymentData.cryptoPay.iconDataUrl || null,
           },
         ]
@@ -144,11 +141,9 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
   if (isLoading) {
     return (
       <Screen noTabBar>
-        <ScreenEmpty
-          icon={<CircleDashed size={28} className="text-[var(--color-muted)]" />}
-          title="Загружаю заказ"
-          subtitle="Подтягиваю оплату и статус."
-        />
+        <Placeholder header="Загружаю заказ" description="Подтягиваю оплату и статус.">
+          <CircleDashed size={32} />
+        </Placeholder>
       </Screen>
     )
   }
@@ -156,11 +151,9 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
   if (isError || !data?.order) {
     return (
       <Screen noTabBar>
-        <ScreenEmpty
-          icon={<CircleDashed size={28} className="text-[var(--color-muted)]" />}
-          title="Заказ не загрузился"
-          subtitle="Обнови экран или попробуй позже."
-        />
+        <Placeholder header="Заказ не загрузился" description="Обнови экран или попробуй позже.">
+          <CircleDashed size={32} />
+        </Placeholder>
       </Screen>
     )
   }
@@ -169,36 +162,11 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
   const isBuyerView = mode === "buyer"
   const isRealBuyerView = isBuyerView && order.isOwner
   const isClosed = ["CLOSED", "CANCELLED"].includes(order.status)
+  const adminToolsVisible = order.isAdmin && mode === "admin"
   const supportLink = meData?.settings.supportUsername
     ? `https://t.me/${meData.settings.supportUsername.replace(/^@/, "")}`
     : null
-  const createdAtLabel = format(new Date(order.createdAt), "dd MMMM · HH:mm", {
-    locale: ru,
-  })
-  const paymentStateLabel = order.isPaid
-    ? "Оплачено"
-    : order.status === "PAYMENT_REVIEW"
-      ? "На проверке"
-        : order.status === "CANCELLED"
-          ? "Отменён"
-          : "Ожидает оплату"
-  const adminToolsVisible = order.isAdmin && mode === "admin"
-  const canConfirmManualPayment =
-    adminToolsVisible &&
-    order.paymentMethodType === "MANUAL" &&
-    order.status === "PAYMENT_REVIEW" &&
-    !order.isPaid
-  const canRefreshCryptoPayment =
-    order.paymentMethodType === "CRYPTO_PAY" && !order.isPaid && !isClosed
-  const canSwitchPaymentMethod =
-    isRealBuyerView &&
-    !order.isPaid &&
-    !isClosed &&
-    !order.manualPaymentRequestedAt &&
-    paymentOptions.length > 1
-  const amountLabel = order.cryptoInvoiceAmount
-    ? `${order.cryptoInvoiceAmount} ${order.cryptoInvoiceFiat || "RUB"}`
-    : null
+  const createdAtLabel = format(new Date(order.createdAt), "dd MMMM · HH:mm", { locale: ru })
   const currentPaymentKey =
     order.paymentMethodType === "MANUAL" && order.paymentMethodId
       ? `manual:${order.paymentMethodId}`
@@ -207,321 +175,291 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
         : null
   const selectedDraftPayment =
     paymentOptions.find((option) => option.key === (draftPaymentKey || currentPaymentKey)) || null
-  const stepper = [
-    {
-      label: "Оплата",
-      active: true,
-      done: order.isPaid,
-    },
-    {
-      label: order.deliveredKey ? "Ключ" : "Выдача",
-      active: order.isPaid,
-      done: Boolean(order.deliveredKey) || order.status === "CLOSED",
-    },
-    {
-      label: "Готово",
-      active: order.status === "CLOSED" || Boolean(order.deliveredKey),
-      done: order.status === "CLOSED" || Boolean(order.deliveredKey),
-    },
-  ]
-
-  const showManualWaitingCard =
-    order.paymentMethodType === "MANUAL" && order.manualPaymentRequestedAt && !order.isPaid
-  const showPaymentDetailsCard =
-    (order.paymentMethodType === "CRYPTO_PAY" && Boolean(order.cryptoInvoiceUrl) && !order.isPaid) ||
-    (order.paymentMethodType === "MANUAL" && Boolean(order.paymentMethodDetails) && !order.isPaid)
+  const canConfirmManualPayment =
+    adminToolsVisible &&
+    order.paymentMethodType === "MANUAL" &&
+    order.status === "PAYMENT_REVIEW" &&
+    !order.isPaid
+  const canRejectManualPayment =
+    adminToolsVisible && order.paymentMethodType === "MANUAL" && order.status === "PAYMENT_REVIEW"
+  const canRefreshCryptoPayment =
+    order.paymentMethodType === "CRYPTO_PAY" && !order.isPaid && !isClosed
+  const canSwitchPaymentMethod =
+    isRealBuyerView &&
+    !order.isPaid &&
+    !isClosed &&
+    !order.manualPaymentRequestedAt &&
+    paymentOptions.length > 1
+  const showManualPayment =
+    order.paymentMethodType === "MANUAL" &&
+    Boolean(order.paymentMethodDetails) &&
+    !order.isPaid &&
+    order.status !== "PAYMENT_REVIEW"
+  const showCryptoPayment =
+    order.paymentMethodType === "CRYPTO_PAY" && Boolean(order.cryptoInvoiceUrl) && !order.isPaid
+  const amountLabel = order.cryptoInvoiceAmount
+    ? `${order.cryptoInvoiceAmount} ${order.cryptoInvoiceFiat || "RUB"}`
+    : null
+  const progress = order.status === "CLOSED" || order.deliveredKey ? 3 : order.isPaid ? 2 : 1
 
   return (
-    <Screen noTabBar className="pt-3">
-      <div className="px-4 pb-4">
-        <div className="mx-auto grid w-full max-w-3xl gap-3">
-          <section className="ui-card overflow-hidden">
-            <div className="px-5 py-6 sm:px-8 sm:py-8">
-              <div className="flex flex-col items-center text-center">
-                <p className="text-2xl font-semibold tracking-[-0.03em] text-[var(--color-text)]">
-                  {order.productTitle || order.subject}
-                </p>
-                <div className="mt-2">
-                  <HeaderMetaRow
-                    items={[
-                      `#${order.number}`,
-                      createdAtLabel,
-                      order.productCategory || null,
-                    ]}
+    <Screen noTabBar className="pb-5 pt-2">
+      <ScreenBody className="mx-auto w-full max-w-2xl gap-3">
+        {adminToolsVisible ? (
+          <Section header="Действия">
+            {order.createdBy ? (
+              <Cell
+                multiline
+                before={
+                  <TgImage
+                    size={48}
+                    src={order.createdBy.photoUrl || undefined}
+                    alt=""
+                    fallbackIcon={<span>{order.createdBy.firstName.slice(0, 1)}</span>}
                   />
-                </div>
-
-                <div className="mt-5">
-                  <PaymentMethodIcon
-                    iconDataUrl={order.paymentMethodIconDataUrl}
-                    title={order.paymentMethodTitle || "PM"}
-                    large
-                  />
-                </div>
-
-                <p className="mt-5 text-2xl font-semibold tracking-[-0.03em] text-[var(--color-text)] sm:text-[2rem]">
-                  {paymentStateLabel}
-                </p>
-                <p className="mt-2 text-sm text-[var(--color-muted)]">
-                  {order.paymentMethodTitle || "Способ оплаты"}
-                </p>
-                {amountLabel ? (
-                  <p className="mt-3 text-3xl font-semibold leading-none text-[var(--color-text)] sm:text-[2.6rem]">
-                    {amountLabel}
-                  </p>
-                ) : null}
-              </div>
-
-              <div className="mt-5">
-                <div className="flex items-center gap-2 rounded-[18px] bg-[var(--color-bg)] px-3 py-2.5 sm:px-4">
-                  {stepper.map((step, index) => (
-                    <div key={step.label} className="flex min-w-0 flex-1 items-center gap-2">
-                      <div
-                        className={cn(
-                          "flex size-7 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold",
-                          step.done || step.active
-                            ? "bg-[var(--color-accent)] text-[var(--color-accent-text)]"
-                            : "bg-[var(--color-surface)] text-[var(--color-muted)]",
-                        )}
-                      >
-                        {index + 1}
-                      </div>
-                      <span
-                        className={cn(
-                          "truncate text-xs font-medium",
-                          step.done || step.active
-                            ? "text-[var(--color-text)]"
-                            : "text-[var(--color-muted)]",
-                        )}
-                      >
-                        {step.label}
-                      </span>
-                      {index < stepper.length - 1 ? (
-                        <div className="h-px min-w-3 flex-1 bg-[var(--color-border)]" />
-                      ) : null}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {adminToolsVisible ? (
-                <div className="mt-6 grid gap-3">
-                  {order.createdBy ? (
-                    <div className="rounded-[20px] border border-[var(--color-border)] bg-[var(--color-bg)] p-4">
-                      <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-muted)]">
-                        Покупатель
-                      </p>
-                      <div className="mt-2 flex items-center justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold text-[var(--color-text)]">
-                            {order.createdBy.firstName}
-                          </p>
-                          <p className="mt-0.5 truncate text-xs text-[var(--color-muted)]">
-                            {order.createdBy.username ? `@${order.createdBy.username}` : "Без username"}
-                          </p>
-                        </div>
-                        <div className="rounded-full bg-[var(--color-surface)] px-3 py-1.5 text-[11px] text-[var(--color-text)]">
-                          {order.paymentMethodType === "MANUAL" ? "Ручная оплата" : "Crypto Bot"}
-                        </div>
-                      </div>
-                    </div>
-                  ) : null}
-
-                  <div className="rounded-[20px] border border-[var(--color-border)] bg-[var(--color-bg)] p-4">
-                    <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--color-muted)]">
-                      Действия
-                    </p>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {canConfirmManualPayment ? (
-                        <button
-                          onClick={() => paymentMutation.mutate()}
-                          disabled={paymentMutation.isPending}
-                          className="rounded-full bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-[var(--color-accent-text)] disabled:opacity-60"
-                        >
-                          {paymentMutation.isPending ? "Подтверждаю..." : "Подтвердить оплату"}
-                        </button>
-                      ) : null}
-                      {order.status === "PAYMENT_REVIEW" && order.paymentMethodType === "MANUAL" ? (
-                        <button
-                          onClick={() => rejectManualPaymentMutation.mutate()}
-                          disabled={rejectManualPaymentMutation.isPending}
-                          className="rounded-full bg-[var(--color-surface)] px-4 py-2 text-sm font-medium text-[var(--color-text)] disabled:opacity-60"
-                        >
-                          {rejectManualPaymentMutation.isPending ? "Отклоняю..." : "Отклонить"}
-                        </button>
-                      ) : null}
-                      {canRefreshCryptoPayment ? (
-                        <button
-                          onClick={() => refreshMutation.mutate()}
-                          disabled={refreshMutation.isPending}
-                          className="inline-flex items-center gap-2 rounded-full bg-[var(--color-surface)] px-4 py-2 text-sm font-medium text-[var(--color-text)] disabled:opacity-60"
-                        >
-                          <RefreshCcw size={14} className={cn(refreshMutation.isPending && "animate-spin")} />
-                          {refreshMutation.isPending ? "Проверяю оплату" : "Проверить оплату"}
-                        </button>
-                      ) : null}
-                      <button
-                        onClick={() => setIsDeleteModalOpen(true)}
-                        disabled={deleteOrderMutation.isPending}
-                        className="inline-flex items-center gap-2 rounded-full bg-[var(--color-destructive)]/14 px-4 py-2 text-sm font-medium text-[var(--color-destructive)] disabled:opacity-60"
-                      >
-                        <Trash2 size={14} />
-                        {deleteOrderMutation.isPending ? "Удаляю..." : "Удалить"}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ) : null}
-
-              {canSwitchPaymentMethod ? (
-                <div className="mt-6 rounded-[24px] border border-[var(--color-border)] bg-[var(--color-bg)] p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-[var(--color-text)]">Способ оплаты</p>
-                      <p className="mt-1 truncate text-xs text-[var(--color-muted)]">
-                        {order.paymentMethodTitle || "Не выбран"}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setDraftPaymentKey(currentPaymentKey)
-                        setIsPaymentPickerOpen(true)
-                      }}
-                      className="shrink-0 rounded-full bg-[var(--color-surface)] px-3 py-1.5 text-[11px] font-medium text-[var(--color-text)]"
-                    >
-                      Изменить
-                    </button>
-                  </div>
-                </div>
-              ) : null}
-
-              {showPaymentDetailsCard ? (
-                <div className="mt-6 rounded-[24px] border border-[var(--color-border)] bg-[var(--color-bg)] p-3.5 sm:p-4">
-                  {order.paymentMethodType === "CRYPTO_PAY" && order.cryptoInvoiceUrl ? (
-                    <div className="grid gap-3">
-                      {!order.isPaid ? (
-                        <a
-                          href={order.cryptoInvoiceUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="flex min-h-12 items-center justify-center gap-2 rounded-[18px] bg-[var(--color-accent)] px-4 py-3 text-sm font-semibold text-[var(--color-accent-text)]"
-                        >
-                          Открыть invoice
-                          <ExternalLink size={16} />
-                        </a>
-                      ) : null}
-                    </div>
-                  ) : order.paymentMethodDetails && !order.isPaid ? (
-                    <div className="grid gap-3">
-                      <div className="flex items-center justify-between gap-3">
-                        <p className="text-sm font-semibold text-[var(--color-text)]">Реквизиты</p>
-                        <CopyButton
-                          copied={copiedField === "payment"}
-                          onClick={() => copyValue(order.paymentMethodDetails || "", "payment")}
-                        />
-                      </div>
-                      <p className="break-all rounded-[18px] bg-[var(--color-surface)] px-4 py-4 text-sm leading-6 text-[var(--color-text)]">
-                        {order.paymentMethodDetails}
-                      </p>
-                      {order.paymentMethodType === "MANUAL" &&
-                      !order.isPaid &&
-                      !order.manualPaymentRequestedAt &&
-                      isRealBuyerView &&
-                      !isClosed ? (
-                        <button
-                          type="button"
-                          onClick={() => markManualPaidMutation.mutate()}
-                          disabled={markManualPaidMutation.isPending}
-                          className="min-h-12 rounded-[18px] bg-[var(--color-accent)] px-4 py-3 text-sm font-semibold text-[var(--color-accent-text)] disabled:opacity-60"
-                        >
-                          {markManualPaidMutation.isPending ? "Отмечаю..." : "Я оплатил"}
-                        </button>
-                      ) : null}
-                    </div>
-                  ) : null}
-                </div>
-              ) : null}
-
-              {order.deliveredKey ? (
-                <div className="mt-5 rounded-[24px] border border-[var(--color-border)] bg-[var(--color-bg)] p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-sm font-semibold text-[var(--color-text)]">Выданный ключ</p>
-                    <CopyButton
-                      copied={copiedField === "key"}
-                      onClick={() => copyValue(order.deliveredKey || "", "key")}
-                    />
-                  </div>
-                  <p className="mt-3 break-all rounded-[18px] bg-[var(--color-surface)] px-4 py-4 font-mono text-sm text-[var(--color-text)]">
-                    {order.deliveredKey}
-                  </p>
-                </div>
-              ) : null}
-
-              {showManualWaitingCard ? (
-                <div className="mt-5 rounded-[24px] border border-[var(--color-border)] bg-[var(--color-bg)] p-4">
-                  <p className="text-sm font-semibold text-[var(--color-text)]">Платёж на проверке</p>
-                  <p className="mt-2 text-sm leading-6 text-[var(--color-muted)]">
-                    {adminToolsVisible
-                      ? "Покупатель отметил перевод. Проверь реквизиты и либо подтверди оплату, либо отклони её."
-                      : "Продавец вручную проверит оплату и после подтверждения продолжит выдачу."}
-                  </p>
-                </div>
-              ) : null}
-
-              <div className="mt-5 grid gap-2 sm:grid-cols-2">
-                {order.isPaid && supportLink && isRealBuyerView ? (
-                  <a
-                    href={supportLink}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex min-h-12 items-center justify-center rounded-[18px] bg-[var(--color-accent)] px-4 py-3 text-sm font-semibold text-[var(--color-accent-text)]"
+                }
+                subtitle={order.createdBy.username ? `@${order.createdBy.username}` : "Без username"}
+                after={order.createdBy.isBanned ? <Badge type="number" mode="critical">Бан</Badge> : null}
+              >
+                {order.createdBy.firstName}
+              </Cell>
+            ) : null}
+            {canConfirmManualPayment ? (
+              <Cell
+                after={
+                  <Button
+                    size="s"
+                    loading={confirmMutation.isPending}
+                    onClick={() => confirmMutation.mutate()}
                   >
-                    Поддержка в Telegram
-                  </a>
-                ) : null}
-
-                {isRealBuyerView && !order.isPaid && !isClosed ? (
-                  <button
-                    type="button"
-                    onClick={() => cancelOrderMutation.mutate()}
-                    disabled={cancelOrderMutation.isPending}
-                    className="min-h-12 rounded-[18px] bg-[var(--color-surface)] px-4 py-3 text-sm font-medium text-[var(--color-destructive)] disabled:opacity-60"
+                    Подтвердить
+                  </Button>
+                }
+              >
+                Оплата отмечена
+              </Cell>
+            ) : null}
+            {canRejectManualPayment ? (
+              <Cell
+                after={
+                  <Button
+                    size="s"
+                    mode="gray"
+                    loading={rejectManualPaymentMutation.isPending}
+                    onClick={() => rejectManualPaymentMutation.mutate()}
                   >
-                    {cancelOrderMutation.isPending ? "Отменяю..." : "Отменить заказ"}
-                  </button>
-                ) : null}
-              </div>
+                    Отклонить
+                  </Button>
+                }
+              >
+                Проверка вручную
+              </Cell>
+            ) : null}
+            {canRefreshCryptoPayment ? (
+              <Cell
+                after={
+                  <Button
+                    size="s"
+                    mode="bezeled"
+                    loading={refreshMutation.isPending}
+                    onClick={() => refreshMutation.mutate()}
+                  >
+                    Проверить
+                  </Button>
+                }
+              >
+                Crypto invoice
+              </Cell>
+            ) : null}
+            <Cell
+              after={
+                <Button
+                  size="s"
+                  mode="outline"
+                  before={<Trash2 size={14} />}
+                  onClick={() => setIsDeleteModalOpen(true)}
+                >
+                  Удалить
+                </Button>
+              }
+            >
+              База
+            </Cell>
+          </Section>
+        ) : null}
+
+        <Section>
+          <div className="px-4 py-6 text-center">
+            <Title level="2">{order.productTitle || order.subject}</Title>
+            <p className="mt-2 text-[var(--tgui--hint_color)]">
+              #{order.number} · {createdAtLabel}
+              {order.productCategory ? ` · ${order.productCategory}` : ""}
+            </p>
+            <div className="mt-5 flex justify-center">
+              <PaymentMethodIcon
+                iconDataUrl={order.paymentMethodIconDataUrl}
+                title={order.paymentMethodTitle || "PM"}
+              />
             </div>
-          </section>
-        </div>
-      </div>
+            <Title level="2" className="mt-4">
+              {paymentStateLabel(order)}
+            </Title>
+            <p className="mt-1 text-[var(--tgui--hint_color)]">
+              {order.paymentMethodTitle || "Способ оплаты"}
+            </p>
+            {amountLabel ? (
+              <Title level="1" className="mt-3">
+                {amountLabel}
+              </Title>
+            ) : null}
+          </div>
+          <div className="px-4 pb-4">
+            <Steps count={3} progress={progress} />
+            <div className="mt-2 grid grid-cols-3 text-center text-sm">
+              <span>Оплата</span>
+              <span>Выдача</span>
+              <span>Готово</span>
+            </div>
+          </div>
+        </Section>
 
-      {isDeleteModalOpen ? (
-        <ConfirmDeleteModal
-          loading={deleteOrderMutation.isPending}
-          onClose={() => {
-            if (deleteOrderMutation.isPending) return
-            setIsDeleteModalOpen(false)
-          }}
-          onConfirm={() => {
-            deleteOrderMutation.mutate()
-          }}
-        />
-      ) : null}
+        {canSwitchPaymentMethod ? (
+          <Section>
+            <Cell
+              multiline
+              subtitle={order.paymentMethodTitle || "Не выбран"}
+              after={
+                <Button
+                  size="s"
+                  mode="bezeled"
+                  onClick={() => {
+                    setDraftPaymentKey(currentPaymentKey)
+                    setIsPaymentPickerOpen(true)
+                  }}
+                >
+                  Изменить
+                </Button>
+              }
+            >
+              Способ оплаты
+            </Cell>
+          </Section>
+        ) : null}
 
-      {isPaymentPickerOpen && canSwitchPaymentMethod ? (
+        {showCryptoPayment ? (
+          <Section header="Оплата">
+            <Cell multiline subtitle={amountLabel || "Invoice готов"}>
+              Crypto Bot
+            </Cell>
+            <Cell
+              after={<ExternalLink size={18} />}
+              Component="a"
+              href={order.cryptoInvoiceUrl || undefined}
+              target="_blank"
+            >
+              Открыть invoice
+            </Cell>
+          </Section>
+        ) : null}
+
+        {showManualPayment ? (
+          <Section header="Реквизиты">
+            <Cell
+              multiline
+              subtitle={order.paymentMethodDetails}
+              after={
+                <CopyButton
+                  copied={copiedField === "payment"}
+                  onClick={() => copyValue(order.paymentMethodDetails || "", "payment")}
+                />
+              }
+            >
+              {order.paymentMethodTitle || "Ручная оплата"}
+            </Cell>
+            {isRealBuyerView && !isClosed ? (
+              <Cell
+                after={
+                  <Button
+                    size="s"
+                    loading={markManualPaidMutation.isPending}
+                    onClick={() => markManualPaidMutation.mutate()}
+                  >
+                    Я оплатил
+                  </Button>
+                }
+              >
+                Перевод отправлен
+              </Cell>
+            ) : null}
+          </Section>
+        ) : null}
+
+        {order.deliveredKey ? (
+          <Section header="Выдача">
+            <Cell
+              multiline
+              subtitle={<code className="break-all">{order.deliveredKey}</code>}
+              after={
+                <CopyButton
+                  copied={copiedField === "key"}
+                  onClick={() => copyValue(order.deliveredKey || "", "key")}
+                />
+              }
+            >
+              Выданный ключ
+            </Cell>
+          </Section>
+        ) : null}
+
+        {order.status === "PAYMENT_REVIEW" && !order.isPaid ? (
+          <Section>
+            <Cell multiline description="Покупатель отметил перевод. Заказ ждёт ручного подтверждения продавцом.">
+              Платёж на проверке
+            </Cell>
+          </Section>
+        ) : null}
+
+        {(isRealBuyerView && !order.isPaid && !isClosed) || (order.isPaid && supportLink && isRealBuyerView) ? (
+          <div className="grid gap-2 sm:grid-cols-2">
+            {order.isPaid && supportLink && isRealBuyerView ? (
+              <Button stretched Component="a" href={supportLink} target="_blank">
+                Поддержка в Telegram
+              </Button>
+            ) : null}
+            {isRealBuyerView && !order.isPaid && !isClosed ? (
+              <Button
+                stretched
+                mode="plain"
+                loading={cancelOrderMutation.isPending}
+                onClick={() => cancelOrderMutation.mutate()}
+              >
+                Отменить заказ
+              </Button>
+            ) : null}
+          </div>
+        ) : null}
+      </ScreenBody>
+
+      <ConfirmDeleteModal
+        open={isDeleteModalOpen}
+        loading={deleteOrderMutation.isPending}
+        onOpenChange={setIsDeleteModalOpen}
+        onConfirm={() => deleteOrderMutation.mutate()}
+      />
+
+      {canSwitchPaymentMethod ? (
         <PaymentMethodPickerModal
+          open={isPaymentPickerOpen}
           options={paymentOptions}
           selectedKey={draftPaymentKey || currentPaymentKey}
           currentKey={currentPaymentKey}
           loading={changePaymentMethodMutation.isPending}
-          onSelect={setDraftPaymentKey}
-          onClose={() => {
+          onOpenChange={(open) => {
             if (changePaymentMethodMutation.isPending) return
-            setIsPaymentPickerOpen(false)
-            setDraftPaymentKey(null)
+            setIsPaymentPickerOpen(open)
+            if (!open) setDraftPaymentKey(null)
           }}
+          onSelect={setDraftPaymentKey}
           onConfirm={() => {
             if (!selectedDraftPayment || selectedDraftPayment.key === currentPaymentKey) return
             changePaymentMethodMutation.mutate(
@@ -536,60 +474,28 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
   )
 }
 
+function paymentStateLabel(order: Awaited<ReturnType<typeof getOrder>>["order"]) {
+  if (!order) return "Заказ"
+  if (order.status === "CANCELLED") return "Отменён"
+  if (order.status === "PAYMENT_REVIEW") return "На проверке"
+  if (order.isPaid) return "Оплачено"
+  return "Ожидает оплату"
+}
+
 function PaymentMethodIcon({
   iconDataUrl,
   title,
-  large = false,
 }: {
   iconDataUrl: string | null
   title: string
-  large?: boolean
-}) {
-  if (iconDataUrl) {
-    return (
-      <div
-        className={cn(
-          "relative overflow-hidden",
-          large ? "size-16 rounded-[20px]" : "size-12 rounded-[18px]",
-        )}
-      >
-        <Image
-          src={iconDataUrl}
-          alt=""
-          fill
-          unoptimized
-          sizes={large ? "64px" : "48px"}
-          className="object-contain"
-        />
-      </div>
-    )
-  }
-
-  return (
-    <div
-      className={cn(
-        "flex items-center justify-center bg-[var(--color-bg)] text-xs font-semibold text-[var(--color-text)]",
-        large ? "size-16 rounded-[20px]" : "size-12 rounded-[18px]",
-      )}
-    >
-      {title.slice(0, 2).toUpperCase()}
-    </div>
-  )
-}
-
-function HeaderMetaRow({
-  items,
-}: {
-  items: Array<string | null>
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-      {items.filter(Boolean).map((item) => (
-        <span key={item} className="whitespace-nowrap text-xs text-[var(--color-muted)]">
-          {item}
-        </span>
-      ))}
-    </div>
+    <TgImage
+      size={96}
+      src={iconDataUrl || undefined}
+      alt=""
+      fallbackIcon={<span>{title.slice(0, 2).toUpperCase()}</span>}
+    />
   )
 }
 
@@ -601,89 +507,57 @@ function CopyButton({
   onClick: () => void
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-medium transition-colors",
-        copied
-          ? "bg-[var(--color-accent)] text-[var(--color-accent-text)]"
-          : "bg-[var(--color-bg)] text-[var(--color-text)]",
-      )}
-    >
-      {copied ? <Check size={12} /> : <Copy size={12} />}
-      {copied ? "Скопировано" : "Копировать"}
-    </button>
+    <Button size="s" mode={copied ? "filled" : "bezeled"} before={copied ? <Check size={14} /> : <Copy size={14} />} onClick={onClick}>
+      {copied ? "Готово" : "Копировать"}
+    </Button>
   )
 }
 
 function ConfirmDeleteModal({
+  open,
   loading,
-  onClose,
+  onOpenChange,
   onConfirm,
 }: {
+  open: boolean
   loading: boolean
-  onClose: () => void
+  onOpenChange: (open: boolean) => void
   onConfirm: () => void
 }) {
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-[var(--color-overlay)] p-3 md:items-center md:p-6"
-      onClick={onClose}
+    <Modal
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!loading) onOpenChange(nextOpen)
+      }}
+      header={<Modal.Header>Удалить заказ</Modal.Header>}
     >
-      <div
-        className="ui-card w-full max-w-md p-4 sm:p-5"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-base font-semibold text-[var(--color-text)]">Удалить заказ</p>
-            <p className="mt-1 text-sm text-[var(--color-muted)]">
-              Заказ будет удалён из базы полностью. Это действие нельзя отменить.
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[var(--color-bg)] text-[var(--color-muted)]"
-          >
-            <X size={16} />
-          </button>
-        </div>
-
-        <div className="mt-5 flex items-center justify-end gap-2">
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={loading}
-            className="rounded-full bg-[var(--color-bg)] px-4 py-2 text-sm font-medium text-[var(--color-text)] disabled:opacity-60"
-          >
-            Отмена
-          </button>
-          <button
-            type="button"
-            onClick={onConfirm}
-            disabled={loading}
-            className="rounded-full bg-[var(--color-destructive)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
-          >
-            {loading ? "Удаляю..." : "Удалить"}
-          </button>
-        </div>
-      </div>
-    </div>
+      <Section footer="Заказ будет удалён из базы полностью. Это действие нельзя отменить.">
+        <Cell
+          after={
+            <Button size="s" mode="outline" loading={loading} onClick={onConfirm}>
+              Удалить
+            </Button>
+          }
+        >
+          Подтверждение
+        </Cell>
+      </Section>
+    </Modal>
   )
 }
 
 function PaymentMethodPickerModal({
+  open,
   options,
   selectedKey,
   currentKey,
   loading,
   onSelect,
-  onClose,
+  onOpenChange,
   onConfirm,
 }: {
+  open: boolean
   options: Array<{
     key: string
     id?: string
@@ -696,101 +570,36 @@ function PaymentMethodPickerModal({
   currentKey: string | null
   loading: boolean
   onSelect: (key: string) => void
-  onClose: () => void
+  onOpenChange: (open: boolean) => void
   onConfirm: () => void
 }) {
   const canConfirm = Boolean(selectedKey && selectedKey !== currentKey && !loading)
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-[var(--color-overlay)] p-3 md:items-center md:p-6"
-      onClick={onClose}
+    <Modal
+      open={open}
+      onOpenChange={onOpenChange}
+      header={<Modal.Header>Способ оплаты</Modal.Header>}
     >
-      <div
-        className="ui-card w-full max-w-lg p-4 sm:p-5"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-base font-semibold text-[var(--color-text)]">Изменить способ оплаты</p>
-            <p className="mt-1 text-sm text-[var(--color-muted)]">
-              Выбери новый способ и подтверди изменение.
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[var(--color-bg)] text-[var(--color-muted)]"
+      <Section footer="Изменить можно только до оплаты.">
+        {options.map((option) => (
+          <Cell
+            key={option.key}
+            multiline
+            before={<TgImage size={48} src={option.iconDataUrl || undefined} alt="" fallbackIcon={<span>{option.title.slice(0, 2).toUpperCase()}</span>} />}
+            subtitle={option.subtitle}
+            after={<Radio checked={option.key === selectedKey} readOnly />}
+            onClick={() => onSelect(option.key)}
           >
-            <X size={16} />
-          </button>
-        </div>
-
-        <div className="mt-4 grid max-h-[55dvh] gap-2 overflow-y-auto pr-1">
-          {options.map((option) => {
-            const isSelected = option.key === selectedKey
-
-            return (
-              <button
-                key={option.key}
-                type="button"
-                onClick={() => onSelect(option.key)}
-                className={cn(
-                  "flex items-center gap-3 rounded-[18px] border px-3 py-3 text-left transition-colors sm:px-4",
-                  isSelected
-                    ? "border-[var(--color-accent)] bg-[color-mix(in_srgb,var(--color-accent)_10%,var(--color-bg))]"
-                    : "border-[var(--color-border)] bg-[var(--color-surface)]",
-                )}
-              >
-                <PaymentMethodIcon iconDataUrl={option.iconDataUrl} title={option.title} />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <p className="truncate text-sm font-semibold text-[var(--color-text)]">
-                      {option.title}
-                    </p>
-                    <span className="rounded-full bg-[var(--color-bg)] px-2 py-0.5 text-[10px] text-[var(--color-muted)]">
-                      {option.type === "CRYPTO_PAY" ? "Авто" : "Ручная"}
-                    </span>
-                  </div>
-                  <p className="mt-1 line-clamp-2 text-xs leading-5 text-[var(--color-muted)]">
-                    {option.subtitle}
-                  </p>
-                </div>
-                <div
-                  className={cn(
-                    "flex size-5 shrink-0 items-center justify-center rounded-full border",
-                    isSelected
-                      ? "border-[var(--color-accent)] bg-[var(--color-accent)] text-[var(--color-accent-text)]"
-                      : "border-[var(--color-border)] bg-transparent text-transparent",
-                  )}
-                >
-                  <Check size={12} />
-                </div>
-              </button>
-            )
-          })}
-        </div>
-
-        <div className="mt-5 flex items-center justify-end gap-2">
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={loading}
-            className="rounded-full bg-[var(--color-bg)] px-4 py-2 text-sm font-medium text-[var(--color-text)] disabled:opacity-60"
-          >
-            Отмена
-          </button>
-          <button
-            type="button"
-            onClick={onConfirm}
-            disabled={!canConfirm}
-            className="rounded-full bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-[var(--color-accent-text)] disabled:opacity-60"
-          >
-            {loading ? "Сохраняю..." : "Подтвердить"}
-          </button>
-        </div>
+            {option.title}
+          </Cell>
+        ))}
+      </Section>
+      <div className="p-4">
+        <Button stretched loading={loading} disabled={!canConfirm} onClick={onConfirm}>
+          Подтвердить
+        </Button>
       </div>
-    </div>
+    </Modal>
   )
 }

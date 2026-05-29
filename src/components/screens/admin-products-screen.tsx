@@ -1,10 +1,24 @@
 "use client"
 
 import Image from "next/image"
+import type { Dispatch, SetStateAction } from "react"
 import { useMemo, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
-  Check,
+  Badge,
+  Button,
+  Cell,
+  FileInput,
+  Image as TgImage,
+  Input,
+  Modal,
+  Placeholder,
+  Section,
+  SegmentedControl,
+  Switch,
+  Textarea,
+} from "@telegram-apps/telegram-ui"
+import {
   CopyPlus,
   ImagePlus,
   KeyRound,
@@ -12,13 +26,11 @@ import {
   PencilLine,
   Plus,
   Trash2,
-  X,
 } from "lucide-react"
 
 import { getMe, getProduct, getProducts, saveAdminProduct, updateAdminProduct } from "@/lib/api"
 import { optimizeSquareImage } from "@/lib/image"
-import { Screen, ScreenHeader } from "@/components/screen"
-import { cn } from "@/lib/cn"
+import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
 
 type SpecForm = {
   label: string
@@ -135,7 +147,6 @@ export function AdminProductsScreen() {
       imageDataUrl: product.imageDataUrl || "",
       priceRub: String(product.priceRub),
       deliveryType: product.deliveryType,
-      removeKeyIds: [],
       specs: product.specs.length > 0 ? product.specs : [{ label: "", value: "" }],
     })
     setIsEditorOpen(true)
@@ -162,156 +173,91 @@ export function AdminProductsScreen() {
 
   return (
     <Screen>
-      <ScreenHeader title="Товары" subtitle="Каталог, карточки и параметры товара" />
+      <ScreenHeader
+        title="Товары"
+        subtitle={`${products.length} в каталоге`}
+        trailing={
+          <Button size="s" before={<PackagePlus size={14} />} onClick={openCreateEditor}>
+            Новый
+          </Button>
+        }
+      />
 
-      <div className="grid gap-4 px-4 pb-4">
-        <section className="ui-card p-4 sm:p-5">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-base font-semibold text-[var(--color-text)]">
-                Каталог товаров
-              </p>
-              <p className="mt-1 text-sm text-[var(--color-muted)]">
-                Товары отдельно, редактор отдельно. Без мусора в одном экране.
-              </p>
-            </div>
-
-            <button
-              onClick={openCreateEditor}
-              className="inline-flex items-center justify-center gap-2 rounded-[18px] bg-[var(--color-accent)] px-4 py-3 text-sm font-semibold text-[var(--color-accent-text)]"
-            >
-              <PackagePlus size={16} />
-              Новый товар
-            </button>
-          </div>
-        </section>
-
+      <ScreenBody className="gap-3">
         {products.length === 0 ? (
-          <section className="ui-card flex min-h-72 flex-col items-center justify-center gap-3 p-6 text-center">
-            <div className="flex size-14 items-center justify-center rounded-full bg-[var(--color-bg)] text-[var(--color-muted)]">
-              <PackagePlus size={22} />
-            </div>
-            <div>
-              <p className="text-base font-semibold text-[var(--color-text)]">
-                Товаров пока нет
-              </p>
-              <p className="mt-1 text-sm text-[var(--color-muted)]">
-                Создай первую карточку и она сразу появится в магазине.
-              </p>
-            </div>
-            <button
-              onClick={openCreateEditor}
-              className="rounded-[18px] bg-[var(--color-accent)] px-4 py-3 text-sm font-semibold text-[var(--color-accent-text)]"
-            >
+          <Placeholder header="Товаров пока нет" description="Создай первую карточку магазина.">
+            <PackagePlus size={32} />
+            <Button size="m" onClick={openCreateEditor}>
               Создать товар
-            </button>
-          </section>
+            </Button>
+          </Placeholder>
         ) : (
-          <div className="grid gap-3 xl:grid-cols-2">
+          <Section header="Каталог">
             {products.map((product) => (
-              <article
+              <Cell
                 key={product.id}
-                className="ui-card overflow-hidden p-3 sm:p-4"
+                multiline
+                before={
+                  <ProductImage
+                    imageDataUrl={product.imageDataUrl}
+                    title={product.title}
+                    size={48}
+                  />
+                }
+                subtitle={`${product.category || "Без категории"} · ${product.priceRub.toLocaleString("ru-RU")} ₽`}
+                description={product.description}
+                titleBadge={
+                  !product.isActive ? (
+                    <Badge type="number" mode="gray">
+                      Скрыт
+                    </Badge>
+                  ) : undefined
+                }
+                after={
+                  <div className="flex gap-2">
+                    <Button
+                      size="s"
+                      mode="bezeled"
+                      before={<PencilLine size={14} />}
+                      onClick={() => openEditEditor(product)}
+                    >
+                      Править
+                    </Button>
+                    <Button
+                      size="s"
+                      mode="gray"
+                      before={<CopyPlus size={14} />}
+                      onClick={() => openDuplicateEditor(product)}
+                    >
+                      Копия
+                    </Button>
+                  </div>
+                }
               >
-                <div className="grid gap-4 sm:grid-cols-[136px_minmax(0,1fr)]">
-                  <div className="relative aspect-square overflow-hidden rounded-[22px] bg-[var(--color-bg)]">
-                    {product.imageDataUrl ? (
-                      <Image
-                        src={product.imageDataUrl}
-                        alt=""
-                        fill
-                        unoptimized
-                        sizes="160px"
-                        className="object-cover"
-                      />
-                    ) : (
-                      <div className="flex size-full items-center justify-center text-[var(--color-muted)]">
-                        <ImagePlus size={24} />
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="min-w-0">
-                    <div className="flex items-start gap-3">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <p className="truncate text-base font-semibold text-[var(--color-text)]">
-                            {product.title}
-                          </p>
-                          {!product.isActive ? (
-                            <span className="rounded-full bg-[var(--color-bg)] px-2.5 py-1 text-[11px] text-[var(--color-muted)]">
-                              Скрыт
-                            </span>
-                          ) : null}
-                        </div>
-                        <p className="mt-1 text-sm text-[var(--color-muted)]">
-                          {product.category || "Без категории"} ·{" "}
-                          {product.priceRub.toLocaleString("ru-RU")} ₽
-                        </p>
-                      </div>
-
-                      <span className="rounded-full bg-[var(--color-bg)] px-2.5 py-1 text-[11px] text-[var(--color-muted)]">
-                        {product.deliveryType === "AUTO_KEY" ? "Автовыдача" : "Ручная"}
-                      </span>
-                    </div>
-
-                    <div className="mt-3 flex flex-wrap gap-1.5">
-                      {product.deliveryType === "AUTO_KEY" ? (
-                        <span className="rounded-full bg-[var(--color-accent)]/14 px-2.5 py-1 text-[11px] text-[var(--color-accent)]">
-                          {product.availableKeyCount ?? 0} ключей
-                        </span>
-                      ) : (
-                        <span className="rounded-full bg-[var(--color-bg)] px-2.5 py-1 text-[11px] text-[var(--color-muted)]">
-                          Ручная выдача
-                        </span>
-                      )}
-                    </div>
-
-                    <p className="mt-4 line-clamp-4 text-sm leading-6 text-[var(--color-muted)]">
-                      {product.description}
-                    </p>
-
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      <button
-                        onClick={() => openEditEditor(product)}
-                        className="inline-flex items-center gap-2 rounded-[16px] bg-[var(--color-bg)] px-3.5 py-2 text-sm font-medium text-[var(--color-text)]"
-                      >
-                        <PencilLine size={14} />
-                        Редактировать
-                      </button>
-                      <button
-                        onClick={() => openDuplicateEditor(product)}
-                        className="inline-flex items-center gap-2 rounded-[16px] bg-[var(--color-bg)] px-3.5 py-2 text-sm font-medium text-[var(--color-muted)]"
-                      >
-                        <CopyPlus size={14} />
-                        Дублировать
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </article>
+                {product.title}
+              </Cell>
             ))}
-          </div>
+          </Section>
         )}
-      </div>
+      </ScreenBody>
 
-      {isEditorOpen ? (
-        <ProductEditorModal
-          form={form}
-          categoryOptions={categoryOptions}
-          uploading={uploading}
-          saving={mutation.isPending}
-          onClose={closeEditor}
-          onSave={() => mutation.mutate()}
-          onImageChange={handleImageChange}
-          onChange={setForm}
-        />
-      ) : null}
+      <ProductEditorModal
+        open={isEditorOpen}
+        form={form}
+        categoryOptions={categoryOptions}
+        uploading={uploading}
+        saving={mutation.isPending}
+        onClose={closeEditor}
+        onSave={() => mutation.mutate()}
+        onImageChange={handleImageChange}
+        onChange={setForm}
+      />
     </Screen>
   )
 }
 
 function ProductEditorModal({
+  open,
   form,
   categoryOptions,
   uploading,
@@ -321,6 +267,7 @@ function ProductEditorModal({
   onImageChange,
   onChange,
 }: {
+  open: boolean
   form: ProductForm
   categoryOptions: string[]
   uploading: boolean
@@ -328,12 +275,12 @@ function ProductEditorModal({
   onClose: () => void
   onSave: () => void
   onImageChange: (file: File | null) => void
-  onChange: React.Dispatch<React.SetStateAction<ProductForm>>
+  onChange: Dispatch<SetStateAction<ProductForm>>
 }) {
   const { data: productData } = useQuery({
     queryKey: ["admin-product", form.id],
     queryFn: () => getProduct(form.id),
-    enabled: Boolean(form.id),
+    enabled: Boolean(form.id && open),
   })
 
   const editableKeys = productData?.product.editableKeys ?? []
@@ -346,453 +293,276 @@ function ProductEditorModal({
     !saving
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-[var(--color-overlay)] p-0 sm:p-3 md:items-center md:p-6">
-      <div className="ui-card flex h-[min(100dvh,1040px)] w-full max-w-5xl flex-col overflow-hidden rounded-b-none rounded-t-[28px] sm:h-[min(92vh,1040px)] sm:rounded-[32px]">
-        <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 sm:px-5 sm:py-4">
-          <div>
-            <p className="text-base font-semibold text-[var(--color-text)]">
-              {form.id ? "Редактирование товара" : "Новый товар"}
-            </p>
-            <p className="mt-1 text-xs text-[var(--color-muted)] sm:text-sm">
-              Настройки карточки товара
-            </p>
-          </div>
+    <Modal
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!saving && !nextOpen) onClose()
+      }}
+      header={<Modal.Header>{form.id ? "Редактирование товара" : "Новый товар"}</Modal.Header>}
+    >
+      <Section header="Обложка">
+        <Cell
+          multiline
+          before={
+            <ProductImage imageDataUrl={form.imageDataUrl} title={form.title || "Товар"} size={96} />
+          }
+          subtitle={uploading ? "Обработка изображения..." : "Квадратная картинка товара"}
+        >
+          Изображение
+        </Cell>
+        <div className="px-4 pb-3">
+          <FileInput
+            label="Загрузить изображение"
+            accept="image/*"
+            onChange={(event) => onImageChange(event.currentTarget.files?.[0] || null)}
+          />
+        </div>
+      </Section>
 
-          <button
-            onClick={onClose}
-            className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[var(--color-bg)] text-[var(--color-muted)] sm:size-10"
+      <Section header="Карточка">
+        <Input
+          header="Название"
+          value={form.title}
+          onChange={(event) => onChange((prev) => ({ ...prev, title: event.target.value }))}
+          placeholder="DRIP LITE LIFETIME"
+        />
+        <Input
+          header="Категория"
+          value={form.category}
+          onChange={(event) => onChange((prev) => ({ ...prev, category: event.target.value }))}
+          placeholder="Новая или существующая"
+        />
+        {categoryOptions.length > 0 ? (
+          <div className="scrollbar-none flex gap-2 overflow-x-auto px-4 py-2">
+            {categoryOptions.map((category) => (
+              <Button
+                key={category}
+                size="s"
+                mode={form.category.trim() === category ? "filled" : "gray"}
+                onClick={() => onChange((prev) => ({ ...prev, category }))}
+              >
+                {category}
+              </Button>
+            ))}
+          </div>
+        ) : null}
+        <Input
+          header="Цена, RUB"
+          value={form.priceRub}
+          type="number"
+          onChange={(event) => onChange((prev) => ({ ...prev, priceRub: event.target.value }))}
+          placeholder="4990"
+        />
+        <Textarea
+          header="Описание"
+          value={form.description}
+          onChange={(event) => onChange((prev) => ({ ...prev, description: event.target.value }))}
+          placeholder="Краткое описание товара"
+        />
+        <Cell after={<Switch checked={form.isActive} onChange={(event) => onChange((prev) => ({ ...prev, isActive: event.target.checked }))} />}>
+          Показывать в магазине
+        </Cell>
+      </Section>
+
+      <Section header="Выдача">
+        <SegmentedControl>
+          <SegmentedControl.Item
+            selected={form.deliveryType === "MANUAL"}
+            onClick={() => onChange((prev) => ({ ...prev, deliveryType: "MANUAL" }))}
           >
-            <X size={16} />
-          </button>
-        </div>
+            Ручная
+          </SegmentedControl.Item>
+          <SegmentedControl.Item
+            selected={form.deliveryType === "AUTO_KEY"}
+            onClick={() => onChange((prev) => ({ ...prev, deliveryType: "AUTO_KEY" }))}
+          >
+            Автоключи
+          </SegmentedControl.Item>
+        </SegmentedControl>
+      </Section>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3 pb-4 sm:px-5 sm:py-4">
-          <div className="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
-            <section className="grid content-start gap-4">
-              <label className="block">
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(event) => onImageChange(event.target.files?.[0] || null)}
-                />
-                <div className="overflow-hidden rounded-[26px] bg-[var(--color-bg)]">
-                  <div className="relative aspect-square">
-                    {form.imageDataUrl ? (
-                      <Image
-                        src={form.imageDataUrl}
-                        alt=""
-                        fill
-                        unoptimized
-                        sizes="320px"
-                        className="object-cover"
-                      />
-                    ) : (
-                      <div className="flex size-full flex-col items-center justify-center gap-3 text-[var(--color-muted)]">
-                        <ImagePlus size={24} />
-                        <span className="text-sm">
-                          {uploading ? "Обработка..." : "Загрузить квадрат"}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </label>
+      <Section
+        header="Характеристики"
+        footer="Пустые строки не сохраняются и не показываются в карточке товара."
+      >
+        {form.specs.map((spec, index) => (
+          <SpecEditor
+            key={`${index}-${form.id || "new"}`}
+            spec={spec}
+            index={index}
+            canRemove={form.specs.length > 1}
+            onChange={onChange}
+          />
+        ))}
+        <Cell
+          after={
+            <Button
+              size="s"
+              mode="bezeled"
+              before={<Plus size={14} />}
+              onClick={() =>
+                onChange((prev) => ({
+                  ...prev,
+                  specs: [...prev.specs, { label: "", value: "" }],
+                }))
+              }
+            >
+              Добавить
+            </Button>
+          }
+        >
+          Новый пункт
+        </Cell>
+      </Section>
 
-              <div className="ui-card-soft p-4">
-                <p className="text-sm font-medium text-[var(--color-text)]">Превью</p>
-                <div className="mt-3 rounded-[22px] bg-[var(--color-surface)] p-3">
-                  <div className="flex items-center gap-3">
-                    <div className="relative size-14 shrink-0 overflow-hidden rounded-[16px] bg-[var(--color-bg)]">
-                      {form.imageDataUrl ? (
-                        <Image
-                          src={form.imageDataUrl}
-                          alt=""
-                          fill
-                          unoptimized
-                          sizes="56px"
-                          className="object-cover"
-                        />
-                      ) : (
-                        <div className="flex size-full items-center justify-center text-[var(--color-muted)]">
-                          <ImagePlus size={18} />
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold text-[var(--color-text)]">
-                            {form.title || "Название товара"}
-                          </p>
-                          <p className="mt-1 truncate text-xs text-[var(--color-muted)]">
-                            {form.category || "Категория"}
-                          </p>
-                        </div>
-                        <span className="shrink-0 rounded-full bg-[var(--color-bg)] px-2.5 py-1 text-[10px] text-[var(--color-muted)]">
-                          {form.deliveryType === "AUTO_KEY" ? "Авто" : "Ручная"}
-                        </span>
-                      </div>
-
-                      <div className="mt-3 flex items-center justify-between gap-3">
-                        <span className="text-sm font-semibold text-[var(--color-text)]">
-                          {Number(form.priceRub || 0).toLocaleString("ru-RU")} ₽
-                        </span>
-                        <span className="text-[11px] text-[var(--color-muted)]">
-                          {form.isActive ? "В магазине" : "Скрыт"}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            <section className="grid content-start gap-4">
-              <div className="grid gap-3 md:grid-cols-2">
-                <Field label="Название">
-                  <input
-                    value={form.title}
-                    onChange={(event) =>
-                      onChange((prev) => ({ ...prev, title: event.target.value }))
-                    }
-                    placeholder="DRIP LITE LIFETIME"
-                    className="ui-input"
-                  />
-                </Field>
-
-                <Field label="Категория">
-                  <div className="grid gap-2">
-                    <input
-                      value={form.category}
-                      onChange={(event) =>
-                        onChange((prev) => ({ ...prev, category: event.target.value }))
+      {form.deliveryType === "AUTO_KEY" ? (
+        <Section header="Пул ключей" footer="Новые ключи добавляются по одному на строку.">
+          {form.id ? (
+            <>
+              <Cell
+                subtitle={
+                  form.removeKeyIds.length > 0
+                    ? `К удалению: ${form.removeKeyIds.length}`
+                    : "Без изменений"
+                }
+              >
+                {visibleKeys.length} ключей в наличии
+              </Cell>
+              {visibleKeys.map((key) => (
+                <Cell
+                  key={key.id}
+                  multiline
+                  before={<KeyRound size={18} />}
+                  subtitle={<code className="break-all">{key.value}</code>}
+                  after={
+                    <Button
+                      size="s"
+                      mode="gray"
+                      onClick={() =>
+                        onChange((prev) => ({
+                          ...prev,
+                          removeKeyIds: [...prev.removeKeyIds, key.id],
+                        }))
                       }
-                      placeholder="Новая или существующая категория"
-                      className="ui-input"
-                    />
-                    {categoryOptions.length > 0 ? (
-                      <div className="flex flex-wrap gap-2">
-                        {categoryOptions.map((category) => {
-                          const active = form.category.trim() === category
-
-                          return (
-                            <button
-                              key={category}
-                              type="button"
-                              onClick={() =>
-                                onChange((prev) => ({ ...prev, category }))
-                              }
-                              className={cn(
-                                "rounded-full px-3 py-1.5 text-xs transition-colors",
-                                active
-                                  ? "bg-[var(--color-accent)] text-[var(--color-accent-text)]"
-                                  : "bg-[var(--color-bg)] text-[var(--color-muted)]",
-                              )}
-                            >
-                              {category}
-                            </button>
-                          )
-                        })}
-                      </div>
-                    ) : null}
-                  </div>
-                </Field>
-
-                <Field label="Цена">
-                  <input
-                    value={form.priceRub}
-                    type="number"
-                    onChange={(event) =>
-                      onChange((prev) => ({ ...prev, priceRub: event.target.value }))
-                    }
-                    placeholder="4990"
-                    className="ui-input"
-                  />
-                </Field>
-
-                <Field label="Публикация">
-                  <label className="flex h-[50px] items-center gap-3 rounded-2xl bg-[var(--color-bg)] px-4">
-                    <input
-                      checked={form.isActive}
-                      onChange={(event) =>
-                        onChange((prev) => ({ ...prev, isActive: event.target.checked }))
-                      }
-                      type="checkbox"
-                      className="size-4 accent-[var(--color-accent)]"
-                    />
-                    <span className="text-sm text-[var(--color-text)]">
-                      Показывать в магазине
-                    </span>
-                  </label>
-                </Field>
-              </div>
-
-              <div className="grid gap-2">
-                <p className="px-1 text-sm font-medium text-[var(--color-text)]">Выдача</p>
-                <div className="flex rounded-[22px] bg-[var(--color-bg)] p-1">
-                  {(["MANUAL", "AUTO_KEY"] as const).map((type) => (
-                    <button
-                      key={type}
-                      onClick={() => onChange((prev) => ({ ...prev, deliveryType: type }))}
-                      className={cn(
-                        "flex-1 rounded-[18px] px-4 py-2.5 text-sm font-medium transition-colors",
-                        form.deliveryType === type
-                          ? "bg-[var(--color-accent)] text-[var(--color-accent-text)]"
-                          : "text-[var(--color-muted)]",
-                      )}
                     >
-                      {type === "MANUAL" ? "Ручная выдача" : "Автовыдача ключей"}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <Field label="Описание">
-                <textarea
-                  value={form.description}
-                  onChange={(event) =>
-                    onChange((prev) => ({ ...prev, description: event.target.value }))
+                      Убрать
+                    </Button>
                   }
-                  placeholder="Краткое и нормальное описание товара"
-                  className="ui-input min-h-36"
-                />
-              </Field>
+                >
+                  Ключ
+                </Cell>
+              ))}
+            </>
+          ) : null}
+          <Textarea
+            header="Добавить новые"
+            value={form.keyPoolText}
+            onChange={(event) => onChange((prev) => ({ ...prev, keyPoolText: event.target.value }))}
+            placeholder="Один ключ на строку"
+          />
+        </Section>
+      ) : null}
 
-              <div className="ui-card-soft p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-medium text-[var(--color-text)]">
-                      Характеристики
-                    </p>
-                    <p className="mt-1 text-xs text-[var(--color-muted)]">
-                      Каждая строка станет отдельным пунктом в карточке товара.
-                    </p>
-                  </div>
-                  <button
-                    onClick={() =>
-                      onChange((prev) => ({
-                        ...prev,
-                        specs: [...prev.specs, { label: "", value: "" }],
-                      }))
-                    }
-                    className="inline-flex items-center gap-2 rounded-[16px] bg-[var(--color-bg)] px-3 py-2 text-sm font-medium text-[var(--color-text)]"
-                  >
-                    <Plus size={14} />
-                    Добавить
-                  </button>
-                </div>
-
-                <div className="mt-4 grid gap-3">
-                  {form.specs.map((spec, index) => (
-                    <div
-                      key={`${index}-${form.id || "new"}`}
-                      className="rounded-[22px] bg-[var(--color-bg)] p-3"
-                    >
-                      <div className="mb-3 flex items-center justify-between gap-3">
-                        <p className="text-xs font-medium uppercase tracking-[0.14em] text-[var(--color-muted)]">
-                          Характеристика {index + 1}
-                        </p>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            onChange((prev) => ({
-                              ...prev,
-                              specs:
-                                prev.specs.length === 1
-                                  ? [{ label: "", value: "" }]
-                                  : prev.specs.filter((_, itemIndex) => itemIndex !== index),
-                            }))
-                          }
-                          className="flex size-9 items-center justify-center rounded-full bg-[var(--color-surface)] text-[var(--color-muted)]"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        <label className="grid gap-2">
-                          <span className="px-1 text-xs text-[var(--color-muted)]">
-                            Название
-                          </span>
-                          <input
-                            value={spec.label}
-                            onChange={(event) =>
-                              onChange((prev) => ({
-                                ...prev,
-                                specs: prev.specs.map((item, itemIndex) =>
-                                  itemIndex === index
-                                    ? { ...item, label: event.target.value }
-                                    : item,
-                                ),
-                              }))
-                            }
-                            placeholder="Например: Support versions"
-                            className="ui-input"
-                          />
-                        </label>
-
-                        <label className="grid gap-2">
-                          <span className="px-1 text-xs text-[var(--color-muted)]">
-                            Значение
-                          </span>
-                          <input
-                            value={spec.value}
-                            onChange={(event) =>
-                              onChange((prev) => ({
-                                ...prev,
-                                specs: prev.specs.map((item, itemIndex) =>
-                                  itemIndex === index
-                                    ? { ...item, value: event.target.value }
-                                    : item,
-                                ),
-                              }))
-                            }
-                            placeholder="Например: 1.8.9 - 1.21.4"
-                            className="ui-input"
-                          />
-                        </label>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {form.deliveryType === "AUTO_KEY" ? (
-                <div className="ui-card-soft p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-medium text-[var(--color-text)]">
-                        Пул ключей
-                      </p>
-                      <p className="mt-1 text-xs text-[var(--color-muted)]">
-                        Добавляй новые ключи отдельно, старые можно убрать поштучно.
-                      </p>
-                    </div>
-                    <div className="rounded-full bg-[var(--color-bg)] px-3 py-1.5 text-xs text-[var(--color-text)]">
-                      {visibleKeys.length} в наличии
-                    </div>
-                  </div>
-
-                  {form.id ? (
-                    <div className="mt-4 grid gap-2">
-                      <p className="text-xs font-medium uppercase tracking-[0.14em] text-[var(--color-muted)]">
-                        Текущие ключи
-                      </p>
-                      {visibleKeys.length > 0 ? (
-                        <div className="grid gap-2 max-h-56 overflow-y-auto pr-1">
-                          {visibleKeys.map((key) => (
-                            <div
-                              key={key.id}
-                              className="flex items-center gap-2 rounded-[18px] bg-[var(--color-bg)] px-3 py-3"
-                            >
-                              <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[var(--color-surface)] text-[var(--color-muted)]">
-                                <KeyRound size={14} />
-                              </div>
-                              <code className="min-w-0 flex-1 truncate text-xs text-[var(--color-text)]">
-                                {key.value}
-                              </code>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  onChange((prev) => ({
-                                    ...prev,
-                                    removeKeyIds: [...prev.removeKeyIds, key.id],
-                                  }))
-                                }
-                                className="rounded-full bg-[var(--color-surface)] px-3 py-1.5 text-xs text-[var(--color-muted)]"
-                              >
-                                Убрать
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="rounded-[18px] bg-[var(--color-bg)] px-4 py-4 text-sm text-[var(--color-muted)]">
-                          Активных ключей сейчас нет.
-                        </div>
-                      )}
-                    </div>
-                  ) : null}
-
-                  {form.removeKeyIds.length > 0 ? (
-                    <div className="mt-4 rounded-[18px] bg-[var(--color-bg)] p-3">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-2 text-sm text-[var(--color-text)]">
-                          <Check size={14} className="text-[var(--color-accent)]" />
-                          Помечено на удаление: {form.removeKeyIds.length}
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            onChange((prev) => ({ ...prev, removeKeyIds: [] }))
-                          }
-                          className="text-xs text-[var(--color-muted)]"
-                        >
-                          Сбросить
-                        </button>
-                      </div>
-                    </div>
-                  ) : null}
-
-                  <div className="mt-4 grid gap-2">
-                    <p className="text-xs font-medium uppercase tracking-[0.14em] text-[var(--color-muted)]">
-                      Добавить новые
-                    </p>
-                    <textarea
-                      value={form.keyPoolText}
-                      onChange={(event) =>
-                        onChange((prev) => ({ ...prev, keyPoolText: event.target.value }))
-                      }
-                      placeholder="Один ключ на строку"
-                      className="ui-input min-h-32"
-                    />
-                  </div>
-                </div>
-              ) : null}
-            </section>
-          </div>
-        </div>
-
-        <div className="sticky bottom-0 z-10 border-t border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 pb-[calc(env(safe-area-inset-bottom,0px)+12px)] sm:px-5 sm:py-4">
-          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-            <button
-              onClick={onClose}
-              className="rounded-[18px] bg-[var(--color-bg)] px-4 py-2.5 text-sm font-medium text-[var(--color-text)]"
-            >
-              Отмена
-            </button>
-            <button
-              onClick={onSave}
-              disabled={!canSave}
-              className={cn(
-                "rounded-[18px] px-4 py-2.5 text-sm font-semibold",
-                canSave
-                  ? "bg-[var(--color-accent)] text-[var(--color-accent-text)]"
-                  : "bg-[var(--color-bg)] text-[var(--color-muted)]",
-              )}
-            >
-              {saving ? "Сохранение..." : form.id ? "Сохранить изменения" : "Создать товар"}
-            </button>
-          </div>
-        </div>
+      <div className="grid gap-2 p-4">
+        <Button stretched loading={saving} disabled={!canSave} onClick={onSave}>
+          {form.id ? "Сохранить изменения" : "Создать товар"}
+        </Button>
+        <Button stretched mode="plain" onClick={onClose}>
+          Отмена
+        </Button>
       </div>
+    </Modal>
+  )
+}
+
+function SpecEditor({
+  spec,
+  index,
+  canRemove,
+  onChange,
+}: {
+  spec: SpecForm
+  index: number
+  canRemove: boolean
+  onChange: Dispatch<SetStateAction<ProductForm>>
+}) {
+  return (
+    <div className="grid gap-2 px-4 py-3">
+      <Cell
+        after={
+          <Button
+            size="s"
+            mode="gray"
+            before={<Trash2 size={14} />}
+            onClick={() =>
+              onChange((prev) => ({
+                ...prev,
+                specs: canRemove
+                  ? prev.specs.filter((_, itemIndex) => itemIndex !== index)
+                  : [{ label: "", value: "" }],
+              }))
+            }
+          >
+            Убрать
+          </Button>
+        }
+      >
+        Характеристика {index + 1}
+      </Cell>
+      <Input
+        header="Название"
+        value={spec.label}
+        onChange={(event) =>
+          onChange((prev) => ({
+            ...prev,
+            specs: prev.specs.map((item, itemIndex) =>
+              itemIndex === index ? { ...item, label: event.target.value } : item,
+            ),
+          }))
+        }
+        placeholder="Support versions"
+      />
+      <Input
+        header="Значение"
+        value={spec.value}
+        onChange={(event) =>
+          onChange((prev) => ({
+            ...prev,
+            specs: prev.specs.map((item, itemIndex) =>
+              itemIndex === index ? { ...item, value: event.target.value } : item,
+            ),
+          }))
+        }
+        placeholder="1.8.9 - 1.21.4"
+      />
     </div>
   )
 }
 
-function Field({
-  label,
-  children,
+function ProductImage({
+  imageDataUrl,
+  title,
+  size,
 }: {
-  label: string
-  children: React.ReactNode
+  imageDataUrl?: string | null
+  title: string
+  size: 48 | 96
 }) {
+  if (imageDataUrl) {
+    return (
+      <TgImage
+        size={size}
+        src={imageDataUrl}
+        alt=""
+      />
+    )
+  }
+
   return (
-    <label className="grid gap-2">
-      <span className="px-1 text-sm font-medium text-[var(--color-text)]">{label}</span>
-      {children}
-    </label>
+    <TgImage
+      size={size}
+      alt=""
+      fallbackIcon={title ? <span>{title.slice(0, 2).toUpperCase()}</span> : <ImagePlus size={20} />}
+    />
   )
 }

@@ -3,11 +3,11 @@
 import Link from "next/link"
 import { useMemo, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
-import { CircleDashed, Clock3, Receipt, ShieldCheck } from "lucide-react"
+import { Badge, Cell, Placeholder, Section, SegmentedControl } from "@telegram-apps/telegram-ui"
+import { Clock3, Receipt } from "lucide-react"
 
+import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
 import { getMe, getOrders } from "@/lib/api"
-import { Screen, ScreenBody, ScreenEmpty, ScreenHeader } from "@/components/screen"
-import { cn } from "@/lib/cn"
 
 type FilterKey = "all" | "waiting" | "review" | "work" | "closed"
 
@@ -30,20 +30,10 @@ export function AdminOrdersScreen() {
         order.status !== "PAYMENT_REVIEW",
     )
     const review = orders.filter((order) => order.status === "PAYMENT_REVIEW")
-    const work = orders.filter(
-      (order) =>
-        order.isPaid &&
-        !["CLOSED", "CANCELLED"].includes(order.status),
-    )
+    const work = orders.filter((order) => order.isPaid && !["CLOSED", "CANCELLED"].includes(order.status))
     const closed = orders.filter((order) => ["CLOSED", "CANCELLED"].includes(order.status))
 
-    return {
-      all: orders,
-      waiting,
-      review,
-      work,
-      closed,
-    }
+    return { all: orders, waiting, review, work, closed }
   }, [orders])
 
   const visibleOrders = buckets[filter]
@@ -58,143 +48,64 @@ export function AdminOrdersScreen() {
 
   return (
     <Screen>
-      <ScreenHeader title="Заказы" subtitle="Одна очередь без пустых секций и мусора" />
+      <ScreenHeader title="Заказы" subtitle="Очередь продавца" />
 
       {isLoading ? (
-        <ScreenEmpty
-          title="Загружаю заказы"
-          subtitle="Подтягиваю очередь продавца."
-          icon={<Clock3 size={28} className="text-[var(--color-muted)]" />}
-        />
+        <Placeholder header="Загружаю заказы" description="Подтягиваю очередь продавца.">
+          <Clock3 size={32} />
+        </Placeholder>
       ) : isError ? (
-        <ScreenEmpty
-          title="Очередь не загрузилась"
-          subtitle="Обнови экран или попробуй позже."
-          icon={<Clock3 size={28} className="text-[var(--color-muted)]" />}
-        />
+        <Placeholder header="Очередь не загрузилась" description="Обнови экран или попробуй позже.">
+          <Clock3 size={32} />
+        </Placeholder>
       ) : orders.length === 0 ? (
-        <ScreenEmpty
-          title="Активных заказов нет"
-          subtitle="Новые покупки появятся здесь."
-          icon={<Clock3 size={28} className="text-[var(--color-muted)]" />}
-        />
+        <Placeholder header="Заказов нет" description="Новые покупки появятся здесь.">
+          <Clock3 size={32} />
+        </Placeholder>
       ) : (
-        <ScreenBody className="gap-4">
-          <section className="ui-card p-3 sm:p-4">
-            <div className="flex flex-wrap gap-2">
-              {[
-                {
-                  key: "all" as const,
-                  label: "Все",
-                  count: buckets.all.length,
-                  icon: <Clock3 size={14} />,
-                },
-                {
-                  key: "waiting" as const,
-                  label: "Ждут оплату",
-                  count: buckets.waiting.length,
-                  icon: <Receipt size={14} />,
-                },
-                {
-                  key: "review" as const,
-                  label: "На проверке",
-                  count: buckets.review.length,
-                  icon: <CircleDashed size={14} />,
-                },
-                {
-                  key: "work" as const,
-                  label: "Выдача",
-                  count: buckets.work.length,
-                  icon: <ShieldCheck size={14} />,
-                },
-                {
-                  key: "closed" as const,
-                  label: "Закрытые",
-                  count: buckets.closed.length,
-                  icon: <Clock3 size={14} />,
-                },
-              ].map((item) => {
-                const active = filter === item.key
-
-                return (
-                  <button
-                    key={item.key}
-                    onClick={() => setFilter(item.key)}
-                    className={cn(
-                      "inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm transition-colors",
-                      active
-                        ? "bg-[var(--color-accent)] text-[var(--color-accent-text)]"
-                        : "bg-[var(--color-bg)] text-[var(--color-muted)]",
-                    )}
-                  >
-                    {item.icon}
-                    {item.label}
-                    <span
-                      className={cn(
-                        "rounded-full px-1.5 py-0.5 text-[10px]",
-                        active
-                          ? "bg-[var(--color-accent-text)]/14 text-[var(--color-accent-text)]"
-                          : "bg-[var(--color-surface)] text-[var(--color-text)]",
-                      )}
-                    >
-                      {item.count}
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
-          </section>
+        <ScreenBody className="gap-3">
+          <SegmentedControl>
+            {[
+              { key: "all" as const, label: "Все" },
+              { key: "waiting" as const, label: "Оплата" },
+              { key: "review" as const, label: "Проверка" },
+              { key: "work" as const, label: "Выдача" },
+              { key: "closed" as const, label: "История" },
+            ].map((item) => (
+              <SegmentedControl.Item
+                key={item.key}
+                selected={filter === item.key}
+                onClick={() => setFilter(item.key)}
+              >
+                {item.label}
+              </SegmentedControl.Item>
+            ))}
+          </SegmentedControl>
 
           {visibleOrders.length === 0 ? (
-            <section className="ui-card px-4 py-10 text-center">
-              <p className="text-sm font-medium text-[var(--color-text)]">Пусто</p>
-              <p className="mt-1 text-sm text-[var(--color-muted)]">
-                Для этого фильтра сейчас ничего нет.
-              </p>
-            </section>
+            <Placeholder header="Пусто" description="Для этого фильтра сейчас ничего нет." />
           ) : (
-            <div className="grid gap-3">
+            <Section>
               {visibleOrders.map((order) => (
-                <Link key={order.id} href={`/orders/${order.id}`} className="ui-card p-4">
-                  <div className="flex items-start gap-3">
-                    <div
-                      className={cn(
-                        "flex size-11 shrink-0 items-center justify-center rounded-full text-sm font-semibold",
-                        !order.isPaid
-                            ? "bg-[var(--color-bg)] text-[var(--color-text)]"
-                            : "bg-[var(--color-accent)]/16 text-[var(--color-accent)]",
-                      )}
-                    >
-                      {order.productTitle?.slice(0, 1).toUpperCase() || "#"}
-                    </div>
-
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="truncate text-base font-semibold text-[var(--color-text)]">
-                            {order.productTitle || order.subject}
-                          </p>
-                          <p className="mt-1 text-sm text-[var(--color-muted)]">
-                            #{order.number}
-                            {order.productCategory ? ` · ${order.productCategory}` : ""}
-                            {order.paymentMethodTitle ? ` · ${order.paymentMethodTitle}` : ""}
-                          </p>
-                        </div>
-
-                        <div className="flex flex-wrap justify-end gap-2">
-                          <StatusPill>{renderPrimaryState(order)}</StatusPill>
-                          <StatusPill>{renderStatus(order.status)}</StatusPill>
-                        </div>
-                      </div>
-
-                      <p className="mt-3 line-clamp-2 text-sm leading-6 text-[var(--color-muted)]">
-                        {renderSummary(order)}
-                      </p>
-                    </div>
-                  </div>
+                <Link key={order.id} href={`/orders/${order.id}`}>
+                  <Cell
+                    multiline
+                    before={<Receipt size={24} />}
+                    titleBadge={<OrderBadge order={order} />}
+                    subtitle={[
+                      `#${order.number}`,
+                      order.productCategory,
+                      order.paymentMethodTitle,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                    description={renderSummary(order)}
+                  >
+                    {order.productTitle || order.subject}
+                  </Cell>
                 </Link>
               ))}
-            </div>
+            </Section>
           )}
         </ScreenBody>
       )}
@@ -202,49 +113,22 @@ export function AdminOrdersScreen() {
   )
 }
 
-function renderStatus(status: string) {
-  switch (status) {
-    case "OPEN":
-      return "Открыт"
-    case "CLOSED":
-      return "Закрыт"
-    case "PAYMENT_REVIEW":
-      return "Проверка оплаты"
-    case "CANCELLED":
-      return "Отменён"
-    default:
-      return status
-  }
-}
-
-function renderPrimaryState(order: Awaited<ReturnType<typeof getOrders>>["orders"][number]) {
-  if (order.status === "PAYMENT_REVIEW") {
-    return "На проверке"
-  }
-  if (order.status === "CANCELLED") return "Отменён"
-  if (order.status === "CLOSED" && !order.isPaid) return "Не оплачен"
-  if (!order.isPaid) return "Ждёт оплату"
-  if (order.status === "CLOSED") return "Завершён"
-  return "Оплачен"
+function OrderBadge({
+  order,
+}: {
+  order: Awaited<ReturnType<typeof getOrders>>["orders"][number]
+}) {
+  if (order.status === "PAYMENT_REVIEW") return <Badge type="number" mode="primary">!</Badge>
+  if (order.status === "CANCELLED") return <Badge type="number" mode="critical">×</Badge>
+  if (!order.isPaid) return <Badge type="number" mode="gray">₽</Badge>
+  return <Badge type="number" mode="secondary">✓</Badge>
 }
 
 function renderSummary(order: Awaited<ReturnType<typeof getOrders>>["orders"][number]) {
-  if (order.status === "PAYMENT_REVIEW") return "Платёж отмечен и ждёт проверки."
+  if (order.status === "PAYMENT_REVIEW") return "Покупатель отметил оплату."
   if (order.status === "CANCELLED") return "Заказ отменён."
-  if (order.status === "CLOSED" && !order.isPaid) return "Заказ закрыт без оплаты."
-  if (!order.isPaid) {
-    return order.paymentMethodTitle
-      ? `Ожидает оплату через ${order.paymentMethodTitle}.`
-      : "Ожидает оплату."
-  }
-  if (order.status === "CLOSED") return "Заказ завершён."
-  return "Оплата подтверждена."
-}
-
-function StatusPill({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="rounded-full bg-[var(--color-bg)] px-2.5 py-1 text-[10px] text-[var(--color-muted)]">
-      {children}
-    </span>
-  )
+  if (order.status === "CLOSED" && !order.isPaid) return "Закрыт без оплаты."
+  if (!order.isPaid) return "Ожидает оплату."
+  if (order.status === "CLOSED") return "Завершён."
+  return "Оплачен, нужна выдача."
 }

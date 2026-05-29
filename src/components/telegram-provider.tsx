@@ -30,35 +30,35 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
   const [appearance, setAppearance] = useState<"dark" | "light">("dark")
 
   useEffect(() => {
-    const cleanup = init()
     const telegram = isTMA()
+    const cleanup = telegram ? init() : () => {}
 
     try {
-      if (themeParams.mount.isAvailable()) {
+      if (telegram && themeParams.mount.isAvailable()) {
         themeParams.mount()
       }
 
-      if (themeParams.bindCssVars.isAvailable()) {
+      if (telegram && themeParams.bindCssVars.isAvailable()) {
         themeParams.bindCssVars()
       }
 
-      if (miniApp.mount.isAvailable()) {
+      if (telegram && miniApp.mount.isAvailable()) {
         miniApp.mount()
       }
 
-      if (backButton.mount.isAvailable()) {
+      if (telegram && backButton.mount.isAvailable()) {
         backButton.mount()
       }
 
-      if (mainButton.mount.isAvailable()) {
+      if (telegram && mainButton.mount.isAvailable()) {
         mainButton.mount()
       }
 
-      if (swipeBehavior.mount.isAvailable()) {
+      if (telegram && swipeBehavior.mount.isAvailable()) {
         swipeBehavior.mount()
       }
 
-      if (viewport.mount.isAvailable()) {
+      if (telegram && viewport.mount.isAvailable()) {
         viewport.mount().catch(() => {})
       }
 

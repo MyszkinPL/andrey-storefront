@@ -1,15 +1,22 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
+import { Avatar, Cell, Image as TgImage, Placeholder, Section } from "@telegram-apps/telegram-ui"
 import { CreditCard } from "lucide-react"
 
+import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
 import { getMe, getPaymentMethods } from "@/lib/api"
-import { Screen, ScreenBody, ScreenEmpty, ScreenHeader } from "@/components/screen"
-import { Avatar } from "@/components/ui"
 
 export function ProfileScreen() {
-  const { data: meData, isLoading: isLoadingMe, isError: isErrorMe } = useQuery({ queryKey: ["me"], queryFn: getMe })
-  const { data: paymentData, isLoading: isLoadingPayments, isError: isErrorPayments } = useQuery({
+  const { data: meData, isLoading: isLoadingMe, isError: isErrorMe } = useQuery({
+    queryKey: ["me"],
+    queryFn: getMe,
+  })
+  const {
+    data: paymentData,
+    isLoading: isLoadingPayments,
+    isError: isErrorPayments,
+  } = useQuery({
     queryKey: ["payment-methods"],
     queryFn: getPaymentMethods,
   })
@@ -20,85 +27,68 @@ export function ProfileScreen() {
   return (
     <Screen>
       <ScreenHeader
-        inlineTrailingMobile
-        title={
-          <div>
-            <p>{meData?.user.firstName || "Профиль"}</p>
-            <p className="mt-1 text-xs font-normal text-[var(--color-muted)]">
-              {meData?.user.role === "ADMIN" ? "Администратор" : "Покупатель"}
-            </p>
-          </div>
+        title={meData?.user.firstName || "Профиль"}
+        subtitle={
+          meData?.user.username
+            ? `@${meData.user.username}`
+            : meData?.user.role === "ADMIN"
+              ? "Администратор"
+              : "Покупатель"
         }
-        subtitle={meData?.user.username ? `@${meData.user.username}` : "Telegram"}
         trailing={
-          meData?.user.photoUrl ? (
-            <Avatar size={40} src={meData.user.photoUrl} alt={meData.user.firstName} />
-          ) : (
-            <div className="flex size-11 items-center justify-center rounded-full bg-[var(--color-surface-2)] text-sm font-semibold text-[var(--color-text)]">
-              {(meData?.user.firstName || "S").slice(0, 1).toUpperCase()}
-            </div>
-          )
+          <Avatar
+            size={40}
+            src={meData?.user.photoUrl || undefined}
+            acronym={(meData?.user.firstName || "S").slice(0, 1).toUpperCase()}
+            alt={meData?.user.firstName || "Профиль"}
+          />
         }
       />
 
-      <ScreenBody className="gap-3 xl:grid-cols-[minmax(0,320px)_minmax(0,1fr)]">
+      <ScreenBody className="gap-3">
         {isLoadingMe || isLoadingPayments ? (
-          <ScreenEmpty
-            icon={<CreditCard size={30} className="text-[var(--color-muted)]" />}
-            title="Загружаю профиль"
-            subtitle="Подтягиваю данные магазина и оплаты."
-          />
+          <Placeholder header="Загружаю профиль" description="Подтягиваю данные магазина и оплаты.">
+            <CreditCard size={32} />
+          </Placeholder>
         ) : isErrorMe || isErrorPayments ? (
-          <ScreenEmpty
-            icon={<CreditCard size={30} className="text-[var(--color-muted)]" />}
-            title="Профиль не загрузился"
-            subtitle="Обнови экран или попробуй позже."
-          />
+          <Placeholder header="Профиль не загрузился" description="Обнови экран или попробуй позже.">
+            <CreditCard size={32} />
+          </Placeholder>
+        ) : methods.length === 0 && !hasCryptoPay ? (
+          <Placeholder header="Реквизитов пока нет" description="Админ добавит способы оплаты позже.">
+            <CreditCard size={32} />
+          </Placeholder>
         ) : (
-          <>
-        {methods.length === 0 && !hasCryptoPay ? (
-          <ScreenEmpty
-            icon={<CreditCard size={30} className="text-[var(--color-muted)]" />}
-            title="Реквизитов пока нет"
-            subtitle="Админ добавит способы оплаты позже."
-          />
-        ) : (
-          <section className="ui-card p-4 xl:col-span-2">
-            <p className="mb-3 text-sm font-semibold text-[var(--color-text)]">Способы оплаты</p>
-            <div className="grid gap-2 md:grid-cols-2">
-              {methods.map((method) => (
-                <div key={method.id} className="ui-card-soft flex items-center gap-3 p-3">
-                  <PaymentMethodIcon iconDataUrl={method.iconDataUrl} title={method.title} />
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-[var(--color-text)]">{method.title}</p>
-                    <p className="mt-1 line-clamp-2 whitespace-pre-wrap text-xs leading-5 text-[var(--color-muted)]">
-                      {method.details}
-                    </p>
-                  </div>
-                </div>
-              ))}
-              {hasCryptoPay ? (
-                <div className="ui-card-soft flex items-center gap-3 p-3">
+          <Section header="Способы оплаты">
+            {methods.map((method) => (
+              <Cell
+                key={method.id}
+                multiline
+                before={<PaymentMethodIcon iconDataUrl={method.iconDataUrl} title={method.title} />}
+                subtitle={method.details}
+              >
+                {method.title}
+              </Cell>
+            ))}
+            {hasCryptoPay ? (
+              <Cell
+                multiline
+                before={
                   <PaymentMethodIcon
                     iconDataUrl={paymentData?.cryptoPay.iconDataUrl || null}
                     title="CR"
                   />
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-[var(--color-text)]">
-                      {paymentData?.cryptoPay.title || "Crypto Bot"}
-                    </p>
-                    <p className="mt-1 whitespace-pre-wrap text-xs leading-5 text-[var(--color-muted)]">
-                      {paymentData?.cryptoPay.acceptedAssets
-                        ? `Автооплата · ${paymentData.cryptoPay.acceptedAssets}`
-                        : "Автооплата через invoice"}
-                    </p>
-                  </div>
-                </div>
-              ) : null}
-            </div>
-          </section>
-        )}
-          </>
+                }
+                subtitle={
+                  paymentData?.cryptoPay.acceptedAssets
+                    ? `Автооплата · ${paymentData.cryptoPay.acceptedAssets}`
+                    : "Автооплата через invoice"
+                }
+              >
+                {paymentData?.cryptoPay.title || "Crypto Bot"}
+              </Cell>
+            ) : null}
+          </Section>
         )}
       </ScreenBody>
     </Screen>
@@ -112,16 +102,12 @@ function PaymentMethodIcon({
   iconDataUrl: string | null
   title: string
 }) {
-  if (iconDataUrl) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img src={iconDataUrl} alt="" className="size-11 rounded-2xl object-cover" />
-    )
-  }
-
   return (
-    <div className="flex size-11 items-center justify-center rounded-2xl bg-[var(--color-surface)] text-xs font-semibold text-[var(--color-text)]">
-      {title.slice(0, 2).toUpperCase()}
-    </div>
+    <TgImage
+      size={48}
+      src={iconDataUrl || undefined}
+      alt=""
+      fallbackIcon={<span>{title.slice(0, 2).toUpperCase()}</span>}
+    />
   )
 }

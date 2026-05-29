@@ -1,14 +1,22 @@
 "use client"
+
 import { useQuery } from "@tanstack/react-query"
+import { Cell, Placeholder, Section } from "@telegram-apps/telegram-ui"
 import { CreditCard, Package2, Receipt, ShieldCheck, Users } from "lucide-react"
 
-import { getAdminUsers, getMe, getPaymentMethods, getProducts, getOrders } from "@/lib/api"
-import { Screen, ScreenBody, ScreenEmpty, ScreenHeader } from "@/components/screen"
+import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
+import { getAdminUsers, getMe, getOrders, getPaymentMethods, getProducts } from "@/lib/api"
 
 export function AdminOverviewScreen() {
   const { data: meData } = useQuery({ queryKey: ["me"], queryFn: getMe })
-  const { data: productsData, isLoading: isLoadingProducts, isError: isErrorProducts } = useQuery({ queryKey: ["products"], queryFn: getProducts })
-  const { data: ordersData, isLoading: isLoadingOrders, isError: isErrorOrders } = useQuery({ queryKey: ["orders", "all"], queryFn: () => getOrders({ scope: "all" }) })
+  const { data: productsData, isLoading: isLoadingProducts, isError: isErrorProducts } = useQuery({
+    queryKey: ["products"],
+    queryFn: getProducts,
+  })
+  const { data: ordersData, isLoading: isLoadingOrders, isError: isErrorOrders } = useQuery({
+    queryKey: ["orders", "all"],
+    queryFn: () => getOrders({ scope: "all" }),
+  })
   const { data: paymentData, isLoading: isLoadingPayments, isError: isErrorPayments } = useQuery({
     queryKey: ["payment-methods"],
     queryFn: getPaymentMethods,
@@ -35,11 +43,12 @@ export function AdminOverviewScreen() {
     {
       label: "Активные заказы",
       value:
-        ordersData?.orders.filter((item) => !["CLOSED", "CANCELLED"].includes(item.status)).length || 0,
+        ordersData?.orders.filter((item) => !["CLOSED", "CANCELLED"].includes(item.status)).length ||
+        0,
       icon: Receipt,
     },
     {
-      label: "Ключи в наличии",
+      label: "Ключи",
       value:
         productsData?.products.reduce(
           (sum, item) => sum + (item.deliveryType === "AUTO_KEY" ? item.availableKeyCount || 0 : 0),
@@ -53,7 +62,7 @@ export function AdminOverviewScreen() {
       icon: CreditCard,
     },
     {
-      label: "Забаненные",
+      label: "Баны",
       value: usersData?.summary.banned || 0,
       icon: Users,
     },
@@ -65,49 +74,24 @@ export function AdminOverviewScreen() {
 
       <ScreenBody className="gap-3">
         {isLoadingProducts || isLoadingOrders || isLoadingPayments || isLoadingUsers ? (
-          <ScreenEmpty
-            icon={<Package2 size={28} className="text-[var(--color-muted)]" />}
-            title="Загружаю сводку"
-            subtitle="Собираю данные магазина."
-          />
+          <Placeholder header="Загружаю сводку" description="Собираю данные магазина.">
+            <Package2 size={32} />
+          </Placeholder>
         ) : isErrorProducts || isErrorOrders || isErrorPayments || isErrorUsers ? (
-          <ScreenEmpty
-            icon={<Package2 size={28} className="text-[var(--color-muted)]" />}
-            title="Сводка не загрузилась"
-            subtitle="Обнови экран или попробуй позже."
-          />
+          <Placeholder header="Сводка не загрузилась" description="Обнови экран или попробуй позже.">
+            <Package2 size={32} />
+          </Placeholder>
         ) : (
-          <section className="ui-card p-3">
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <div>
-                <p className="text-sm font-semibold text-[var(--color-text)]">Сводка</p>
-                <p className="mt-1 text-xs text-[var(--color-muted)]">
-                  Главное по магазину без лишнего воздуха
-                </p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 xl:grid-cols-5">
-              {stats.map((item) => {
-                const Icon = item.icon
-                return (
-                  <div key={item.label} className="rounded-[20px] bg-[var(--color-bg)] px-3 py-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <p className="min-w-0 text-[11px] leading-4 text-[var(--color-muted)]">
-                        {item.label}
-                      </p>
-                      <div className="flex size-8 shrink-0 items-center justify-center rounded-2xl bg-[var(--color-surface)] text-[var(--color-muted)]">
-                        <Icon size={15} />
-                      </div>
-                    </div>
-                    <p className="mt-3 text-2xl font-semibold leading-none text-[var(--color-text)]">
-                      {item.value}
-                    </p>
-                  </div>
-                )
-              })}
-            </div>
-          </section>
+          <Section header="Сводка">
+            {stats.map((item) => {
+              const Icon = item.icon
+              return (
+                <Cell key={item.label} before={<Icon size={24} />} after={item.value}>
+                  {item.label}
+                </Cell>
+              )
+            })}
+          </Section>
         )}
       </ScreenBody>
     </Screen>
