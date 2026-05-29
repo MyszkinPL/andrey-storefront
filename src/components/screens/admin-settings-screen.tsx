@@ -25,7 +25,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
+import {
+  Field,
+  FieldContent,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+  FieldTitle,
+} from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
@@ -342,20 +349,20 @@ export function AdminSettingsScreen() {
           </CardHeader>
           <CardContent className="flex flex-col gap-3">
             {paymentMethods.map((method, index) => (
-              <div key={method.id || `${method.title}-${index}`} className="flex items-center gap-3 rounded-3xl bg-input/50 p-3">
+              <Field key={method.id || `${method.title}-${index}`} orientation="horizontal">
                 <MethodPreview iconDataUrl={method.iconDataUrl} title={method.title} />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="truncate text-sm font-medium">{method.title}</span>
+                <FieldContent>
+                  <FieldTitle>
+                    <span className="truncate">{method.title}</span>
                     {!method.isActive ? <Badge variant="secondary">Скрыт</Badge> : null}
-                  </div>
-                  <div className="truncate text-xs text-muted-foreground">{method.details || "Без реквизитов"}</div>
-                </div>
+                  </FieldTitle>
+                  <FieldDescription className="truncate">{method.details || "Без реквизитов"}</FieldDescription>
+                </FieldContent>
                 <Button size="sm" variant="secondary" onClick={() => openEditModal(index)}>
                   <PencilLine data-icon="inline-start" />
                   Править
                 </Button>
-              </div>
+              </Field>
             ))}
             {paymentMethods.length === 0 ? (
               <div className="text-sm text-muted-foreground">Добавь СБП, карту или другой ручной способ.</div>

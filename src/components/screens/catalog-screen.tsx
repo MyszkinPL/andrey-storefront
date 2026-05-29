@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query"
 import { PackageSearch, Search } from "lucide-react"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
+import { AspectRatio } from "@/components/ui/aspect-ratio"
 import {
   Card,
   CardContent,
@@ -23,6 +23,7 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty"
 import { Input } from "@/components/ui/input"
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
 import { getMe, getProducts } from "@/lib/api"
 
@@ -98,21 +99,19 @@ export function CatalogScreen() {
               </CardContent>
             </Card>
 
-            <div className="flex gap-2 overflow-x-auto py-1">
-              {categories.map((item) => {
-                const active = (category || "Все") === item
-                return (
-                  <Button
-                    key={item}
-                    variant={active ? "default" : "secondary"}
-                    size="sm"
-                    onClick={() => setCategory(item === "Все" ? "" : item)}
-                  >
-                    {item}
-                  </Button>
-                )
-              })}
-            </div>
+            <ToggleGroup
+              value={[category || "Все"]}
+              onValueChange={(value) => setCategory(value[0] === "Все" ? "" : value[0] || "")}
+              variant="outline"
+              size="sm"
+              className="w-full overflow-x-auto"
+            >
+              {categories.map((item) => (
+                <ToggleGroupItem key={item} value={item}>
+                  {item}
+                </ToggleGroupItem>
+              ))}
+            </ToggleGroup>
 
             {filtered.length === 0 ? (
               <CatalogEmpty title="Пусто" description="Попробуй другую категорию или запрос." />
@@ -162,7 +161,7 @@ function ProductCover({
   title: string
 }) {
   return (
-    <div className="aspect-square overflow-hidden bg-muted">
+    <AspectRatio ratio={1} className="overflow-hidden">
       {imageDataUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={imageDataUrl} alt={title} className="size-full object-cover" />
@@ -171,7 +170,7 @@ function ProductCover({
           <PackageSearch className="size-8" />
         </div>
       )}
-    </div>
+    </AspectRatio>
   )
 }
 

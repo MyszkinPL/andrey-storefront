@@ -273,18 +273,20 @@ function UserDetailsDialog({
               <CardContent className="flex flex-col gap-2">
                 {user.orders.length > 0 ? (
                   user.orders.map((order) => (
-                    <Link key={order.id} href={`/orders/${order.id}`} className="rounded-3xl bg-input/50 p-3">
-                      <div className="flex items-center gap-2 text-sm font-medium">
-                        <History className="size-4 text-muted-foreground" />
-                        {order.productTitle || `Заказ #${order.number}`}
-                      </div>
-                      <div className="mt-1 text-xs text-muted-foreground">
-                        #{order.number}
-                        {order.productCategory ? ` · ${order.productCategory}` : ""}
-                        {order.priceRub ? ` · ${order.priceRub.toLocaleString("ru-RU")} ₽` : ""}
-                        {" · "}
-                        {renderOrderStatus(order.status, order.isPaid)}
-                      </div>
+                    <Link key={order.id} href={`/orders/${order.id}`}>
+                      <Card size="sm">
+                        <CardHeader>
+                          <History className="size-4 text-muted-foreground" />
+                          <CardTitle>{order.productTitle || `Заказ #${order.number}`}</CardTitle>
+                          <CardDescription>
+                            #{order.number}
+                            {order.productCategory ? ` · ${order.productCategory}` : ""}
+                            {order.priceRub ? ` · ${order.priceRub.toLocaleString("ru-RU")} ₽` : ""}
+                            {" · "}
+                            {renderOrderStatus(order.status, order.isPaid)}
+                          </CardDescription>
+                        </CardHeader>
+                      </Card>
                     </Link>
                   ))
                 ) : (

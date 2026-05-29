@@ -442,9 +442,9 @@ function ProductEditorDialog({
                       {form.removeKeyIds.length > 0 ? ` · к удалению ${form.removeKeyIds.length}` : ""}
                     </div>
                     {visibleKeys.map((key) => (
-                      <div key={key.id} className="flex items-center gap-2 rounded-3xl bg-input/50 p-3">
+                      <Field key={key.id} orientation="horizontal">
                         <KeyRound className="size-4 text-muted-foreground" />
-                        <code className="min-w-0 flex-1 truncate text-sm">{key.value}</code>
+                        <Input readOnly value={key.value} />
                         <Button
                           size="sm"
                           variant="ghost"
@@ -457,7 +457,7 @@ function ProductEditorDialog({
                         >
                           Убрать
                         </Button>
-                      </div>
+                      </Field>
                     ))}
                   </>
                 ) : null}
@@ -499,7 +499,7 @@ function SpecEditor({
   onChange: Dispatch<SetStateAction<ProductForm>>
 }) {
   return (
-    <div className="grid gap-2 rounded-3xl bg-input/50 p-3">
+    <FieldGroup>
       <div className="flex items-center justify-between gap-2">
         <span className="text-sm font-medium">Характеристика {index + 1}</span>
         <Button
@@ -542,7 +542,7 @@ function SpecEditor({
         }
         placeholder="1.8.9 - 1.21.4"
       />
-    </div>
+    </FieldGroup>
   )
 }
 
@@ -556,9 +556,9 @@ function ProductImage({
   large?: boolean
 }) {
   return (
-    <Avatar className={large ? "size-20 rounded-3xl" : "size-12 rounded-2xl"}>
-      {imageDataUrl ? <AvatarImage src={imageDataUrl} alt={title} className="rounded-[inherit]" /> : null}
-      <AvatarFallback className="rounded-[inherit]">
+    <Avatar size={large ? "lg" : "default"}>
+      {imageDataUrl ? <AvatarImage src={imageDataUrl} alt={title} /> : null}
+      <AvatarFallback>
         {title ? title.slice(0, 2).toUpperCase() : <ImagePlus className="size-4" />}
       </AvatarFallback>
     </Avatar>

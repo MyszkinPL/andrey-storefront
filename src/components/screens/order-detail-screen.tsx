@@ -16,6 +16,16 @@ import {
 } from "lucide-react"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button, buttonVariants } from "@/components/ui/button"
 import {
@@ -41,6 +51,14 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty"
+import {
+  Field,
+  FieldContent,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field"
+import { Input } from "@/components/ui/input"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Screen, ScreenBody } from "@/components/screen"
 import { useMode } from "@/components/mode-provider"
@@ -431,13 +449,13 @@ function AdminOrderPanel({
 function OrderProgress({ progress }: { progress: 1 | 2 | 3 }) {
   const steps = ["Оплата", "Ключ", "Готово"]
   return (
-    <div className="grid grid-cols-3 gap-2">
+    <div className="flex flex-wrap gap-2">
       {steps.map((step, index) => {
         const done = progress >= index + 1
         return (
-          <div key={step} className={cn("rounded-3xl px-3 py-2 text-center text-sm", done ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground")}>
-            {step}
-          </div>
+          <Badge key={step} variant={done ? "default" : "secondary"}>
+            {index + 1}. {step}
+          </Badge>
         )
       })}
     </div>
@@ -467,7 +485,9 @@ function ValueBlock({
         </CardAction>
       </CardHeader>
       <CardContent>
-        <code className="block overflow-x-auto rounded-3xl bg-input/50 p-3 text-sm">{value}</code>
+        <Field>
+          <Input readOnly value={value} />
+        </Field>
       </CardContent>
     </Card>
   )
@@ -507,22 +527,20 @@ function ConfirmDeleteDialog({
   onConfirm: () => void
 }) {
   return (
-    <Dialog open={open} onOpenChange={(nextOpen) => !loading && onOpenChange(nextOpen)}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Удалить заказ</DialogTitle>
-          <DialogDescription>Заказ будет удалён из базы полностью. Это действие нельзя отменить.</DialogDescription>
-        </DialogHeader>
-        <DialogFooter>
-          <Button variant="secondary" onClick={() => onOpenChange(false)}>
-            Отмена
-          </Button>
-          <Button variant="destructive" disabled={loading} onClick={onConfirm}>
+    <AlertDialog open={open} onOpenChange={(nextOpen) => !loading && onOpenChange(nextOpen)}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Удалить заказ</AlertDialogTitle>
+          <AlertDialogDescription>Заказ будет удалён из базы полностью. Это действие нельзя отменить.</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Отмена</AlertDialogCancel>
+          <AlertDialogAction variant="destructive" disabled={loading} onClick={onConfirm}>
             Удалить
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   )
 }
 
@@ -562,16 +580,21 @@ function PaymentMethodPickerDialog({
           <DialogDescription>Изменить можно только до оплаты.</DialogDescription>
         </DialogHeader>
         <RadioGroup value={selectedKey || ""} onValueChange={onSelect}>
-          {options.map((option) => (
-            <label key={option.key} className="flex cursor-pointer items-center gap-3 rounded-3xl bg-input/50 p-3">
-              <PaymentMethodIcon iconDataUrl={option.iconDataUrl} title={option.title} />
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-medium">{option.title}</span>
-                <span className="block truncate text-xs text-muted-foreground">{option.subtitle}</span>
-              </span>
-              <RadioGroupItem value={option.key} />
-            </label>
-          ))}
+          <FieldGroup>
+            {options.map((option) => {
+              const inputId = `order-payment-${option.key}`
+              return (
+                <Field key={option.key} orientation="horizontal">
+                  <RadioGroupItem id={inputId} value={option.key} />
+                  <PaymentMethodIcon iconDataUrl={option.iconDataUrl} title={option.title} />
+                  <FieldContent>
+                    <FieldLabel htmlFor={inputId}>{option.title}</FieldLabel>
+                    <FieldDescription>{option.subtitle}</FieldDescription>
+                  </FieldContent>
+                </Field>
+              )
+            })}
+          </FieldGroup>
         </RadioGroup>
         <DialogFooter>
           <Button variant="secondary" onClick={() => onOpenChange(false)}>

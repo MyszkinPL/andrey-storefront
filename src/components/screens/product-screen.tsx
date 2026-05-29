@@ -3,9 +3,10 @@
 import { useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { Check, KeyRound, PackageSearch, ShoppingBag } from "lucide-react"
+import { KeyRound, PackageSearch, ShoppingBag } from "lucide-react"
 
-import { Avatar, AvatarBadge, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { AspectRatio } from "@/components/ui/aspect-ratio"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -23,6 +24,13 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty"
+import {
+  Field,
+  FieldContent,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Separator } from "@/components/ui/separator"
 import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
@@ -178,25 +186,22 @@ export function ProductScreen({ productId }: { productId: string }) {
               <CardDescription>Выбери способ перед созданием заказа.</CardDescription>
             </CardHeader>
             <CardContent>
-              <RadioGroup
-                value={selectedPayment?.key}
-                onValueChange={(value) => setSelectedPaymentKey(value)}
-              >
-                {paymentOptions.map((option) => (
-                  <label
-                    key={option.key}
-                    className="flex cursor-pointer items-center gap-3 rounded-3xl bg-input/50 p-3"
-                  >
-                    <PaymentIcon iconDataUrl={option.iconDataUrl} title={option.title} />
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-medium">{option.title}</span>
-                      <span className="block truncate text-xs text-muted-foreground">
-                        {option.subtitle}
-                      </span>
-                    </span>
-                    <RadioGroupItem value={option.key} />
-                  </label>
-                ))}
+              <RadioGroup value={selectedPayment?.key} onValueChange={setSelectedPaymentKey}>
+                <FieldGroup>
+                  {paymentOptions.map((option) => {
+                    const inputId = `payment-${option.key}`
+                    return (
+                      <Field key={option.key} orientation="horizontal">
+                        <RadioGroupItem id={inputId} value={option.key} />
+                        <PaymentIcon iconDataUrl={option.iconDataUrl} title={option.title} />
+                        <FieldContent>
+                          <FieldLabel htmlFor={inputId}>{option.title}</FieldLabel>
+                          <FieldDescription>{option.subtitle}</FieldDescription>
+                        </FieldContent>
+                      </Field>
+                    )
+                  })}
+                </FieldGroup>
               </RadioGroup>
             </CardContent>
             <CardFooter>
@@ -239,7 +244,7 @@ function ProductImage({
   title: string
 }) {
   return (
-    <div className="aspect-square overflow-hidden bg-muted">
+    <AspectRatio ratio={1} className="overflow-hidden">
       {imageDataUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={imageDataUrl} alt={title} className="size-full object-cover" />
@@ -248,7 +253,7 @@ function ProductImage({
           <PackageSearch className="size-10" />
         </div>
       )}
-    </div>
+    </AspectRatio>
   )
 }
 
@@ -263,9 +268,6 @@ function PaymentIcon({
     <Avatar size="lg">
       {iconDataUrl ? <AvatarImage src={iconDataUrl} alt={title} /> : null}
       <AvatarFallback>{title.slice(0, 2).toUpperCase()}</AvatarFallback>
-      <AvatarBadge>
-        <Check />
-      </AvatarBadge>
     </Avatar>
   )
 }
