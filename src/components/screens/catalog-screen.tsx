@@ -6,12 +6,12 @@ import { useQuery } from "@tanstack/react-query"
 import {
   Avatar,
   Card,
+  Cell,
   Chip,
   Image as TgImage,
   Input,
   Placeholder,
   Section,
-  Title,
 } from "@telegram-apps/telegram-ui"
 import { PackageSearch, Search } from "lucide-react"
 
@@ -57,15 +57,15 @@ export function CatalogScreen() {
   return (
     <Screen>
       <ScreenHeader
-        title={
-          <div className="flex items-center gap-3">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.svg" alt={shopName} className="size-10 shrink-0 object-contain" />
-            <Title level="3" Component="span">
-              {shopName}
-            </Title>
-          </div>
+        before={
+          <TgImage
+            size={40}
+            src="/logo.svg"
+            alt=""
+            fallbackIcon={<span>{shopName.slice(0, 2).toUpperCase()}</span>}
+          />
         }
+        title={shopName}
         trailing={
           <Avatar
             size={40}
@@ -76,7 +76,7 @@ export function CatalogScreen() {
         }
       />
 
-      <ScreenBody className="gap-3">
+      <ScreenBody>
         {isLoading ? (
           <Placeholder header="Загружаю каталог" description="Подтягиваю товары магазина.">
             <PackageSearch size={32} />
@@ -96,7 +96,7 @@ export function CatalogScreen() {
               />
             </Section>
 
-            <div className="scrollbar-none flex gap-2 overflow-x-auto px-1 py-1">
+            <div className="flex gap-2 overflow-x-auto px-1 py-1">
               {categories.map((item) => {
                 const active = (category || "Все") === item
                 return (
@@ -117,11 +117,11 @@ export function CatalogScreen() {
                 <PackageSearch size={32} />
               </Placeholder>
             ) : (
-              <div className="grid grid-cols-2 gap-3 sm:[grid-template-columns:repeat(auto-fill,minmax(188px,1fr))]">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
                 {filtered.map((product) => (
-                  <Link key={product.id} href={`/product/${product.id}`} className="min-w-0">
-                    <Card type="plain" className="h-full overflow-hidden">
-                      <div className="aspect-square w-full overflow-hidden">
+                  <Link key={product.id} href={`/product/${product.id}`}>
+                    <Card type="plain" className="w-full">
+                      <div className="aspect-square overflow-hidden">
                         {product.imageDataUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
@@ -130,16 +130,16 @@ export function CatalogScreen() {
                             className="size-full object-cover"
                           />
                         ) : (
-                          <div className="flex size-full items-center justify-center">
-                            <TgImage size={96} fallbackIcon={<PackageSearch size={36} />} />
-                          </div>
+                          <Cell before={<TgImage size={96} fallbackIcon={<PackageSearch size={28} />} />}>
+                            Фото
+                          </Cell>
                         )}
                       </div>
                       <Card.Cell
-                        subtitle={product.category || "digital"}
+                        subtitle={product.category || "Без категории"}
                         after={`${product.priceRub.toLocaleString("ru-RU")} ₽`}
                       >
-                        <span className="line-clamp-2">{product.title}</span>
+                        {product.title}
                       </Card.Cell>
                     </Card>
                   </Link>

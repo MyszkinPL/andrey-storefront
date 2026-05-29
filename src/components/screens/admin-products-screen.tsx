@@ -333,7 +333,7 @@ function ProductEditorModal({
           placeholder="Новая или существующая"
         />
         {categoryOptions.length > 0 ? (
-          <div className="scrollbar-none flex gap-2 overflow-x-auto px-4 py-2">
+          <div className="flex gap-2 overflow-x-auto px-4 py-2">
             {categoryOptions.map((category) => (
               <Button
                 key={category}

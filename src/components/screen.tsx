@@ -14,11 +14,10 @@ export function Screen({
   return (
     <main
       className={cn(
-        "mx-auto flex min-h-dvh w-full max-w-5xl flex-col",
+        "mx-auto flex min-h-dvh w-full max-w-5xl flex-col pt-[env(safe-area-inset-top)]",
         !noTabBar && "pb-[88px]",
         className,
       )}
-      style={{ paddingTop: "env(safe-area-inset-top, 0)" }}
     >
       {children}
     </main>
@@ -26,10 +25,12 @@ export function Screen({
 }
 
 export function ScreenHeader({
+  before,
   title,
   subtitle,
   trailing,
 }: {
+  before?: React.ReactNode
   title: React.ReactNode
   subtitle?: React.ReactNode
   trailing?: React.ReactNode
@@ -38,7 +39,7 @@ export function ScreenHeader({
   return (
     <List className="px-4 pb-1 pt-2">
       <Section>
-        <Cell multiline after={trailing} subtitle={subtitle}>
+        <Cell multiline before={before} after={trailing} subtitle={subtitle}>
           {title}
         </Cell>
       </Section>
