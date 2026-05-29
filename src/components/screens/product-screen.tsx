@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { KeyRound, PackageSearch, ShoppingBag } from "lucide-react"
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { AspectRatio } from "@/components/ui/aspect-ratio"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -139,8 +138,7 @@ export function ProductScreen({ productId }: { productId: string }) {
       <ScreenHeader title={product.title} subtitle={`${category} · ${deliveryLabel}`} />
 
       <ScreenBody className="mx-auto w-full max-w-4xl lg:grid lg:grid-cols-[minmax(0,1fr)_360px]">
-        <Card className="gap-0 py-0">
-          <ProductImage imageDataUrl={product.imageDataUrl} title={product.title} />
+        <Card size="sm">
           <CardHeader>
             <CardTitle>{product.title}</CardTitle>
             <CardDescription>{category}</CardDescription>
@@ -149,6 +147,9 @@ export function ProductScreen({ productId }: { productId: string }) {
             </CardAction>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
+            <div className="mx-auto w-full max-w-64 overflow-hidden rounded-3xl border">
+              <ProductImage imageDataUrl={product.imageDataUrl} title={product.title} />
+            </div>
             <p className="text-sm leading-6 text-muted-foreground">{product.description}</p>
             <Separator />
             <div className="flex items-center justify-between gap-3">
@@ -265,9 +266,13 @@ function PaymentIcon({
   title: string
 }) {
   return (
-    <Avatar size="lg">
-      {iconDataUrl ? <AvatarImage src={iconDataUrl} alt={title} /> : null}
-      <AvatarFallback>{title.slice(0, 2).toUpperCase()}</AvatarFallback>
-    </Avatar>
+    <div className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border bg-muted text-xs font-medium">
+      {iconDataUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={iconDataUrl} alt={title} className="size-full object-cover" />
+      ) : (
+        title.slice(0, 2).toUpperCase()
+      )}
+    </div>
   )
 }

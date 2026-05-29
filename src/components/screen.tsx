@@ -7,10 +7,8 @@ import {
 } from "@/components/ui/empty"
 import {
   Card,
-  CardAction,
   CardContent,
   CardDescription,
-  CardHeader,
   CardTitle,
 } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
@@ -27,7 +25,7 @@ export function Screen({
   return (
     <main
       className={cn(
-        "mx-auto flex min-h-dvh w-full max-w-5xl flex-col px-4 pt-[calc(env(safe-area-inset-top)+0.75rem)]",
+        "mx-auto box-border flex min-h-dvh w-full max-w-5xl flex-col overflow-x-hidden px-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] sm:px-4",
         !noTabBar && "pb-[calc(env(safe-area-inset-bottom)+5.75rem)]",
         noTabBar && "pb-[calc(env(safe-area-inset-bottom)+1rem)]",
         className,
@@ -52,14 +50,14 @@ export function ScreenHeader({
 }) {
   return (
     <Card size="sm" className="mb-3">
-      <CardHeader className="grid-cols-[auto_1fr_auto] items-center">
-        {before ? <div className="row-span-2">{before}</div> : null}
-        <CardTitle className="min-w-0 truncate">{title}</CardTitle>
-        {trailing ? <CardAction>{trailing}</CardAction> : null}
-        {subtitle ? (
-          <CardDescription className="min-w-0 truncate">{subtitle}</CardDescription>
-        ) : null}
-      </CardHeader>
+      <CardContent className="flex items-center gap-3">
+        {before ? <div className="shrink-0">{before}</div> : null}
+        <div className="min-w-0 flex-1">
+          <CardTitle className="truncate">{title}</CardTitle>
+          {subtitle ? <CardDescription className="truncate">{subtitle}</CardDescription> : null}
+        </div>
+        {trailing ? <div className="shrink-0">{trailing}</div> : null}
+      </CardContent>
     </Card>
   )
 }

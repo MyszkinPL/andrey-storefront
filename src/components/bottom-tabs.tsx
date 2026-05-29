@@ -36,7 +36,7 @@ export function BottomTabs() {
   const tabs = mode === "admin" ? ADMIN_TABS : BUYER_TABS
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-5xl p-4 pt-0">
+    <div className="fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-md p-3 pt-0 sm:max-w-lg sm:p-4 sm:pt-0">
       <Card size="sm">
         <CardContent className={cn("grid gap-1", mode === "admin" ? "grid-cols-5" : "grid-cols-3")}>
           {tabs.map((tab) => {

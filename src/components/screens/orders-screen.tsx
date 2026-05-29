@@ -94,7 +94,7 @@ export function OrdersScreen() {
       ) : (
         <ScreenBody>
           <Tabs value={filter} onValueChange={(value) => setFilter(value as FilterKey)}>
-            <TabsList className="w-full">
+            <TabsList className="grid w-full grid-cols-5">
               {[
                 { key: "all" as const, label: "Все" },
                 { key: "waiting" as const, label: "Оплата" },
@@ -102,7 +102,7 @@ export function OrdersScreen() {
                 { key: "active" as const, label: "Выдача" },
                 { key: "closed" as const, label: "История" },
               ].map((item) => (
-                <TabsTrigger key={item.key} value={item.key}>
+                <TabsTrigger key={item.key} value={item.key} className="px-1 text-xs">
                   {item.label}
                 </TabsTrigger>
               ))}
@@ -122,8 +122,8 @@ export function OrdersScreen() {
                         #{order.number}
                         {order.productCategory ? ` · ${order.productCategory}` : ""}
                       </CardDescription>
-                      <CardAction>
-                        <span className="text-xs text-muted-foreground">
+                      <CardAction className="max-w-28">
+                        <span className="block truncate text-xs text-muted-foreground">
                           {formatDistanceToNow(new Date(order.updatedAt), {
                             addSuffix: true,
                             locale: ru,
@@ -134,7 +134,7 @@ export function OrdersScreen() {
                     <CardContent className="flex items-center justify-between gap-3">
                       <Badge variant={orderBadgeVariant(order)}>{renderPrimaryState(order)}</Badge>
                       {order.paymentMethodTitle && !order.isPaid ? (
-                        <span className="truncate text-xs text-muted-foreground">
+                        <span className="min-w-0 truncate text-xs text-muted-foreground">
                           {order.paymentMethodTitle}
                         </span>
                       ) : null}

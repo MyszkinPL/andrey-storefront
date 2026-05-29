@@ -17,7 +17,7 @@ export function ModeSwitcher() {
   if (!canSwitch) return null
 
   return (
-    <div className="mx-auto w-full max-w-5xl px-4 pt-3">
+    <div className="mx-auto w-full max-w-md px-3 pt-3 sm:px-4">
       <Card size="sm">
         <CardContent className="grid grid-cols-2 gap-2">
           <Button

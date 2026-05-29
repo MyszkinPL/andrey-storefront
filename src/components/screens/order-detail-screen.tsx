@@ -508,10 +508,14 @@ function PaymentMethodIcon({
   title: string
 }) {
   return (
-    <Avatar className="size-20">
-      {iconDataUrl ? <AvatarImage src={iconDataUrl} alt={title} /> : null}
-      <AvatarFallback>{title.slice(0, 2).toUpperCase()}</AvatarFallback>
-    </Avatar>
+    <div className="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl border bg-muted text-sm font-medium">
+      {iconDataUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={iconDataUrl} alt={title} className="size-full object-cover" />
+      ) : (
+        title.slice(0, 2).toUpperCase()
+      )}
+    </div>
   )
 }
 

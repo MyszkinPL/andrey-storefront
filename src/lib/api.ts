@@ -2,6 +2,8 @@
 
 import type { PaymentMethodType, OrderStatus } from "@prisma/client"
 
+import { isLocalMockApiEnabled, mockApi } from "@/lib/mock-api"
+
 export class ApiError extends Error {
   status: number
 
@@ -49,6 +51,10 @@ export type CryptoPayCurrency = {
 }
 
 async function api<T>(input: RequestInfo, init?: RequestInit): Promise<T> {
+  if (isLocalMockApiEnabled()) {
+    return mockApi<T>(input, init)
+  }
+
   const response = await fetch(input, {
     ...init,
     credentials: "include",

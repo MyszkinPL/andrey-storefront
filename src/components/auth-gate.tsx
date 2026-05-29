@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/empty"
 import { authenticateWithTelegram } from "@/lib/api"
 import { useTelegram } from "@/hooks/use-telegram"
+import { isLocalMockApiEnabled } from "@/lib/mock-api"
 
 export function AuthGate({ children }: { children: React.ReactNode }) {
   const { ready, initData, isTelegram } = useTelegram()
@@ -20,6 +21,13 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!ready) return
+
+    if (!isTelegram && isLocalMockApiEnabled()) {
+      authenticateWithTelegram("", true)
+        .then(() => setState("ok"))
+        .catch(() => setState("outside"))
+      return
+    }
 
     fetch("/api/me", { credentials: "include" }).then(async (response) => {
       if (response.ok) {

@@ -75,7 +75,7 @@ export function AdminOrdersScreen() {
       ) : (
         <ScreenBody>
           <Tabs value={filter} onValueChange={(value) => setFilter(value as FilterKey)}>
-            <TabsList className="w-full">
+            <TabsList className="grid w-full grid-cols-5">
               {[
                 { key: "all" as const, label: "Все" },
                 { key: "waiting" as const, label: "Оплата" },
@@ -83,7 +83,7 @@ export function AdminOrdersScreen() {
                 { key: "work" as const, label: "Выдача" },
                 { key: "closed" as const, label: "История" },
               ].map((item) => (
-                <TabsTrigger key={item.key} value={item.key}>
+                <TabsTrigger key={item.key} value={item.key} className="px-1 text-xs">
                   {item.label}
                 </TabsTrigger>
               ))}

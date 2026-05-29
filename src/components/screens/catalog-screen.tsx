@@ -104,7 +104,7 @@ export function CatalogScreen() {
               onValueChange={(value) => setCategory(value[0] === "Все" ? "" : value[0] || "")}
               variant="outline"
               size="sm"
-              className="w-full overflow-x-auto"
+              className="grid w-full grid-cols-3"
             >
               {categories.map((item) => (
                 <ToggleGroupItem key={item} value={item}>
@@ -116,12 +116,12 @@ export function CatalogScreen() {
             {filtered.length === 0 ? (
               <CatalogEmpty title="Пусто" description="Попробуй другую категорию или запрос." />
             ) : (
-              <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
+              <div className="grid grid-cols-[repeat(2,minmax(0,1fr))] gap-3 md:grid-cols-[repeat(auto-fill,minmax(180px,1fr))]">
                 {filtered.map((product) => (
                   <Link key={product.id} href={`/product/${product.id}`} className="min-w-0">
-                    <Card size="sm" className="h-full gap-0 py-0">
+                    <Card size="sm" className="h-full min-w-0 gap-0 py-0">
                       <ProductCover imageDataUrl={product.imageDataUrl} title={product.title} />
-                      <CardFooter className="items-end justify-between gap-3 py-4">
+                      <CardFooter className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-3 py-4">
                         <div className="min-w-0">
                           <CardTitle className="truncate">{product.title}</CardTitle>
                           <CardDescription className="truncate">
@@ -146,10 +146,8 @@ export function CatalogScreen() {
 
 function ShopLogo() {
   return (
-    <Avatar size="lg">
-      <AvatarImage src="/logo.svg" alt="snx.sell" />
-      <AvatarFallback>SX</AvatarFallback>
-    </Avatar>
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src="/logo.svg" alt="snx.sell" className="size-8 shrink-0" />
   )
 }
 
