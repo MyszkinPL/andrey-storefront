@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { KeyRound, PackageSearch, ShoppingBag } from "lucide-react"
 
 import { AspectRatio } from "@/components/ui/aspect-ratio"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -29,10 +30,18 @@ import {
   FieldDescription,
   FieldGroup,
   FieldLabel,
+  FieldTitle,
 } from "@/components/ui/field"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Separator } from "@/components/ui/separator"
-import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Screen, ScreenBody } from "@/components/screen"
 import { useBackButton, useHaptic, useMainButton } from "@/hooks/use-telegram"
 import { createOrder, getPaymentMethods, getProduct } from "@/lib/api"
 
@@ -134,11 +143,9 @@ export function ProductScreen({ productId }: { productId: string }) {
   const deliveryLabel = product.deliveryType === "AUTO_KEY" ? "Автовыдача" : "Ручная выдача"
 
   return (
-    <Screen noTabBar>
-      <ScreenHeader title={product.title} subtitle={`${category} · ${deliveryLabel}`} />
-
-      <ScreenBody className="mx-auto w-full max-w-4xl lg:grid lg:grid-cols-[minmax(0,1fr)_360px]">
-        <Card size="sm">
+    <Screen noTabBar className="min-h-[calc(100dvh-3rem)]">
+      <ScreenBody className="mx-auto w-full max-w-2xl flex-1">
+        <Card size="sm" className="flex-1">
           <CardHeader>
             <CardTitle>{product.title}</CardTitle>
             <CardDescription>{category}</CardDescription>
@@ -146,92 +153,66 @@ export function ProductScreen({ productId }: { productId: string }) {
               <Badge variant="secondary">{product.priceRub.toLocaleString("ru-RU")} ₽</Badge>
             </CardAction>
           </CardHeader>
-          <CardContent className="flex flex-col gap-4">
-            <div className="mx-auto w-full max-w-64 overflow-hidden rounded-3xl border">
-              <ProductImage imageDataUrl={product.imageDataUrl} title={product.title} />
-            </div>
-            <p className="text-sm leading-6 text-muted-foreground">{product.description}</p>
+          <CardContent className="flex flex-1 flex-col gap-4">
+            <ProductImage imageDataUrl={product.imageDataUrl} title={product.title} />
+            <CardDescription>{product.description}</CardDescription>
             <Separator />
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2 text-sm">
-                <KeyRound className="size-4 text-muted-foreground" />
-                {deliveryLabel}
-              </div>
+            <Field orientation="horizontal">
+              <KeyRound className="size-4 text-muted-foreground" />
+              <FieldContent>
+                <FieldTitle>{deliveryLabel}</FieldTitle>
+              </FieldContent>
               {product.deliveryType === "AUTO_KEY" ? (
                 <Badge variant="outline">{product.availableKeyCount ?? 0} ключей</Badge>
               ) : null}
-            </div>
-          </CardContent>
-        </Card>
+            </Field>
 
-        <div className="flex flex-col gap-3">
-          {product.specs.length > 0 ? (
-            <Card size="sm">
-              <CardHeader>
-                <CardTitle>Характеристики</CardTitle>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-3">
-                {product.specs.map((spec) => (
-                  <div key={`${spec.label}-${spec.value}`} className="flex items-start justify-between gap-4 text-sm">
-                    <span className="text-muted-foreground">{spec.label}</span>
-                    <span className="text-right font-medium">{spec.value}</span>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          ) : null}
-
-          <Card size="sm">
-            <CardHeader>
-              <CardTitle>Оплата</CardTitle>
-              <CardDescription>Выбери способ перед созданием заказа.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <RadioGroup value={selectedPayment?.key} onValueChange={setSelectedPaymentKey}>
-                <FieldGroup>
-                  {paymentOptions.map((option) => {
-                    const inputId = `payment-${option.key}`
-                    return (
-                      <Field key={option.key} orientation="horizontal">
-                        <RadioGroupItem id={inputId} value={option.key} />
-                        <PaymentIcon iconDataUrl={option.iconDataUrl} title={option.title} />
-                        <FieldContent>
-                          <FieldLabel htmlFor={inputId}>{option.title}</FieldLabel>
-                          <FieldDescription>{option.subtitle}</FieldDescription>
-                        </FieldContent>
-                      </Field>
-                    )
-                  })}
+            {product.specs.length > 0 ? (
+              <>
+                <Separator />
+                <FieldGroup className="gap-2">
+                  {product.specs.map((spec) => (
+                    <Field key={`${spec.label}-${spec.value}`} orientation="horizontal">
+                      <FieldDescription>{spec.label}</FieldDescription>
+                      <FieldTitle className="justify-end text-right">{spec.value}</FieldTitle>
+                    </Field>
+                  ))}
                 </FieldGroup>
-              </RadioGroup>
-            </CardContent>
-            <CardFooter>
-              <Button
-                className="w-full"
-                disabled={!selectedPayment || orderMutation.isPending}
-                onClick={() => orderMutation.mutate()}
-              >
-                {orderMutation.isPending ? (
-                  "Создаём..."
-                ) : (
-                  <>
-                    <ShoppingBag data-icon="inline-start" />
-                    Оформить заказ
-                  </>
-                )}
-              </Button>
-            </CardFooter>
-          </Card>
+              </>
+            ) : null}
 
-          {orderMutation.error ? (
-            <Card size="sm">
-              <CardHeader>
-                <CardTitle>Не удалось создать заказ</CardTitle>
-                <CardDescription>{orderMutation.error.message}</CardDescription>
-              </CardHeader>
-            </Card>
-          ) : null}
-        </div>
+            <FieldGroup className="mt-auto gap-4">
+              <Separator />
+              <PaymentMethodSelect
+                options={paymentOptions}
+                selectedKey={selectedPayment?.key || ""}
+                onSelect={setSelectedPaymentKey}
+              />
+              {orderMutation.error ? (
+                <Field>
+                  <FieldTitle>Не удалось создать заказ</FieldTitle>
+                  <FieldDescription>{orderMutation.error.message}</FieldDescription>
+                </Field>
+              ) : null}
+            </FieldGroup>
+          </CardContent>
+          <CardFooter className="mt-auto">
+            <Button
+              className="w-full"
+              disabled={!selectedPayment || orderMutation.isPending}
+              onClick={() => orderMutation.mutate()}
+            >
+              {orderMutation.isPending ? (
+                "Создаём..."
+              ) : (
+                <>
+                  <ShoppingBag data-icon="inline-start" />
+                  Оформить заказ
+                </>
+              )}
+            </Button>
+          </CardFooter>
+        </Card>
       </ScreenBody>
     </Screen>
   )
@@ -245,34 +226,77 @@ function ProductImage({
   title: string
 }) {
   return (
-    <AspectRatio ratio={1} className="overflow-hidden">
+    <AspectRatio ratio={1} className="mx-auto w-full max-w-64 overflow-hidden">
       {imageDataUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={imageDataUrl} alt={title} className="size-full object-cover" />
       ) : (
-        <div className="flex size-full items-center justify-center text-muted-foreground">
-          <PackageSearch className="size-10" />
-        </div>
+        <Empty>
+          <EmptyMedia variant="icon">
+            <PackageSearch />
+          </EmptyMedia>
+        </Empty>
       )}
     </AspectRatio>
   )
 }
 
-function PaymentIcon({
-  iconDataUrl,
-  title,
+function PaymentMethodSelect({
+  options,
+  selectedKey,
+  onSelect,
 }: {
-  iconDataUrl: string | null
-  title: string
+  options: Array<{
+    key: string
+    title: string
+    subtitle: string
+    iconDataUrl: string | null
+  }>
+  selectedKey: string
+  onSelect: (key: string) => void
 }) {
+  const selectedOption = options.find((option) => option.key === selectedKey)
+
   return (
-    <div className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border bg-muted text-xs font-medium">
-      {iconDataUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={iconDataUrl} alt={title} className="size-full object-cover" />
-      ) : (
-        title.slice(0, 2).toUpperCase()
-      )}
-    </div>
+    <Field>
+      <FieldLabel>Способ оплаты</FieldLabel>
+      <Select
+        value={selectedKey}
+        onValueChange={(value) => {
+          if (value) onSelect(String(value))
+        }}
+        items={options.map((option) => ({ value: option.key, label: option.title }))}
+      >
+        <SelectTrigger className="h-11 w-full">
+          {selectedOption ? (
+            <Avatar size="sm">
+              {selectedOption.iconDataUrl ? (
+                <AvatarImage src={selectedOption.iconDataUrl} alt={selectedOption.title} />
+              ) : null}
+              <AvatarFallback>{getAvatarFallback(selectedOption.title)}</AvatarFallback>
+            </Avatar>
+          ) : null}
+          <SelectValue placeholder="Выбрать способ" />
+        </SelectTrigger>
+        <SelectContent className="max-h-72">
+          <SelectGroup>
+            {options.map((option) => (
+              <SelectItem key={option.key} value={option.key} label={option.title}>
+                <Avatar size="sm">
+                  {option.iconDataUrl ? <AvatarImage src={option.iconDataUrl} alt={option.title} /> : null}
+                  <AvatarFallback>{getAvatarFallback(option.title)}</AvatarFallback>
+                </Avatar>
+                {option.title}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        </SelectContent>
+      </Select>
+      {selectedOption?.subtitle ? <FieldDescription>{selectedOption.subtitle}</FieldDescription> : null}
+    </Field>
   )
+}
+
+function getAvatarFallback(title: string) {
+  return title.slice(0, 2).toUpperCase()
 }

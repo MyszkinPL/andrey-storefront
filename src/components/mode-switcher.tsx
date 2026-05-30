@@ -3,10 +3,10 @@
 import { Shield, ShoppingBag } from "lucide-react"
 import { usePathname, useRouter } from "next/navigation"
 
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useMode } from "@/components/mode-provider"
 import { useHaptic } from "@/hooks/use-telegram"
+import { resolveModePath } from "@/lib/navigation"
 
 export function ModeSwitcher() {
   const { mode, setMode, canSwitch } = useMode()
@@ -17,48 +17,27 @@ export function ModeSwitcher() {
   if (!canSwitch) return null
 
   return (
-    <div className="mx-auto w-full max-w-md px-3 pt-3 sm:px-4">
-      <Card size="sm">
-        <CardContent className="grid grid-cols-2 gap-2">
-          <Button
-            variant={mode === "buyer" ? "default" : "ghost"}
-            onClick={() => {
-              if (mode === "buyer") return
-              haptic.select()
-              setMode("buyer")
-              router.replace(resolveModePath(pathname, "buyer"))
-            }}
-          >
-            <ShoppingBag data-icon="inline-start" />
-            Покупатель
-          </Button>
-          <Button
-            variant={mode === "admin" ? "default" : "ghost"}
-            onClick={() => {
-              if (mode === "admin") return
-              haptic.select()
-              setMode("admin")
-              router.replace(resolveModePath(pathname, "admin"))
-            }}
-          >
-            <Shield data-icon="inline-start" />
-            Админ
-          </Button>
-        </CardContent>
-      </Card>
-    </div>
+    <Tabs
+      value={mode}
+      onValueChange={(value) => {
+        const nextMode = value as "buyer" | "admin"
+        if (nextMode === mode) return
+        haptic.select()
+        setMode(nextMode)
+        router.replace(resolveModePath(pathname, nextMode))
+      }}
+      className="mx-auto w-full max-w-md px-3 pt-3 sm:px-4"
+    >
+      <TabsList className="grid w-full grid-cols-2">
+        <TabsTrigger value="buyer">
+          <ShoppingBag data-icon="inline-start" />
+          Покупатель
+        </TabsTrigger>
+        <TabsTrigger value="admin">
+          <Shield data-icon="inline-start" />
+          Админ
+        </TabsTrigger>
+      </TabsList>
+    </Tabs>
   )
-}
-
-function resolveModePath(pathname: string, nextMode: "buyer" | "admin") {
-  if (nextMode === "admin") {
-    if (pathname === "/orders" || pathname.startsWith("/orders/")) return "/admin/orders"
-    if (pathname === "/profile") return "/admin/settings"
-    return "/admin"
-  }
-
-  if (pathname === "/admin/orders") return "/orders"
-  if (pathname === "/admin/settings") return "/profile"
-  if (pathname === "/admin/products") return "/catalog"
-  return "/catalog"
 }

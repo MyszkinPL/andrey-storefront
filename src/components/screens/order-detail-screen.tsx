@@ -33,17 +33,10 @@ import {
   CardAction,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
 import {
   Empty,
   EmptyDescription,
@@ -57,9 +50,22 @@ import {
   FieldDescription,
   FieldGroup,
   FieldLabel,
+  FieldTitle,
 } from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+} from "@/components/ui/input-group"
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Screen, ScreenBody } from "@/components/screen"
 import { useMode } from "@/components/mode-provider"
 import { useBackButton } from "@/hooks/use-telegram"
@@ -78,13 +84,20 @@ import {
 import { cn } from "@/lib/utils"
 
 type Order = NonNullable<Awaited<ReturnType<typeof getOrder>>["order"]>
+type PaymentOption = {
+  key: string
+  id?: string
+  type: "MANUAL" | "CRYPTO_PAY"
+  title: string
+  subtitle: string
+  iconDataUrl: string | null
+}
 
 export function OrderDetailScreen({ orderId }: { orderId: string }) {
   const router = useRouter()
   const queryClient = useQueryClient()
   const { mode } = useMode()
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
-  const [isPaymentPickerOpen, setIsPaymentPickerOpen] = useState(false)
   const [draftPaymentKey, setDraftPaymentKey] = useState<string | null>(null)
   const [copiedField, setCopiedField] = useState<"payment" | "key" | null>(null)
 
@@ -112,11 +125,26 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
     }, 1400)
   }
 
-  const confirmMutation = useMutation({ mutationFn: () => confirmOrderPayment(orderId), onSuccess: invalidate })
-  const rejectManualPaymentMutation = useMutation({ mutationFn: () => rejectManualOrderPayment(orderId), onSuccess: invalidate })
-  const cancelOrderMutation = useMutation({ mutationFn: () => cancelOwnOrder(orderId), onSuccess: invalidate })
-  const refreshMutation = useMutation({ mutationFn: () => refreshCryptoInvoice(orderId), onSuccess: invalidate })
-  const markManualPaidMutation = useMutation({ mutationFn: () => markManualOrderPaid(orderId), onSuccess: invalidate })
+  const confirmMutation = useMutation({
+    mutationFn: () => confirmOrderPayment(orderId),
+    onSuccess: invalidate,
+  })
+  const rejectManualPaymentMutation = useMutation({
+    mutationFn: () => rejectManualOrderPayment(orderId),
+    onSuccess: invalidate,
+  })
+  const cancelOrderMutation = useMutation({
+    mutationFn: () => cancelOwnOrder(orderId),
+    onSuccess: invalidate,
+  })
+  const refreshMutation = useMutation({
+    mutationFn: () => refreshCryptoInvoice(orderId),
+    onSuccess: invalidate,
+  })
+  const markManualPaidMutation = useMutation({
+    mutationFn: () => markManualOrderPaid(orderId),
+    onSuccess: invalidate,
+  })
   const changePaymentMethodMutation = useMutation({
     mutationFn: (payload: { paymentMethodId?: string; paymentMethodType?: PaymentMethodType }) =>
       changeOrderPaymentMethod(
@@ -127,7 +155,6 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
       ),
     onSuccess: async () => {
       await invalidate()
-      setIsPaymentPickerOpen(false)
       setDraftPaymentKey(null)
     },
   })
@@ -141,7 +168,7 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
 
   useBackButton(() => router.back())
 
-  const paymentOptions = [
+  const paymentOptions: PaymentOption[] = [
     ...((paymentData?.paymentMethods ?? []).filter((item) => item.isActive).map((method) => ({
       key: `manual:${method.id}`,
       id: method.id,
@@ -189,8 +216,6 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
       : order.paymentMethodType === "CRYPTO_PAY"
         ? "crypto:auto"
         : null
-  const selectedDraftPayment =
-    paymentOptions.find((option) => option.key === (draftPaymentKey || currentPaymentKey)) || null
   const canConfirmManualPayment =
     adminToolsVisible &&
     order.paymentMethodType === "MANUAL" &&
@@ -215,12 +240,37 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
     order.paymentMethodType === "CRYPTO_PAY" && Boolean(order.cryptoInvoiceUrl) && !order.isPaid
   const amountLabel = order.cryptoInvoiceAmount
     ? `${order.cryptoInvoiceAmount} ${order.cryptoInvoiceFiat || "RUB"}`
+    : order.priceRub
+      ? `${order.priceRub.toLocaleString("ru-RU")} ₽`
     : null
-  const progress = order.status === "CLOSED" || order.deliveredKey ? 3 : order.isPaid ? 2 : 1
+  const selectedPaymentKey = draftPaymentKey || currentPaymentKey
+  const showOrderNotice =
+    Boolean(order.deliveredKey) ||
+    order.status === "PAYMENT_REVIEW" ||
+    order.status === "CANCELLED" ||
+    order.isPaid
+  const handlePaymentMethodSelect = (key: string) => {
+    if (changePaymentMethodMutation.isPending) return
+
+    const option = paymentOptions.find((item) => item.key === key)
+    if (!option) return
+
+    if (option.key === currentPaymentKey) {
+      setDraftPaymentKey(null)
+      return
+    }
+
+    setDraftPaymentKey(option.key)
+    changePaymentMethodMutation.mutate(
+      option.type === "MANUAL" && option.id
+        ? { paymentMethodId: option.id }
+        : { paymentMethodType: "CRYPTO_PAY" },
+    )
+  }
 
   return (
-    <Screen noTabBar>
-      <ScreenBody className="mx-auto w-full max-w-2xl">
+    <Screen noTabBar className="min-h-[calc(100dvh-3rem)]">
+      <ScreenBody className="mx-auto w-full max-w-2xl flex-1">
         {adminToolsVisible ? (
           <AdminOrderPanel
             order={order}
@@ -237,33 +287,47 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
           />
         ) : null}
 
-        <Card>
-          <CardHeader className="text-center">
-            <div className="mx-auto">
-              <PaymentMethodIcon
-                iconDataUrl={order.paymentMethodIconDataUrl}
-                title={order.paymentMethodTitle || "PM"}
-              />
-            </div>
+        <Card size="sm" className="flex-1">
+          <CardHeader>
             <CardTitle>{paymentStateLabel(order)}</CardTitle>
             <CardDescription>
-              {order.productTitle || order.subject} · {createdAtLabel}
+              Заказ #{order.number} · {order.productTitle || order.subject} · {createdAtLabel}
             </CardDescription>
-            {amountLabel ? <div className="text-3xl font-semibold">{amountLabel}</div> : null}
+            <CardAction>
+              {amountLabel ? <Badge variant="secondary">{amountLabel}</Badge> : null}
+            </CardAction>
           </CardHeader>
-          <CardContent className="flex flex-col gap-4">
-            <OrderProgress progress={progress} />
+
+          <CardContent className="flex flex-1 flex-col gap-3">
+            {showOrderNotice ? (
+              <Field>
+                <FieldTitle>{renderOrderActionTitle(order, amountLabel)}</FieldTitle>
+                <FieldDescription>{renderOrderActionDescription(order)}</FieldDescription>
+              </Field>
+            ) : null}
 
             {canSwitchPaymentMethod ? (
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  setDraftPaymentKey(currentPaymentKey)
-                  setIsPaymentPickerOpen(true)
-                }}
-              >
-                Изменить способ оплаты
-              </Button>
+              <PaymentMethodSelector
+                options={paymentOptions}
+                selectedKey={selectedPaymentKey}
+                loading={changePaymentMethodMutation.isPending}
+                onSelect={handlePaymentMethodSelect}
+              />
+            ) : (
+              <PaymentMethodSummary
+                title={order.paymentMethodTitle || "Способ оплаты"}
+                description={order.paymentMethodDetails || order.paymentMethodType || "Не выбрана"}
+                iconDataUrl={order.paymentMethodIconDataUrl}
+              />
+            )}
+
+            {showManualPayment ? (
+              <CopyField
+                title="Реквизиты"
+                value={order.paymentMethodDetails || ""}
+                copied={copiedField === "payment"}
+                onCopy={() => copyValue(order.paymentMethodDetails || "", "payment")}
+              />
             ) : null}
 
             {showCryptoPayment ? (
@@ -271,20 +335,11 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
                 href={order.cryptoInvoiceUrl || undefined}
                 target="_blank"
                 rel="noreferrer"
-                className={cn(buttonVariants(), "w-full")}
+                className={cn(buttonVariants({ size: "lg" }), "w-full")}
               >
                 Открыть invoice
                 <ExternalLink data-icon="inline-end" />
               </a>
-            ) : null}
-
-            {showManualPayment ? (
-              <ValueBlock
-                title="Реквизиты"
-                value={order.paymentMethodDetails || ""}
-                copied={copiedField === "payment"}
-                onCopy={() => copyValue(order.paymentMethodDetails || "", "payment")}
-              />
             ) : null}
 
             {isRealBuyerView && showManualPayment && !isClosed ? (
@@ -296,17 +351,8 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
               </Button>
             ) : null}
 
-            {order.status === "PAYMENT_REVIEW" && !order.isPaid ? (
-              <Card size="sm">
-                <CardHeader>
-                  <CardTitle>Платёж на проверке</CardTitle>
-                  <CardDescription>Продавец вручную проверит оплату.</CardDescription>
-                </CardHeader>
-              </Card>
-            ) : null}
-
             {order.deliveredKey ? (
-              <ValueBlock
+              <CopyField
                 title="Выданный ключ"
                 value={order.deliveredKey}
                 copied={copiedField === "key"}
@@ -314,25 +360,38 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
               />
             ) : null}
 
-            {(isRealBuyerView && !order.isPaid && !isClosed) || (order.isPaid && supportLink && isRealBuyerView) ? (
-              <div className="grid gap-2 sm:grid-cols-2">
-                {order.isPaid && supportLink && isRealBuyerView ? (
-                  <a href={supportLink} target="_blank" rel="noreferrer" className={buttonVariants({ variant: "secondary" })}>
-                    Поддержка в Telegram
-                  </a>
-                ) : null}
-                {isRealBuyerView && !order.isPaid && !isClosed ? (
-                  <Button
-                    variant="destructive"
-                    disabled={cancelOrderMutation.isPending}
-                    onClick={() => cancelOrderMutation.mutate()}
-                  >
-                    Отменить заказ
-                  </Button>
-                ) : null}
-              </div>
-            ) : null}
+            <OrderReceipt
+              className="mt-auto"
+              productTitle={order.productTitle || order.subject}
+              paymentTitle={order.paymentMethodTitle || "Не выбрана"}
+              amountLabel={amountLabel}
+              createdAtLabel={createdAtLabel}
+            />
           </CardContent>
+
+          {(order.isPaid && supportLink && isRealBuyerView) || (isRealBuyerView && !order.isPaid && !isClosed) ? (
+            <CardFooter className="mt-auto flex-col items-stretch gap-2">
+              {order.isPaid && supportLink && isRealBuyerView ? (
+                <a
+                  href={supportLink}
+                  target="_blank"
+                  rel="noreferrer"
+                  className={buttonVariants({ variant: "secondary" })}
+                >
+                  Поддержка в Telegram
+                </a>
+              ) : null}
+              {isRealBuyerView && !order.isPaid && !isClosed ? (
+                <Button
+                  variant="destructive"
+                  disabled={cancelOrderMutation.isPending}
+                  onClick={() => cancelOrderMutation.mutate()}
+                >
+                  Отменить заказ
+                </Button>
+              ) : null}
+            </CardFooter>
+          ) : null}
         </Card>
       </ScreenBody>
 
@@ -342,30 +401,6 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
         onOpenChange={setIsDeleteModalOpen}
         onConfirm={() => deleteOrderMutation.mutate()}
       />
-
-      {canSwitchPaymentMethod ? (
-        <PaymentMethodPickerDialog
-          open={isPaymentPickerOpen}
-          options={paymentOptions}
-          selectedKey={draftPaymentKey || currentPaymentKey}
-          currentKey={currentPaymentKey}
-          loading={changePaymentMethodMutation.isPending}
-          onOpenChange={(open) => {
-            if (changePaymentMethodMutation.isPending) return
-            setIsPaymentPickerOpen(open)
-            if (!open) setDraftPaymentKey(null)
-          }}
-          onSelect={setDraftPaymentKey}
-          onConfirm={() => {
-            if (!selectedDraftPayment || selectedDraftPayment.key === currentPaymentKey) return
-            changePaymentMethodMutation.mutate(
-              selectedDraftPayment.type === "MANUAL"
-                ? { paymentMethodId: selectedDraftPayment.id }
-                : { paymentMethodType: "CRYPTO_PAY" },
-            )
-          }}
-        />
-      ) : null}
     </Screen>
   )
 }
@@ -406,20 +441,22 @@ function AdminOrderPanel({
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
         {order.createdBy ? (
-          <div className="flex items-center gap-3">
+          <Field orientation="horizontal">
             <Avatar size="lg">
-              {order.createdBy.photoUrl ? <AvatarImage src={order.createdBy.photoUrl} alt={order.createdBy.firstName} /> : null}
+              {order.createdBy.photoUrl ? (
+                <AvatarImage src={order.createdBy.photoUrl} alt={order.createdBy.firstName} />
+              ) : null}
               <AvatarFallback>{order.createdBy.firstName.slice(0, 1)}</AvatarFallback>
             </Avatar>
-            <div className="min-w-0">
-              <div className="truncate text-sm font-medium">{order.createdBy.firstName}</div>
-              <div className="truncate text-xs text-muted-foreground">
+            <FieldContent>
+              <FieldTitle className="truncate">{order.createdBy.firstName}</FieldTitle>
+              <FieldDescription className="truncate">
                 {order.createdBy.username ? `@${order.createdBy.username}` : "Без username"}
-              </div>
-            </div>
-          </div>
+              </FieldDescription>
+            </FieldContent>
+          </Field>
         ) : null}
-        <div className="flex flex-wrap gap-2">
+        <FieldGroup className="gap-2 sm:flex sm:flex-row sm:flex-wrap">
           {canConfirmManualPayment ? (
             <Button size="sm" disabled={confirmPending} onClick={onConfirm}>
               Подтвердить оплату
@@ -440,29 +477,13 @@ function AdminOrderPanel({
             <Trash2 data-icon="inline-start" />
             Удалить
           </Button>
-        </div>
+        </FieldGroup>
       </CardContent>
     </Card>
   )
 }
 
-function OrderProgress({ progress }: { progress: 1 | 2 | 3 }) {
-  const steps = ["Оплата", "Ключ", "Готово"]
-  return (
-    <div className="flex flex-wrap gap-2">
-      {steps.map((step, index) => {
-        const done = progress >= index + 1
-        return (
-          <Badge key={step} variant={done ? "default" : "secondary"}>
-            {index + 1}. {step}
-          </Badge>
-        )
-      })}
-    </div>
-  )
-}
-
-function ValueBlock({
+function CopyField({
   title,
   value,
   copied,
@@ -474,22 +495,18 @@ function ValueBlock({
   onCopy: () => void
 }) {
   return (
-    <Card size="sm">
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
-        <CardAction>
-          <Button size="sm" variant="secondary" onClick={onCopy}>
+    <Field>
+      <FieldLabel>{title}</FieldLabel>
+      <InputGroup>
+        <InputGroupInput readOnly value={value} />
+        <InputGroupAddon align="inline-end">
+          <InputGroupButton onClick={onCopy}>
             {copied ? <Check data-icon="inline-start" /> : <Copy data-icon="inline-start" />}
             {copied ? "Готово" : "Копировать"}
-          </Button>
-        </CardAction>
-      </CardHeader>
-      <CardContent>
-        <Field>
-          <Input readOnly value={value} />
-        </Field>
-      </CardContent>
-    </Card>
+          </InputGroupButton>
+        </InputGroupAddon>
+      </InputGroup>
+    </Field>
   )
 }
 
@@ -500,22 +517,133 @@ function paymentStateLabel(order: Order) {
   return "Ожидает оплату"
 }
 
-function PaymentMethodIcon({
-  iconDataUrl,
-  title,
+function renderOrderActionTitle(order: Order, amountLabel: string | null) {
+  if (order.deliveredKey) return "Ключ готов"
+  if (order.status === "PAYMENT_REVIEW") return "Проверка оплаты"
+  if (order.status === "CANCELLED") return "Заказ отменён"
+  if (order.isPaid) return "Оплата получена"
+  if (order.paymentMethodType === "CRYPTO_PAY") return amountLabel || "Invoice"
+  return "Оплата по реквизитам"
+}
+
+function renderOrderActionDescription(order: Order) {
+  if (order.deliveredKey) return "Скопируй ключ и сохрани его в безопасном месте."
+  if (order.status === "PAYMENT_REVIEW") return "Покупатель отметил оплату. Ждём ручную проверку."
+  if (order.status === "CANCELLED") return "Действия по заказу больше недоступны."
+  if (order.isPaid) return "Платёж подтверждён, выдача будет здесь."
+  if (order.paymentMethodType === "CRYPTO_PAY") return "Открой invoice и заверши оплату в Crypto Bot."
+  return "Переведи сумму по реквизитам и нажми кнопку после оплаты."
+}
+
+function PaymentMethodSelector({
+  options,
+  selectedKey,
+  loading,
+  onSelect,
 }: {
-  iconDataUrl: string | null
+  options: PaymentOption[]
+  selectedKey: string | null
+  loading: boolean
+  onSelect: (key: string) => void
+}) {
+  const selectedOption = options.find((option) => option.key === selectedKey)
+
+  return (
+    <Field>
+      <FieldLabel>Способ оплаты</FieldLabel>
+      <Select
+        value={selectedKey || ""}
+        onValueChange={(value) => {
+          if (value) onSelect(String(value))
+        }}
+        disabled={loading}
+        items={options.map((option) => ({ value: option.key, label: option.title }))}
+      >
+        <SelectTrigger className="h-11 w-full">
+          {selectedOption ? (
+            <Avatar size="sm">
+              {selectedOption.iconDataUrl ? (
+                <AvatarImage src={selectedOption.iconDataUrl} alt={selectedOption.title} />
+              ) : null}
+              <AvatarFallback>{getAvatarFallback(selectedOption.title)}</AvatarFallback>
+            </Avatar>
+          ) : null}
+          <SelectValue placeholder="Выбрать способ" />
+        </SelectTrigger>
+        <SelectContent className="max-h-72">
+          <SelectGroup>
+            {options.map((option) => (
+              <SelectItem key={option.key} value={option.key} label={option.title}>
+                <Avatar size="sm">
+                  {option.iconDataUrl ? <AvatarImage src={option.iconDataUrl} alt={option.title} /> : null}
+                  <AvatarFallback>{getAvatarFallback(option.title)}</AvatarFallback>
+                </Avatar>
+                {option.title}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        </SelectContent>
+      </Select>
+      {loading ? <FieldDescription>Меняю способ оплаты...</FieldDescription> : null}
+    </Field>
+  )
+}
+
+function PaymentMethodSummary({
+  title,
+  description,
+  iconDataUrl,
+}: {
   title: string
+  description: string
+  iconDataUrl: string | null
 }) {
   return (
-    <div className="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl border bg-muted text-sm font-medium">
-      {iconDataUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={iconDataUrl} alt={title} className="size-full object-cover" />
-      ) : (
-        title.slice(0, 2).toUpperCase()
-      )}
-    </div>
+    <Field orientation="horizontal">
+      <Avatar size="lg">
+        {iconDataUrl ? <AvatarImage src={iconDataUrl} alt={title} /> : null}
+        <AvatarFallback>{getAvatarFallback(title)}</AvatarFallback>
+      </Avatar>
+      <FieldContent>
+        <FieldTitle>{title}</FieldTitle>
+        <FieldDescription className="truncate">{description}</FieldDescription>
+      </FieldContent>
+    </Field>
+  )
+}
+
+function OrderReceipt({
+  productTitle,
+  paymentTitle,
+  amountLabel,
+  createdAtLabel,
+  className,
+}: {
+  productTitle: string
+  paymentTitle: string
+  amountLabel: string | null
+  createdAtLabel: string
+  className?: string
+}) {
+  return (
+    <FieldGroup className={cn("gap-2", className)}>
+      <Field orientation="horizontal">
+        <FieldLabel>Товар</FieldLabel>
+        <FieldDescription className="truncate text-right">{productTitle}</FieldDescription>
+      </Field>
+      <Field orientation="horizontal">
+        <FieldLabel>Оплата</FieldLabel>
+        <FieldDescription className="text-right">{paymentTitle}</FieldDescription>
+      </Field>
+      <Field orientation="horizontal">
+        <FieldLabel>Сумма</FieldLabel>
+        <FieldDescription className="text-right">{amountLabel || "—"}</FieldDescription>
+      </Field>
+      <Field orientation="horizontal">
+        <FieldLabel>Создан</FieldLabel>
+        <FieldDescription className="text-right">{createdAtLabel}</FieldDescription>
+      </Field>
+    </FieldGroup>
   )
 }
 
@@ -548,69 +676,8 @@ function ConfirmDeleteDialog({
   )
 }
 
-function PaymentMethodPickerDialog({
-  open,
-  options,
-  selectedKey,
-  currentKey,
-  loading,
-  onSelect,
-  onOpenChange,
-  onConfirm,
-}: {
-  open: boolean
-  options: Array<{
-    key: string
-    id?: string
-    type: "MANUAL" | "CRYPTO_PAY"
-    title: string
-    subtitle: string
-    iconDataUrl: string | null
-  }>
-  selectedKey: string | null
-  currentKey: string | null
-  loading: boolean
-  onSelect: (key: string) => void
-  onOpenChange: (open: boolean) => void
-  onConfirm: () => void
-}) {
-  const canConfirm = Boolean(selectedKey && selectedKey !== currentKey && !loading)
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Способ оплаты</DialogTitle>
-          <DialogDescription>Изменить можно только до оплаты.</DialogDescription>
-        </DialogHeader>
-        <RadioGroup value={selectedKey || ""} onValueChange={onSelect}>
-          <FieldGroup>
-            {options.map((option) => {
-              const inputId = `order-payment-${option.key}`
-              return (
-                <Field key={option.key} orientation="horizontal">
-                  <RadioGroupItem id={inputId} value={option.key} />
-                  <PaymentMethodIcon iconDataUrl={option.iconDataUrl} title={option.title} />
-                  <FieldContent>
-                    <FieldLabel htmlFor={inputId}>{option.title}</FieldLabel>
-                    <FieldDescription>{option.subtitle}</FieldDescription>
-                  </FieldContent>
-                </Field>
-              )
-            })}
-          </FieldGroup>
-        </RadioGroup>
-        <DialogFooter>
-          <Button variant="secondary" onClick={() => onOpenChange(false)}>
-            Отмена
-          </Button>
-          <Button disabled={!canConfirm} onClick={onConfirm}>
-            Подтвердить
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  )
+function getAvatarFallback(title: string) {
+  return title.slice(0, 2).toUpperCase()
 }
 
 function OrderState({ title, description }: { title: string; description: string }) {

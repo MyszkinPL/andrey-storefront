@@ -13,7 +13,7 @@ import {
   Trash2,
 } from "lucide-react"
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { AspectRatio } from "@/components/ui/aspect-ratio"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -21,7 +21,6 @@ import {
   CardAction,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
@@ -40,11 +39,21 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty"
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
+import { Field, FieldDescription, FieldGroup, FieldLabel, FieldTitle } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemGroup,
+  ItemMedia,
+  ItemTitle,
+} from "@/components/ui/item"
 import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { getMe, getProduct, getProducts, saveAdminProduct, updateAdminProduct } from "@/lib/api"
 import { optimizeSquareImage } from "@/lib/image"
 import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
@@ -218,33 +227,41 @@ export function AdminProductsScreen() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-3 lg:grid-cols-2">
+          <ItemGroup className="gap-2 lg:grid lg:grid-cols-2">
             {products.map((product) => (
-              <Card key={product.id} size="sm">
-                <CardHeader>
-                  <ProductImage imageDataUrl={product.imageDataUrl} title={product.title} />
-                  <CardTitle className="truncate">{product.title}</CardTitle>
-                  <CardDescription>
-                    {product.category || "Без категории"} · {product.priceRub.toLocaleString("ru-RU")} ₽
-                  </CardDescription>
-                  <CardAction>{!product.isActive ? <Badge variant="secondary">Скрыт</Badge> : null}</CardAction>
-                </CardHeader>
-                <CardContent>
-                  <p className="line-clamp-2 text-sm text-muted-foreground">{product.description}</p>
-                </CardContent>
-                <CardFooter className="gap-2">
-                  <Button size="sm" variant="secondary" onClick={() => openEditEditor(product)}>
-                    <PencilLine data-icon="inline-start" />
-                    Править
+              <Item key={product.id} variant="muted" size="sm">
+                <ItemMedia variant={product.imageDataUrl ? "image" : "icon"}>
+                    <ProductThumbnail imageDataUrl={product.imageDataUrl} title={product.title} />
+                </ItemMedia>
+                <ItemContent className="min-w-0">
+                  <ItemTitle>{product.title}</ItemTitle>
+                  <ItemDescription>
+                    {product.category || "Без категории"} · {product.priceRub.toLocaleString("ru-RU")} ₽ ·{" "}
+                    {renderDelivery(product)}
+                  </ItemDescription>
+                </ItemContent>
+                <ItemActions>
+                  {!product.isActive ? <Badge variant="secondary">Скрыт</Badge> : null}
+                  <Button
+                    size="icon-sm"
+                    variant="secondary"
+                    aria-label="Править товар"
+                    onClick={() => openEditEditor(product)}
+                  >
+                    <PencilLine />
                   </Button>
-                  <Button size="sm" variant="ghost" onClick={() => openDuplicateEditor(product)}>
-                    <CopyPlus data-icon="inline-start" />
-                    Копия
+                  <Button
+                    size="icon-sm"
+                    variant="ghost"
+                    aria-label="Скопировать товар"
+                    onClick={() => openDuplicateEditor(product)}
+                  >
+                    <CopyPlus />
                   </Button>
-                </CardFooter>
-              </Card>
+                </ItemActions>
+              </Item>
             ))}
-          </div>
+          </ItemGroup>
         )}
       </ScreenBody>
 
@@ -315,7 +332,7 @@ function ProductEditorDialog({
         <FieldGroup>
           <Card size="sm">
             <CardHeader>
-              <ProductImage imageDataUrl={form.imageDataUrl} title={form.title || "Товар"} large />
+              <ProductCoverPreview imageDataUrl={form.imageDataUrl} title={form.title || "Товар"} />
               <CardTitle>Обложка</CardTitle>
               <CardDescription>
                 {uploading ? "Обработка изображения..." : "Квадратная картинка товара"}
@@ -347,18 +364,22 @@ function ProductEditorDialog({
               placeholder="Новая или существующая"
             />
             {categoryOptions.length > 0 ? (
-              <div className="flex gap-2 overflow-x-auto py-1">
+              <ToggleGroup
+                value={form.category.trim() ? [form.category.trim()] : []}
+                onValueChange={(value) => onChange((prev) => ({ ...prev, category: value[0] || "" }))}
+                variant="outline"
+                size="sm"
+                className="flex-wrap"
+              >
                 {categoryOptions.map((category) => (
-                  <Button
+                  <ToggleGroupItem
                     key={category}
-                    size="sm"
-                    variant={form.category.trim() === category ? "default" : "secondary"}
-                    onClick={() => onChange((prev) => ({ ...prev, category }))}
+                    value={category}
                   >
                     {category}
-                  </Button>
+                  </ToggleGroupItem>
                 ))}
-              </div>
+              </ToggleGroup>
             ) : null}
           </Field>
 
@@ -381,13 +402,13 @@ function ProductEditorDialog({
             />
           </Field>
 
-          <div className="flex items-center justify-between gap-3">
+          <Field orientation="horizontal">
             <FieldLabel>Показывать в магазине</FieldLabel>
             <Switch
               checked={form.isActive}
               onCheckedChange={(checked) => onChange((prev) => ({ ...prev, isActive: checked }))}
             />
-          </div>
+          </Field>
 
           <Tabs value={form.deliveryType} onValueChange={(value) => onChange((prev) => ({ ...prev, deliveryType: value as ProductForm["deliveryType"] }))}>
             <TabsList className="w-full">
@@ -437,10 +458,10 @@ function ProductEditorDialog({
               <CardContent className="flex flex-col gap-3">
                 {form.id ? (
                   <>
-                    <div className="text-sm text-muted-foreground">
+                    <FieldDescription>
                       {visibleKeys.length} ключей в наличии
                       {form.removeKeyIds.length > 0 ? ` · к удалению ${form.removeKeyIds.length}` : ""}
-                    </div>
+                    </FieldDescription>
                     {visibleKeys.map((key) => (
                       <Field key={key.id} orientation="horizontal">
                         <KeyRound className="size-4 text-muted-foreground" />
@@ -500,8 +521,8 @@ function SpecEditor({
 }) {
   return (
     <FieldGroup>
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-sm font-medium">Характеристика {index + 1}</span>
+      <Field orientation="horizontal">
+        <FieldTitle>Характеристика {index + 1}</FieldTitle>
         <Button
           size="sm"
           variant="ghost"
@@ -517,50 +538,83 @@ function SpecEditor({
           <Trash2 data-icon="inline-start" />
           Убрать
         </Button>
-      </div>
-      <Input
-        value={spec.label}
-        onChange={(event) =>
-          onChange((prev) => ({
-            ...prev,
-            specs: prev.specs.map((item, itemIndex) =>
-              itemIndex === index ? { ...item, label: event.target.value } : item,
-            ),
-          }))
-        }
-        placeholder="Support versions"
-      />
-      <Input
-        value={spec.value}
-        onChange={(event) =>
-          onChange((prev) => ({
-            ...prev,
-            specs: prev.specs.map((item, itemIndex) =>
-              itemIndex === index ? { ...item, value: event.target.value } : item,
-            ),
-          }))
-        }
-        placeholder="1.8.9 - 1.21.4"
-      />
+      </Field>
+      <Field>
+        <Input
+          value={spec.label}
+          onChange={(event) =>
+            onChange((prev) => ({
+              ...prev,
+              specs: prev.specs.map((item, itemIndex) =>
+                itemIndex === index ? { ...item, label: event.target.value } : item,
+              ),
+            }))
+          }
+          placeholder="Support versions"
+        />
+      </Field>
+      <Field>
+        <Input
+          value={spec.value}
+          onChange={(event) =>
+            onChange((prev) => ({
+              ...prev,
+              specs: prev.specs.map((item, itemIndex) =>
+                itemIndex === index ? { ...item, value: event.target.value } : item,
+              ),
+            }))
+          }
+          placeholder="1.8.9 - 1.21.4"
+        />
+      </Field>
     </FieldGroup>
   )
 }
 
-function ProductImage({
+function ProductThumbnail({
   imageDataUrl,
   title,
-  large = false,
 }: {
   imageDataUrl?: string | null
   title: string
-  large?: boolean
+}) {
+  if (imageDataUrl) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={imageDataUrl} alt={title} />
+    )
+  }
+
+  return <ImagePlus />
+}
+
+function renderDelivery(product: Awaited<ReturnType<typeof getProducts>>["products"][number]) {
+  if (product.deliveryType === "AUTO_KEY") {
+    return `${product.availableKeyCount || 0} ключей`
+  }
+
+  return "ручная выдача"
+}
+
+function ProductCoverPreview({
+  imageDataUrl,
+  title,
+}: {
+  imageDataUrl?: string | null
+  title: string
 }) {
   return (
-    <Avatar size={large ? "lg" : "default"}>
-      {imageDataUrl ? <AvatarImage src={imageDataUrl} alt={title} /> : null}
-      <AvatarFallback>
-        {title ? title.slice(0, 2).toUpperCase() : <ImagePlus className="size-4" />}
-      </AvatarFallback>
-    </Avatar>
+    <AspectRatio ratio={1} className="mx-auto w-full max-w-64 overflow-hidden">
+      {imageDataUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={imageDataUrl} alt={title} className="size-full object-cover" />
+      ) : (
+        <Empty>
+          <EmptyMedia variant="icon">
+            <ImagePlus />
+          </EmptyMedia>
+        </Empty>
+      )}
+    </AspectRatio>
   )
 }

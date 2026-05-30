@@ -3,17 +3,10 @@
 import Link from "next/link"
 import { useMemo, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
-import { Clock3, Receipt } from "lucide-react"
+import { Clock3 } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import {
   Empty,
   EmptyDescription,
@@ -21,6 +14,15 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty"
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemGroup,
+  ItemMedia,
+  ItemTitle,
+} from "@/components/ui/item"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
 import { getMe, getOrders } from "@/lib/api"
@@ -93,29 +95,28 @@ export function AdminOrdersScreen() {
           {visibleOrders.length === 0 ? (
             <OrdersEmpty title="Пусто" description="Для этого фильтра сейчас ничего нет." />
           ) : (
-            <div className="flex flex-col gap-3">
+            <ItemGroup className="gap-2">
               {visibleOrders.map((order) => (
-                <Link key={order.id} href={`/orders/${order.id}`}>
-                  <Card size="sm">
-                    <CardHeader>
-                      <CardTitle className="truncate">{order.productTitle || order.subject}</CardTitle>
-                      <CardDescription>
-                        #{order.number}
-                        {order.productCategory ? ` · ${order.productCategory}` : ""}
-                        {order.paymentMethodTitle ? ` · ${order.paymentMethodTitle}` : ""}
-                      </CardDescription>
-                      <CardAction>
-                        <OrderBadge order={order} />
-                      </CardAction>
-                    </CardHeader>
-                    <CardContent className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Receipt className="size-4" />
+                <Item key={order.id} render={<Link href={`/orders/${order.id}`} />} variant="muted" size="sm">
+                  <ItemMedia variant="icon">
+                    <Clock3 />
+                  </ItemMedia>
+                  <ItemContent className="min-w-0">
+                    <ItemTitle>{order.productTitle || order.subject}</ItemTitle>
+                    <ItemDescription>
+                      #{order.number}
+                      {order.productCategory ? ` · ${order.productCategory}` : ""}
+                      {order.paymentMethodTitle ? ` · ${order.paymentMethodTitle}` : ""}
+                      {" · "}
                       {renderSummary(order)}
-                    </CardContent>
-                  </Card>
-                </Link>
+                    </ItemDescription>
+                  </ItemContent>
+                  <ItemActions>
+                    <OrderBadge order={order} />
+                  </ItemActions>
+                </Item>
               ))}
-            </div>
+            </ItemGroup>
           )}
         </ScreenBody>
       )}

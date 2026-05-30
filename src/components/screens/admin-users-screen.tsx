@@ -3,9 +3,19 @@
 import Link from "next/link"
 import { useMemo, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { Ban, History, Search, ShieldCheck } from "lucide-react"
+import { ChevronRight, History, Search, ShieldCheck } from "lucide-react"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -13,7 +23,6 @@ import {
   CardAction,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
@@ -32,7 +41,16 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty"
-import { Input } from "@/components/ui/input"
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group"
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemGroup,
+  ItemMedia,
+  ItemTitle,
+} from "@/components/ui/item"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
 import { getAdminUser, getAdminUsers, getMe, updateAdminUserModeration } from "@/lib/api"
@@ -64,6 +82,7 @@ export function AdminUsersScreen() {
 
   const users = useMemo(() => data?.users ?? [], [data?.users])
   const selectedUser = users.find((user) => user.id === selectedUserId) ?? null
+  const summary = data?.summary
 
   if (meData && meData.user.role !== "ADMIN") {
     return (
@@ -75,25 +94,25 @@ export function AdminUsersScreen() {
 
   return (
     <Screen>
-      <ScreenHeader title="Модерация" subtitle="Баны и доступ покупателей" />
+      <ScreenHeader
+        title="Юзеры"
+        subtitle={summary ? renderUsersSummary(summary) : "Баны и доступ покупателей"}
+      />
 
       <ScreenBody>
-        <Card size="sm">
-          <CardContent>
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={search}
-                className="pl-9"
-                placeholder="Имя, username или Telegram ID"
-                onChange={(event) => {
-                  setSearch(event.target.value)
-                  setPage(1)
-                }}
-              />
-            </div>
-          </CardContent>
-        </Card>
+        <InputGroup>
+          <InputGroupAddon>
+            <Search />
+          </InputGroupAddon>
+          <InputGroupInput
+            value={search}
+            placeholder="Имя, username или Telegram ID"
+            onChange={(event) => {
+              setSearch(event.target.value)
+              setPage(1)
+            }}
+          />
+        </InputGroup>
 
         <Tabs value={filter} onValueChange={(value) => {
           setFilter(value as typeof filter)
@@ -120,36 +139,40 @@ export function AdminUsersScreen() {
         ) : users.length === 0 ? (
           <UsersEmpty title="Никого не найдено" description="Смени фильтр или запрос." />
         ) : (
-          <div className="grid gap-3 lg:grid-cols-2">
+          <ItemGroup className="gap-2 lg:grid lg:grid-cols-2">
             {users.map((user) => (
-              <Card key={user.id} size="sm">
-                <CardHeader>
-                  <Avatar size="lg">
+              <Item key={user.id} role="listitem" variant="muted" size="sm">
+                <ItemMedia>
+                  <Avatar size="sm">
                     {user.photoUrl ? <AvatarImage src={user.photoUrl} alt={user.firstName} /> : null}
                     <AvatarFallback>{user.firstName.slice(0, 1)}</AvatarFallback>
                   </Avatar>
-                  <CardTitle className="truncate">{[user.firstName, user.lastName || ""].join(" ").trim()}</CardTitle>
-                  <CardDescription>{user.username ? `@${user.username}` : `tg:${user.telegramId}`}</CardDescription>
-                  <CardAction>
-                    {user.isBanned ? (
-                      <Badge variant="destructive">Бан</Badge>
-                    ) : user.role === "ADMIN" ? (
-                      <Badge variant="secondary">Админ</Badge>
-                    ) : null}
-                  </CardAction>
-                </CardHeader>
-                <CardContent className="flex items-center justify-between text-sm text-muted-foreground">
-                  <span>{user.activeOrderCount} активных заказов</span>
-                  <span>ID {user.telegramId}</span>
-                </CardContent>
-                <CardFooter>
-                  <Button size="sm" variant="secondary" onClick={() => setSelectedUserId(user.id)}>
-                    Открыть
+                </ItemMedia>
+                <ItemContent className="min-w-0">
+                  <ItemTitle>{[user.firstName, user.lastName || ""].join(" ").trim()}</ItemTitle>
+                  <ItemDescription>
+                    {user.username ? `@${user.username}` : `tg:${user.telegramId}`} · ID {user.telegramId} ·{" "}
+                    {formatActiveOrders(user.activeOrderCount)}
+                  </ItemDescription>
+                </ItemContent>
+                <ItemActions>
+                  {user.isBanned ? (
+                    <Badge variant="destructive">Бан</Badge>
+                  ) : user.role === "ADMIN" ? (
+                    <Badge variant="secondary">Админ</Badge>
+                  ) : null}
+                  <Button
+                    size="icon-sm"
+                    variant="secondary"
+                    aria-label="Открыть пользователя"
+                    onClick={() => setSelectedUserId(user.id)}
+                  >
+                    <ChevronRight />
                   </Button>
-                </CardFooter>
-              </Card>
+                </ItemActions>
+              </Item>
             ))}
-          </div>
+          </ItemGroup>
         )}
 
         {data?.pageInfo?.hasMore ? (
@@ -179,29 +202,22 @@ export function AdminUsersScreen() {
         />
       ) : null}
 
-      <Dialog
+      <AlertDialog
         open={Boolean(banDraft)}
         onOpenChange={(open) => {
           if (!open && !moderationMutation.isPending) setBanDraft(null)
         }}
       >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Блокировка пользователя</DialogTitle>
-            <DialogDescription>Все активные неоплаченные заказы пользователя будут отменены.</DialogDescription>
-          </DialogHeader>
-          <Card size="sm">
-            <CardHeader>
-              <Ban className="size-5 text-muted-foreground" />
-              <CardTitle>Забанить пользователя?</CardTitle>
-              <CardDescription>{banDraft?.name}</CardDescription>
-            </CardHeader>
-          </Card>
-          <DialogFooter>
-            <Button variant="secondary" onClick={() => setBanDraft(null)}>
-              Отмена
-            </Button>
-            <Button
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Забанить пользователя?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {banDraft?.name ? `${banDraft.name}. ` : ""}Все активные неоплаченные заказы пользователя будут отменены.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Отмена</AlertDialogCancel>
+            <AlertDialogAction
               variant="destructive"
               disabled={moderationMutation.isPending}
               onClick={() => {
@@ -210,10 +226,10 @@ export function AdminUsersScreen() {
               }}
             >
               Забанить
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Screen>
   )
 }
@@ -272,25 +288,32 @@ function UserDetailsDialog({
               </CardHeader>
               <CardContent className="flex flex-col gap-2">
                 {user.orders.length > 0 ? (
-                  user.orders.map((order) => (
-                    <Link key={order.id} href={`/orders/${order.id}`}>
-                      <Card size="sm">
-                        <CardHeader>
-                          <History className="size-4 text-muted-foreground" />
-                          <CardTitle>{order.productTitle || `Заказ #${order.number}`}</CardTitle>
-                          <CardDescription>
+                  <ItemGroup className="gap-2">
+                    {user.orders.map((order) => (
+                      <Item key={order.id} render={<Link href={`/orders/${order.id}`} />} variant="muted" size="sm">
+                        <ItemMedia variant="icon">
+                          <History />
+                        </ItemMedia>
+                        <ItemContent>
+                          <ItemTitle>{order.productTitle || `Заказ #${order.number}`}</ItemTitle>
+                          <ItemDescription>
                             #{order.number}
                             {order.productCategory ? ` · ${order.productCategory}` : ""}
                             {order.priceRub ? ` · ${order.priceRub.toLocaleString("ru-RU")} ₽` : ""}
                             {" · "}
                             {renderOrderStatus(order.status, order.isPaid)}
-                          </CardDescription>
-                        </CardHeader>
-                      </Card>
-                    </Link>
-                  ))
+                          </ItemDescription>
+                        </ItemContent>
+                      </Item>
+                    ))}
+                  </ItemGroup>
                 ) : (
-                  <div className="text-sm text-muted-foreground">Заказов пока нет</div>
+                  <Empty>
+                    <EmptyHeader>
+                      <EmptyTitle>Заказов пока нет</EmptyTitle>
+                      <EmptyDescription>История покупок появится после первого заказа.</EmptyDescription>
+                    </EmptyHeader>
+                  </Empty>
                 )}
               </CardContent>
             </Card>
@@ -338,4 +361,31 @@ function renderOrderStatus(status: string, isPaid: boolean) {
   if (status === "PAYMENT_REVIEW") return "Проверка"
   if (!isPaid) return "Оплата"
   return "Оплачен"
+}
+
+function formatActiveOrders(count: number) {
+  if (count === 1) return "1 активный"
+  return `${count} активных`
+}
+
+function renderUsersSummary(summary: Awaited<ReturnType<typeof getAdminUsers>>["summary"]) {
+  const parts = [
+    formatCount(summary.total, "юзер", "юзера", "юзеров"),
+    formatCount(summary.buyers, "покупатель", "покупателя", "покупателей"),
+    formatCount(summary.admins, "админ", "админа", "админов"),
+  ]
+
+  if (summary.banned > 0) {
+    parts.push(formatCount(summary.banned, "бан", "бана", "банов"))
+  }
+
+  return parts.join(" · ")
+}
+
+function formatCount(count: number, one: string, few: string, many: string) {
+  const mod10 = count % 10
+  const mod100 = count % 100
+  const word = mod10 === 1 && mod100 !== 11 ? one : mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14) ? few : many
+
+  return `${count} ${word}`
 }

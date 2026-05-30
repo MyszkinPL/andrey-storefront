@@ -51,12 +51,7 @@ const manualIcon = svgDataUrl(`
   <path d="M40 64l17 17 34-39" fill="none" stroke="#0ea5e9" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>`)
 
-const cryptoIcon = svgDataUrl(`
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
-  <rect width="128" height="128" rx="28" fill="#38bdf8"/>
-  <path d="M30 40h68L72 88H56z" fill="#fff"/>
-  <path d="M46 50h36L68 76h-8z" fill="#38bdf8"/>
-</svg>`)
+const cryptoIcon = "/crypto-bot-logo.svg"
 
 const products = [
   {
@@ -365,6 +360,7 @@ function makeOrder({
     isPaid: status === "CLOSED",
     productTitle: product.title,
     productCategory: product.category,
+    priceRub: product.priceRub,
     deliveredKey: status === "CLOSED" ? "SNX-LITE-TEST-001" : null,
     manualPaymentRequestedAt,
     isAdmin: true,

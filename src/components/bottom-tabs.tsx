@@ -3,11 +3,11 @@
 import { Home, LifeBuoy, Receipt, Settings, Shield, Store, Users } from "lucide-react"
 import { usePathname, useRouter } from "next/navigation"
 
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { cn } from "@/lib/utils"
 import { useMode } from "@/components/mode-provider"
 import { useHaptic } from "@/hooks/use-telegram"
+import { isBottomTabsRoute } from "@/lib/navigation"
 
 const BUYER_TABS = [
   { href: "/catalog", label: "Каталог", icon: Store },
@@ -23,47 +23,46 @@ const ADMIN_TABS = [
   { href: "/admin/settings", label: "Настройки", icon: Settings },
 ]
 
-const HIDDEN_PREFIXES = ["/product/", "/orders/"]
-
 export function BottomTabs() {
   const pathname = usePathname()
   const router = useRouter()
   const haptic = useHaptic()
   const { mode } = useMode()
 
-  if (HIDDEN_PREFIXES.some((prefix) => pathname.startsWith(prefix))) return null
+  if (!isBottomTabsRoute(pathname)) return null
 
   const tabs = mode === "admin" ? ADMIN_TABS : BUYER_TABS
+  const activeTab =
+    tabs.find((tab) => {
+      const isHomeRoot = tab.href === "/catalog" || tab.href === "/admin"
+      return isHomeRoot ? pathname === tab.href : pathname === tab.href || pathname.startsWith(tab.href)
+    })?.href || tabs[0]?.href
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-md p-3 pt-0 sm:max-w-lg sm:p-4 sm:pt-0">
-      <Card size="sm">
-        <CardContent className={cn("grid gap-1", mode === "admin" ? "grid-cols-5" : "grid-cols-3")}>
-          {tabs.map((tab) => {
-            const isHomeRoot = tab.href === "/catalog" || tab.href === "/admin"
-            const selected = isHomeRoot
-              ? pathname === tab.href
-              : pathname === tab.href || pathname.startsWith(tab.href)
-            const Icon = tab.icon
+    <Tabs
+      value={activeTab}
+      onValueChange={(href) => {
+        haptic.select()
+        router.push(href)
+      }}
+      className="fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] z-40 mx-auto w-full max-w-md px-3 sm:max-w-lg sm:px-4"
+    >
+      <TabsList className={cn("grid !h-14 w-full", mode === "admin" ? "grid-cols-5" : "grid-cols-3")}>
+        {tabs.map((tab) => {
+          const Icon = tab.icon
 
-            return (
-              <Button
-                key={tab.href}
-                variant={selected ? "secondary" : "ghost"}
-                size="sm"
-                className="h-auto min-w-0 flex-col gap-1 py-2"
-                onClick={() => {
-                  haptic.select()
-                  router.push(tab.href)
-                }}
-              >
-                <Icon />
-                <span className="max-w-full truncate text-xs">{tab.label}</span>
-              </Button>
-            )
-          })}
-        </CardContent>
-      </Card>
-    </div>
+          return (
+            <TabsTrigger
+              key={tab.href}
+              value={tab.href}
+              className="!h-full min-w-0 flex-col gap-1 px-1 py-1 text-[11px] leading-none sm:text-xs"
+            >
+              <Icon aria-hidden="true" />
+              {tab.label}
+            </TabsTrigger>
+          )
+        })}
+      </TabsList>
+    </Tabs>
   )
 }

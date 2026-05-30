@@ -153,6 +153,7 @@ export async function GET(
       isPaid: order.isPaid,
       productTitle: order.product?.title || null,
       productCategory: order.product?.category || null,
+      priceRub: order.product?.priceRub || null,
       deliveredKey: order.deliveredKey?.value || null,
       manualPaymentRequestedAt: order.manualPaymentRequestedAt?.toISOString() || null,
       isAdmin: user.role === "ADMIN",

@@ -187,6 +187,7 @@ export function getOrder(id: string) {
       isPaid: boolean
       productTitle: string | null
       productCategory: string | null
+      priceRub: number | null
       deliveredKey: string | null
       manualPaymentRequestedAt: string | null
       isAdmin: boolean

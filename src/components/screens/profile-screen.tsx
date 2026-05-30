@@ -4,14 +4,7 @@ import { useQuery } from "@tanstack/react-query"
 import { CreditCard, LifeBuoy } from "lucide-react"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import {
   Empty,
   EmptyDescription,
@@ -19,6 +12,15 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty"
+import { Field, FieldDescription, FieldTitle } from "@/components/ui/field"
+import {
+  Item,
+  ItemContent,
+  ItemDescription,
+  ItemGroup,
+  ItemMedia,
+  ItemTitle,
+} from "@/components/ui/item"
 import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
 import { getMe, getPaymentMethods } from "@/lib/api"
 
@@ -67,27 +69,29 @@ export function ProfileScreen() {
           <ProfileEmpty title="Профиль не загрузился" description="Обнови экран или попробуй позже." />
         ) : (
           <>
-            <Card size="sm">
-              <CardHeader>
-                <CardTitle>Аккаунт</CardTitle>
-                <CardDescription>
-                  {meData?.user.role === "ADMIN" ? "Администратор" : "Покупатель"}
-                </CardDescription>
-                <CardAction>
-                  <LifeBuoy className="size-5 text-muted-foreground" />
-                </CardAction>
-              </CardHeader>
-            </Card>
+            <ItemGroup className="gap-2">
+              <Item variant="muted" size="sm">
+                <ItemMedia variant="icon">
+                  <LifeBuoy />
+                </ItemMedia>
+                <ItemContent>
+                  <ItemTitle>Аккаунт</ItemTitle>
+                  <ItemDescription>
+                    {meData?.user.role === "ADMIN" ? "Администратор" : "Покупатель"}
+                  </ItemDescription>
+                </ItemContent>
+              </Item>
+            </ItemGroup>
 
             {methods.length === 0 && !hasCryptoPay ? (
               <ProfileEmpty title="Реквизитов пока нет" description="Админ добавит способы оплаты позже." />
             ) : (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Способы оплаты</CardTitle>
-                  <CardDescription>Доступны при оформлении заказа.</CardDescription>
-                </CardHeader>
-                <CardContent className="flex flex-col gap-3">
+              <>
+                <Field className="gap-1 px-1">
+                  <FieldTitle>Способы оплаты</FieldTitle>
+                  <FieldDescription>Доступны при оформлении заказа.</FieldDescription>
+                </Field>
+                <ItemGroup className="gap-2">
                   {methods.map((method) => (
                     <PaymentMethodRow
                       key={method.id}
@@ -107,8 +111,8 @@ export function ProfileScreen() {
                       }
                     />
                   ) : null}
-                </CardContent>
-              </Card>
+                </ItemGroup>
+              </>
             )}
           </>
         )}
@@ -127,16 +131,18 @@ function PaymentMethodRow({
   subtitle: string
 }) {
   return (
-    <div className="flex items-center gap-3">
-      <Avatar size="lg">
-        {iconDataUrl ? <AvatarImage src={iconDataUrl} alt={title} /> : null}
-        <AvatarFallback>{title.slice(0, 2).toUpperCase()}</AvatarFallback>
-      </Avatar>
-      <div className="min-w-0">
-        <div className="truncate text-sm font-medium">{title}</div>
-        <div className="truncate text-xs text-muted-foreground">{subtitle}</div>
-      </div>
-    </div>
+    <Item variant="muted" size="sm">
+      <ItemMedia>
+        <Avatar size="lg">
+          {iconDataUrl ? <AvatarImage src={iconDataUrl} alt={title} /> : null}
+          <AvatarFallback>{title.slice(0, 2).toUpperCase()}</AvatarFallback>
+        </Avatar>
+      </ItemMedia>
+      <ItemContent className="min-w-0">
+        <ItemTitle>{title}</ItemTitle>
+        <ItemDescription>{subtitle}</ItemDescription>
+      </ItemContent>
+    </Item>
   )
 }
 

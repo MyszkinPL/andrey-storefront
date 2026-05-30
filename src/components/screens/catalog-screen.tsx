@@ -7,6 +7,7 @@ import { PackageSearch, Search } from "lucide-react"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { AspectRatio } from "@/components/ui/aspect-ratio"
+import { Badge } from "@/components/ui/badge"
 import {
   Card,
   CardContent,
@@ -22,7 +23,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty"
-import { Input } from "@/components/ui/input"
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
 import { getMe, getProducts } from "@/lib/api"
@@ -85,19 +86,16 @@ export function CatalogScreen() {
           <CatalogEmpty title="Каталог не загрузился" description="Обнови экран или попробуй позже." />
         ) : (
           <>
-            <Card size="sm">
-              <CardContent>
-                <div className="relative">
-                  <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    value={search}
-                    onChange={(event) => setSearch(event.target.value)}
-                    className="pl-9"
-                    placeholder="Поиск"
-                  />
-                </div>
-              </CardContent>
-            </Card>
+            <InputGroup>
+              <InputGroupAddon>
+                <Search />
+              </InputGroupAddon>
+              <InputGroupInput
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Поиск"
+              />
+            </InputGroup>
 
             <ToggleGroup
               value={[category || "Все"]}
@@ -121,16 +119,14 @@ export function CatalogScreen() {
                   <Link key={product.id} href={`/product/${product.id}`} className="min-w-0">
                     <Card size="sm" className="h-full min-w-0 gap-0 py-0">
                       <ProductCover imageDataUrl={product.imageDataUrl} title={product.title} />
-                      <CardFooter className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-3 py-4">
-                        <div className="min-w-0">
+                      <CardFooter className="items-end gap-3 py-4">
+                        <CardContent className="min-w-0 flex-1 px-0">
                           <CardTitle className="truncate">{product.title}</CardTitle>
                           <CardDescription className="truncate">
                             {product.category || "Без категории"}
                           </CardDescription>
-                        </div>
-                        <div className="shrink-0 text-sm font-medium">
-                          {product.priceRub.toLocaleString("ru-RU")} ₽
-                        </div>
+                        </CardContent>
+                        <Badge variant="secondary">{product.priceRub.toLocaleString("ru-RU")} ₽</Badge>
                       </CardFooter>
                     </Card>
                   </Link>
@@ -164,9 +160,11 @@ function ProductCover({
         // eslint-disable-next-line @next/next/no-img-element
         <img src={imageDataUrl} alt={title} className="size-full object-cover" />
       ) : (
-        <div className="flex size-full items-center justify-center text-muted-foreground">
-          <PackageSearch className="size-8" />
-        </div>
+        <Empty>
+          <EmptyMedia variant="icon">
+            <PackageSearch />
+          </EmptyMedia>
+        </Empty>
       )}
     </AspectRatio>
   )

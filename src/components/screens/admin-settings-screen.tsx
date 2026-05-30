@@ -3,7 +3,7 @@
 import type { Dispatch, SetStateAction } from "react"
 import { useEffect, useMemo, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { Check, ImagePlus, PencilLine, Plus, RefreshCcw, Trash2 } from "lucide-react"
+import { ImagePlus, PencilLine, Plus, RefreshCcw, Trash2 } from "lucide-react"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -13,7 +13,6 @@ import {
   CardAction,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
@@ -26,16 +25,35 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
+} from "@/components/ui/empty"
+import {
   Field,
-  FieldContent,
-  FieldDescription,
   FieldGroup,
   FieldLabel,
-  FieldTitle,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+} from "@/components/ui/input-group"
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemGroup,
+  ItemMedia,
+  ItemTitle,
+} from "@/components/ui/item"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { getCryptoPayCurrencies, getMe, getPaymentMethods, saveSettings } from "@/lib/api"
 import { optimizeSquareImage } from "@/lib/image"
 import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
@@ -228,14 +246,6 @@ export function AdminSettingsScreen() {
     }
   }
 
-  function toggleAsset(asset: string) {
-    const normalized = asset.toUpperCase()
-    const next = selectedCryptoAssets.includes(normalized)
-      ? selectedCryptoAssets.filter((item) => item !== normalized)
-      : [...selectedCryptoAssets, normalized]
-    setCryptoPayDefaultAssets(next.join(","))
-  }
-
   return (
     <Screen>
       <ScreenHeader
@@ -283,46 +293,48 @@ export function AdminSettingsScreen() {
                 <FieldLabel>API token</FieldLabel>
                 <Input value={cryptoPayToken} onChange={(event) => setCryptoPayToken(event.target.value)} placeholder="Token из Crypto Bot" />
               </Field>
-              <div className="flex items-center justify-between gap-3">
+              <Field orientation="horizontal">
                 <FieldLabel>Testnet</FieldLabel>
                 <Switch checked={cryptoPayUseTestnet} onCheckedChange={setCryptoPayUseTestnet} />
-              </div>
+              </Field>
               <Field>
                 <FieldLabel>Fiat</FieldLabel>
                 <Input value={cryptoPayFiat} onChange={(event) => setCryptoPayFiat(event.target.value.toUpperCase())} placeholder="RUB" />
               </Field>
               <Field>
                 <FieldLabel>Монеты</FieldLabel>
-                <div className="flex flex-wrap gap-2">
-                  {assetOptions.length > 0 ? (
-                    assetOptions.map((asset) => (
-                      <Button
-                        key={asset.code}
-                        size="sm"
-                        variant={selectedCryptoAssets.includes(asset.code) ? "default" : "secondary"}
-                        onClick={() => toggleAsset(asset.code)}
-                      >
-                        {selectedCryptoAssets.includes(asset.code) ? <Check data-icon="inline-start" /> : null}
+                {assetOptions.length > 0 ? (
+                  <ToggleGroup
+                    value={selectedCryptoAssets}
+                    onValueChange={(value) => setCryptoPayDefaultAssets(value.join(","))}
+                    variant="outline"
+                    size="sm"
+                    className="flex-wrap"
+                  >
+                    {assetOptions.map((asset) => (
+                      <ToggleGroupItem key={asset.code} value={asset.code}>
                         {asset.code}
-                      </Button>
-                    ))
-                  ) : (
-                    <Badge variant="secondary">
-                      {cryptoPayTokenValue ? "Нажми обновить" : "Сначала API token"}
-                    </Badge>
-                  )}
-                </div>
+                      </ToggleGroupItem>
+                    ))}
+                  </ToggleGroup>
+                ) : (
+                  <Badge variant="secondary">
+                    {cryptoPayTokenValue ? "Нажми обновить" : "Сначала API token"}
+                  </Badge>
+                )}
               </Field>
               <Field>
                 <FieldLabel>Webhook</FieldLabel>
-                <div className="flex gap-2">
-                  <Input readOnly value={cryptoWebhookUrl || "Появится после открытия на домене деплоя"} />
+                <InputGroup>
+                  <InputGroupInput readOnly value={cryptoWebhookUrl || "Появится после открытия на домене деплоя"} />
                   {cryptoWebhookUrl ? (
-                    <Button variant="secondary" onClick={() => void navigator.clipboard.writeText(cryptoWebhookUrl)}>
-                      Копировать
-                    </Button>
+                    <InputGroupAddon align="inline-end">
+                      <InputGroupButton onClick={() => void navigator.clipboard.writeText(cryptoWebhookUrl)}>
+                        Копировать
+                      </InputGroupButton>
+                    </InputGroupAddon>
                   ) : null}
-                </div>
+                </InputGroup>
               </Field>
               <Button
                 variant="secondary"
@@ -340,44 +352,50 @@ export function AdminSettingsScreen() {
           <CardHeader>
             <CardTitle>Ручная оплата</CardTitle>
             <CardDescription>{paymentMethods.length} всего · {activeCount} активных</CardDescription>
-            <CardAction>
+            <CardAction className="flex gap-2">
+              <Button size="sm" variant="secondary" onClick={() => openCreateModal(templateMethod)}>
+                Шаблон
+              </Button>
               <Button size="sm" onClick={() => openCreateModal()}>
                 <Plus data-icon="inline-start" />
                 Добавить
               </Button>
             </CardAction>
           </CardHeader>
-          <CardContent className="flex flex-col gap-3">
-            {paymentMethods.map((method, index) => (
-              <Field key={method.id || `${method.title}-${index}`} orientation="horizontal">
-                <MethodPreview iconDataUrl={method.iconDataUrl} title={method.title} />
-                <FieldContent>
-                  <FieldTitle>
-                    <span className="truncate">{method.title}</span>
+          <CardContent>
+            <ItemGroup className="gap-2">
+              {paymentMethods.map((method, index) => (
+                <Item key={method.id || `${method.title}-${index}`} variant="muted" size="sm">
+                  <ItemMedia>
+                    <MethodPreview iconDataUrl={method.iconDataUrl} title={method.title} />
+                  </ItemMedia>
+                  <ItemContent className="min-w-0">
+                    <ItemTitle>{method.title}</ItemTitle>
+                    <ItemDescription>{method.details || "Без реквизитов"}</ItemDescription>
+                  </ItemContent>
+                  <ItemActions>
                     {!method.isActive ? <Badge variant="secondary">Скрыт</Badge> : null}
-                  </FieldTitle>
-                  <FieldDescription className="truncate">{method.details || "Без реквизитов"}</FieldDescription>
-                </FieldContent>
-                <Button size="sm" variant="secondary" onClick={() => openEditModal(index)}>
-                  <PencilLine data-icon="inline-start" />
-                  Править
-                </Button>
-              </Field>
-            ))}
+                    <Button
+                      size="icon-sm"
+                      variant="secondary"
+                      aria-label="Править способ оплаты"
+                      onClick={() => openEditModal(index)}
+                    >
+                      <PencilLine />
+                    </Button>
+                  </ItemActions>
+                </Item>
+              ))}
+            </ItemGroup>
             {paymentMethods.length === 0 ? (
-              <div className="text-sm text-muted-foreground">Добавь СБП, карту или другой ручной способ.</div>
+              <Empty>
+                <EmptyHeader>
+                  <EmptyTitle>Способов оплаты нет</EmptyTitle>
+                  <EmptyDescription>Добавь СБП, карту или другой ручной способ.</EmptyDescription>
+                </EmptyHeader>
+              </Empty>
             ) : null}
           </CardContent>
-          <CardFooter className="gap-2">
-            <Button variant="secondary" onClick={() => openCreateModal(templateMethod)}>
-              <Plus data-icon="inline-start" />
-              Шаблон
-            </Button>
-            <Button onClick={() => openCreateModal()}>
-              <Plus data-icon="inline-start" />
-              Новый
-            </Button>
-          </CardFooter>
         </Card>
       </ScreenBody>
 
@@ -462,7 +480,7 @@ function MethodEditorDialog({
               placeholder="Номер, получатель или инструкция"
             />
           </Field>
-          <div className="flex items-center justify-between gap-3">
+          <Field orientation="horizontal">
             <FieldLabel>Показывать покупателю</FieldLabel>
             <Switch
               checked={draft.isActive}
@@ -470,7 +488,7 @@ function MethodEditorDialog({
                 onChange((prev) => (prev ? { ...prev, isActive: checked } : prev))
               }
             />
-          </div>
+          </Field>
         </FieldGroup>
         <DialogFooter>
           {canDelete ? (

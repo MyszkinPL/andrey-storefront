@@ -3,20 +3,11 @@
 import Link from "next/link"
 import { useMemo, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
-import { formatDistanceToNow } from "date-fns"
-import { ru } from "date-fns/locale"
 import { ExternalLink, Receipt } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { buttonVariants } from "@/components/ui/button"
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import {
   Empty,
   EmptyDescription,
@@ -24,6 +15,15 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty"
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemGroup,
+  ItemMedia,
+  ItemTitle,
+} from "@/components/ui/item"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
 import { getMe, getOrders } from "@/lib/api"
@@ -112,37 +112,28 @@ export function OrdersScreen() {
           {visibleOrders.length === 0 ? (
             <OrdersEmpty title="Пусто" description="Для этого фильтра сейчас ничего нет." />
           ) : (
-            <div className="flex flex-col gap-3">
+            <ItemGroup className="gap-2">
               {visibleOrders.map((order) => (
-                <Link key={order.id} href={`/orders/${order.id}`}>
-                  <Card size="sm">
-                    <CardHeader>
-                      <CardTitle className="truncate">{order.productTitle || order.subject}</CardTitle>
-                      <CardDescription>
-                        #{order.number}
-                        {order.productCategory ? ` · ${order.productCategory}` : ""}
-                      </CardDescription>
-                      <CardAction className="max-w-28">
-                        <span className="block truncate text-xs text-muted-foreground">
-                          {formatDistanceToNow(new Date(order.updatedAt), {
-                            addSuffix: true,
-                            locale: ru,
-                          })}
-                        </span>
-                      </CardAction>
-                    </CardHeader>
-                    <CardContent className="flex items-center justify-between gap-3">
-                      <Badge variant={orderBadgeVariant(order)}>{renderPrimaryState(order)}</Badge>
-                      {order.paymentMethodTitle && !order.isPaid ? (
-                        <span className="min-w-0 truncate text-xs text-muted-foreground">
-                          {order.paymentMethodTitle}
-                        </span>
-                      ) : null}
-                    </CardContent>
-                  </Card>
-                </Link>
+                <Item key={order.id} render={<Link href={`/orders/${order.id}`} />} variant="muted" size="sm">
+                  <ItemMedia variant="icon">
+                    <Receipt />
+                  </ItemMedia>
+                  <ItemContent className="min-w-0">
+                    <ItemTitle>{order.productTitle || order.subject}</ItemTitle>
+                    <ItemDescription>
+                      #{order.number}
+                      {order.productCategory ? ` · ${order.productCategory}` : ""}
+                      {order.paymentMethodTitle && !order.isPaid ? ` · ${order.paymentMethodTitle}` : ""}
+                      {" · "}
+                      {formatRelativeTimeShort(order.updatedAt)}
+                    </ItemDescription>
+                  </ItemContent>
+                  <ItemActions>
+                    <Badge variant={orderBadgeVariant(order)}>{renderPrimaryState(order)}</Badge>
+                  </ItemActions>
+                </Item>
               ))}
-            </div>
+            </ItemGroup>
           )}
         </ScreenBody>
       )}
@@ -183,4 +174,16 @@ function renderPrimaryState(order: Awaited<ReturnType<typeof getOrders>>["orders
   if (!order.isPaid) return "Ждёт оплату"
   if (order.status === "CLOSED") return "Завершён"
   return "Оплачен"
+}
+
+function formatRelativeTimeShort(value: string | Date) {
+  const diffMs = Math.max(0, Date.now() - new Date(value).getTime())
+  const minute = 60_000
+  const hour = 60 * minute
+  const day = 24 * hour
+
+  if (diffMs < minute) return "сейчас"
+  if (diffMs < hour) return `${Math.floor(diffMs / minute)} мин`
+  if (diffMs < day) return `${Math.floor(diffMs / hour)} ч`
+  return `${Math.floor(diffMs / day)} д`
 }
