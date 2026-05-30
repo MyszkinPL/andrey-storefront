@@ -375,9 +375,30 @@ export async function mockApi<T>(input: RequestInfo, init?: RequestInit): Promis
     if (!user) throw new Error(`Mock user not found: ${id}`)
 
     if (method === "PATCH") {
-      user.isBanned = Boolean(body?.isBanned)
-      user.bannedAt = user.isBanned ? new Date().toISOString() : null
-      user.banReason = user.isBanned ? body?.banReason || null : null
+      if (body?.role) {
+        if (user.id === mockUser.id && body.role !== "ADMIN") {
+          throw new Error("Нельзя забрать админку у себя")
+        }
+
+        user.role = body.role
+
+        if (body.role === "ADMIN") {
+          user.isBanned = false
+          user.bannedAt = null
+          user.banReason = null
+        }
+      }
+
+      if (body?.isBanned !== undefined) {
+        if (user.role === "ADMIN" && body.isBanned) {
+          throw new Error("Нельзя банить админа")
+        }
+
+        user.isBanned = Boolean(body.isBanned)
+        user.bannedAt = user.isBanned ? new Date().toISOString() : null
+        user.banReason = user.isBanned ? body?.banReason || null : null
+      }
+
       persistMockState()
       return { ok: true } as T
     }

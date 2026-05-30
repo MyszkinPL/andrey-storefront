@@ -4,7 +4,7 @@ import Link from "next/link"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { History } from "lucide-react"
+import { Ban, History, ShieldCheck, ShieldX } from "lucide-react"
 
 import { AccessStateScreen } from "@/components/access-state-screen"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -56,6 +56,7 @@ export function AdminUserDetailScreen({ userId }: { userId: string }) {
   const router = useRouter()
   const queryClient = useQueryClient()
   const [confirmBanOpen, setConfirmBanOpen] = useState(false)
+  const [confirmRole, setConfirmRole] = useState<"USER" | "ADMIN" | null>(null)
 
   const { data: meData } = useQuery({ queryKey: ["me"], queryFn: getMe })
   const { data, isLoading, isError } = useQuery({
@@ -65,13 +66,15 @@ export function AdminUserDetailScreen({ userId }: { userId: string }) {
   })
 
   const moderationMutation = useMutation({
-    mutationFn: (payload: { isBanned: boolean }) =>
-      updateAdminUserModeration(userId, { isBanned: payload.isBanned }),
+    mutationFn: (payload: { isBanned?: boolean; role?: "USER" | "ADMIN" }) =>
+      updateAdminUserModeration(userId, payload),
     onSuccess: async () => {
       setConfirmBanOpen(false)
+      setConfirmRole(null)
       await queryClient.invalidateQueries({ queryKey: ["admin-user", userId] })
       await queryClient.invalidateQueries({ queryKey: ["admin-users"] })
       await queryClient.invalidateQueries({ queryKey: ["orders"] })
+      await queryClient.invalidateQueries({ queryKey: ["me"] })
     },
   })
 
@@ -96,7 +99,9 @@ export function AdminUserDetailScreen({ userId }: { userId: string }) {
 
   const user = data.user
   const displayName = [user.firstName, user.lastName || ""].join(" ").trim()
-  const canModerate = user.role !== "ADMIN"
+  const isCurrentUser = meData?.user.id === user.id
+  const canBan = user.role !== "ADMIN"
+  const canRevokeAdmin = user.role === "ADMIN" && !isCurrentUser
 
   return (
     <Screen noTabBar>
@@ -123,22 +128,45 @@ export function AdminUserDetailScreen({ userId }: { userId: string }) {
             <CardDescription>
               {user.role === "ADMIN" ? "Администратор" : "Покупатель"} · {formatActiveOrders(user.activeOrderCount)}
             </CardDescription>
-            <CardAction>
-              <Button
-                size="sm"
-                variant={user.isBanned ? "secondary" : "destructive"}
-                disabled={!canModerate || moderationMutation.isPending}
-                onClick={() => {
-                  if (!canModerate) return
-                  if (user.isBanned) {
-                    moderationMutation.mutate({ isBanned: false })
-                  } else {
-                    setConfirmBanOpen(true)
-                  }
-                }}
-              >
-                {user.isBanned ? "Снять бан" : "Забанить"}
-              </Button>
+            <CardAction className="flex flex-wrap justify-end gap-2">
+              {user.role === "ADMIN" ? (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  disabled={!canRevokeAdmin || moderationMutation.isPending}
+                  onClick={() => setConfirmRole("USER")}
+                >
+                  <ShieldX data-icon="inline-start" />
+                  Забрать админку
+                </Button>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  disabled={moderationMutation.isPending}
+                  onClick={() => setConfirmRole("ADMIN")}
+                >
+                  <ShieldCheck data-icon="inline-start" />
+                  Выдать админку
+                </Button>
+              )}
+              {canBan ? (
+                <Button
+                  size="sm"
+                  variant={user.isBanned ? "secondary" : "destructive"}
+                  disabled={moderationMutation.isPending}
+                  onClick={() => {
+                    if (user.isBanned) {
+                      moderationMutation.mutate({ isBanned: false })
+                    } else {
+                      setConfirmBanOpen(true)
+                    }
+                  }}
+                >
+                  {!user.isBanned ? <Ban data-icon="inline-start" /> : null}
+                  {user.isBanned ? "Снять бан" : "Забанить"}
+                </Button>
+              ) : null}
             </CardAction>
           </CardHeader>
           <CardContent>
@@ -163,6 +191,11 @@ export function AdminUserDetailScreen({ userId }: { userId: string }) {
                 <FieldLabel>Активные заказы</FieldLabel>
                 <FieldDescription className="text-right">{user.activeOrderCount}</FieldDescription>
               </Field>
+              {moderationMutation.error ? (
+                <Field>
+                  <FieldDescription>{moderationMutation.error.message}</FieldDescription>
+                </Field>
+              ) : null}
             </FieldGroup>
           </CardContent>
         </Card>
@@ -228,6 +261,40 @@ export function AdminUserDetailScreen({ userId }: { userId: string }) {
                 }}
               >
                 Забанить
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      ) : null}
+
+      {confirmRole ? (
+        <AlertDialog
+          open
+          onOpenChange={(open) => !moderationMutation.isPending && setConfirmRole(open ? confirmRole : null)}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {confirmRole === "ADMIN" ? "Выдать админку?" : "Забрать админку?"}
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                {confirmRole === "ADMIN"
+                  ? "Пользователь получит доступ к админским экранам и управлению магазином."
+                  : "Пользователь потеряет доступ к админским экранам и останется покупателем."}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Отмена</AlertDialogCancel>
+              <AlertDialogAction
+                variant={confirmRole === "USER" ? "destructive" : "default"}
+                disabled={moderationMutation.isPending}
+                onClick={() => {
+                  const nextRole = confirmRole
+                  setConfirmRole(null)
+                  moderationMutation.mutate({ role: nextRole })
+                }}
+              >
+                {confirmRole === "ADMIN" ? "Выдать" : "Забрать"}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

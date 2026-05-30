@@ -6,16 +6,20 @@ import { requireAdmin } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 
 const schema = z.object({
-  isBanned: z.boolean(),
+  isBanned: z.boolean().optional(),
   banReason: z.string().trim().optional(),
-})
+  role: z.nativeEnum(Role).optional(),
+}).refine(
+  (payload) => payload.isBanned !== undefined || payload.role !== undefined,
+  "Нет изменений",
+)
 
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    await requireAdmin()
+    const actor = await requireAdmin()
     const { id } = await params
     const payload = schema.parse(await request.json())
 
@@ -31,17 +35,49 @@ export async function PATCH(
       return NextResponse.json({ error: "Пользователь не найден" }, { status: 404 })
     }
 
-    if (target.role === Role.ADMIN) {
+    const nextRole = payload.role || target.role
+
+    if (payload.isBanned && nextRole === Role.ADMIN) {
       return NextResponse.json({ error: "Нельзя банить админа" }, { status: 400 })
+    }
+
+    if (payload.role === Role.USER && target.id === actor.id) {
+      return NextResponse.json({ error: "Нельзя забрать админку у себя" }, { status: 400 })
+    }
+
+    if (payload.role === Role.USER && target.role === Role.ADMIN) {
+      const adminCount = await prisma.user.count({ where: { role: Role.ADMIN } })
+
+      if (adminCount <= 1) {
+        return NextResponse.json({ error: "Нельзя забрать последнюю админку" }, { status: 400 })
+      }
+    }
+
+    const data = {
+      ...(payload.role
+        ? {
+            role: payload.role,
+            ...(payload.role === Role.ADMIN
+              ? {
+                  isBanned: false,
+                  bannedAt: null,
+                  banReason: null,
+                }
+              : {}),
+          }
+        : {}),
+      ...(payload.isBanned !== undefined
+        ? {
+            isBanned: payload.isBanned,
+            bannedAt: payload.isBanned ? new Date() : null,
+            banReason: payload.isBanned ? payload.banReason || null : null,
+          }
+        : {}),
     }
 
     await prisma.user.update({
       where: { id },
-      data: {
-        isBanned: payload.isBanned,
-        bannedAt: payload.isBanned ? new Date() : null,
-        banReason: payload.isBanned ? payload.banReason || null : null,
-      },
+      data,
     })
 
     if (payload.isBanned) {

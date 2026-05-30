@@ -277,7 +277,7 @@ export function deleteAdminOrder(id: string) {
 
 export function updateAdminUserModeration(
   id: string,
-  payload: { isBanned: boolean; banReason?: string },
+  payload: { isBanned?: boolean; banReason?: string; role?: "USER" | "ADMIN" },
 ) {
   return api<{ ok: true }>(`/api/admin/users/${id}`, {
     method: "PATCH",
