@@ -1,0 +1,199 @@
+"use client"
+
+import Link from "next/link"
+import { useState } from "react"
+import { useRouter } from "next/navigation"
+import { useQuery } from "@tanstack/react-query"
+import { format } from "date-fns"
+import { ru } from "date-fns/locale"
+import { Check, CheckCircle2, CircleDashed, Copy } from "lucide-react"
+
+import { Badge } from "@/components/ui/badge"
+import { buttonVariants } from "@/components/ui/button"
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardFooter,
+  CardHeader,
+} from "@/components/ui/card"
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty"
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+  FieldTitle,
+} from "@/components/ui/field"
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+} from "@/components/ui/input-group"
+import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
+import { useBackButton } from "@/hooks/use-telegram"
+import { getOrder } from "@/lib/api"
+
+type Order = Awaited<ReturnType<typeof getOrder>>["order"]
+
+export function OrderCompleteScreen({ orderId }: { orderId: string }) {
+  const router = useRouter()
+  const [copied, setCopied] = useState(false)
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["order", orderId],
+    queryFn: () => getOrder(orderId),
+    refetchInterval: 10_000,
+  })
+
+  useBackButton(() => router.push(`/orders/${orderId}`))
+
+  async function copyKey(value: string) {
+    await navigator.clipboard.writeText(value)
+    setCopied(true)
+    window.setTimeout(() => setCopied(false), 1400)
+  }
+
+  if (isLoading) {
+    return <CompleteState title="Загружаю результат" description="Проверяю оплату и выдачу." />
+  }
+
+  if (isError || !data?.order) {
+    return <CompleteState title="Результат не загрузился" description="Вернись к заказу и попробуй ещё раз." />
+  }
+
+  const order = data.order
+  const createdAtLabel = format(new Date(order.createdAt), "dd MMMM · HH:mm", { locale: ru })
+  const amountLabel = order.cryptoInvoiceAmount
+    ? `${order.cryptoInvoiceAmount} ${order.cryptoInvoiceFiat || "RUB"}`
+    : order.priceRub
+      ? `${order.priceRub.toLocaleString("ru-RU")} ₽`
+      : "—"
+
+  return (
+    <Screen noTabBar>
+      <ScreenHeader
+        title={renderTitle(order)}
+        subtitle={`Заказ #${order.number}`}
+        trailing={<Badge variant={order.isPaid ? "default" : "secondary"}>{amountLabel}</Badge>}
+      />
+
+      <ScreenBody className="mx-auto w-full max-w-2xl">
+        <Card className="min-h-[calc(100dvh-8rem)]">
+          <CardHeader>
+            <Empty>
+              <EmptyMedia variant="icon">
+                {order.isPaid ? <CheckCircle2 /> : <CircleDashed />}
+              </EmptyMedia>
+              <EmptyHeader>
+                <EmptyTitle>{renderTitle(order)}</EmptyTitle>
+                <EmptyDescription>{renderDescription(order)}</EmptyDescription>
+              </EmptyHeader>
+            </Empty>
+            <CardAction>
+              {order.status === "CANCELLED" ? <Badge variant="destructive">Отменён</Badge> : null}
+            </CardAction>
+          </CardHeader>
+
+          <CardContent className="flex flex-1 flex-col gap-3">
+            {order.deliveredKey ? (
+              <Field>
+                <FieldLabel>Ключ</FieldLabel>
+                <InputGroup>
+                  <InputGroupInput readOnly value={order.deliveredKey} />
+                  <InputGroupAddon align="inline-end">
+                    <InputGroupButton onClick={() => copyKey(order.deliveredKey || "")}>
+                      {copied ? <Check data-icon="inline-start" /> : <Copy data-icon="inline-start" />}
+                      {copied ? "Готово" : "Копировать"}
+                    </InputGroupButton>
+                  </InputGroupAddon>
+                </InputGroup>
+              </Field>
+            ) : (
+              <Field>
+                <FieldTitle>{order.isPaid ? "Выдача" : "Оплата"}</FieldTitle>
+                <FieldDescription>
+                  {order.isPaid
+                    ? "Ключ или инструкция появится здесь после выдачи."
+                    : "Заверши оплату на экране заказа."}
+                </FieldDescription>
+              </Field>
+            )}
+
+            <FieldGroup className="mt-auto gap-2">
+              <Field orientation="horizontal">
+                <FieldLabel>Товар</FieldLabel>
+                <FieldDescription className="truncate text-right">
+                  {order.productTitle || order.subject}
+                </FieldDescription>
+              </Field>
+              <Field orientation="horizontal">
+                <FieldLabel>Оплата</FieldLabel>
+                <FieldDescription className="text-right">
+                  {order.paymentMethodTitle || "Не выбрана"}
+                </FieldDescription>
+              </Field>
+              <Field orientation="horizontal">
+                <FieldLabel>Сумма</FieldLabel>
+                <FieldDescription className="text-right">{amountLabel}</FieldDescription>
+              </Field>
+              <Field orientation="horizontal">
+                <FieldLabel>Создан</FieldLabel>
+                <FieldDescription className="text-right">{createdAtLabel}</FieldDescription>
+              </Field>
+            </FieldGroup>
+          </CardContent>
+
+          <CardFooter className="mt-auto flex-col items-stretch gap-2">
+            <Link href={`/orders/${order.id}`} className={buttonVariants({ variant: "secondary" })}>
+              К заказу
+            </Link>
+            <Link href="/catalog" className={buttonVariants()}>
+              В каталог
+            </Link>
+          </CardFooter>
+        </Card>
+      </ScreenBody>
+    </Screen>
+  )
+}
+
+function renderTitle(order: Order) {
+  if (order.status === "CANCELLED") return "Заказ отменён"
+  if (order.deliveredKey) return "Ключ готов"
+  if (order.isPaid) return "Оплата получена"
+  return "Ожидает оплату"
+}
+
+function renderDescription(order: Order) {
+  if (order.status === "CANCELLED") return "Действия по заказу больше недоступны."
+  if (order.deliveredKey) return "Скопируй ключ и сохрани его."
+  if (order.isPaid) return "Платёж подтверждён, выдача будет здесь."
+  return "Вернись к заказу и заверши оплату."
+}
+
+function CompleteState({ title, description }: { title: string; description: string }) {
+  return (
+    <Screen noTabBar>
+      <Card>
+        <CardContent>
+          <Empty>
+            <EmptyMedia variant="icon">
+              <CircleDashed />
+            </EmptyMedia>
+            <EmptyHeader>
+              <EmptyTitle>{title}</EmptyTitle>
+              <EmptyDescription>{description}</EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        </CardContent>
+      </Card>
+    </Screen>
+  )
+}

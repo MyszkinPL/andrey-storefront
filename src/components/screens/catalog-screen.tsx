@@ -6,16 +6,8 @@ import { useQuery } from "@tanstack/react-query"
 import { PackageSearch, Search } from "lucide-react"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { AspectRatio } from "@/components/ui/aspect-ratio"
 import { Badge } from "@/components/ui/badge"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+import { Card, CardHeader } from "@/components/ui/card"
 import {
   Empty,
   EmptyDescription,
@@ -24,6 +16,15 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty"
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group"
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemGroup,
+  ItemMedia,
+  ItemTitle,
+} from "@/components/ui/item"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
 import { getMe, getProducts } from "@/lib/api"
@@ -114,24 +115,35 @@ export function CatalogScreen() {
             {filtered.length === 0 ? (
               <CatalogEmpty title="Пусто" description="Попробуй другую категорию или запрос." />
             ) : (
-              <div className="grid grid-cols-[repeat(2,minmax(0,1fr))] gap-3 md:grid-cols-[repeat(auto-fill,minmax(180px,1fr))]">
+              <ItemGroup className="gap-2 lg:grid lg:grid-cols-2">
                 {filtered.map((product) => (
-                  <Link key={product.id} href={`/product/${product.id}`} className="min-w-0">
-                    <Card size="sm" className="h-full min-w-0 gap-0 py-0">
-                      <ProductCover imageDataUrl={product.imageDataUrl} title={product.title} />
-                      <CardFooter className="items-end gap-3 py-4">
-                        <CardContent className="min-w-0 flex-1 px-0">
-                          <CardTitle className="truncate">{product.title}</CardTitle>
-                          <CardDescription className="truncate">
-                            {product.category || "Без категории"}
-                          </CardDescription>
-                        </CardContent>
-                        <Badge variant="secondary">{product.priceRub.toLocaleString("ru-RU")} ₽</Badge>
-                      </CardFooter>
-                    </Card>
-                  </Link>
+                  <Item
+                    key={product.id}
+                    render={<Link href={`/product/${product.id}`} />}
+                    variant="muted"
+                    className="p-2.5"
+                  >
+                    <ItemMedia
+                      variant={product.imageDataUrl ? "image" : "icon"}
+                      className={product.imageDataUrl ? "size-20" : "size-20 rounded-xl"}
+                    >
+                      <ProductThumbnail imageDataUrl={product.imageDataUrl} title={product.title} />
+                    </ItemMedia>
+                    <ItemContent className="min-w-0">
+                      <ItemTitle>{product.title}</ItemTitle>
+                      <ItemDescription>
+                        {product.category || "Без категории"} · {renderDelivery(product)}
+                      </ItemDescription>
+                      {product.description ? (
+                        <ItemDescription className="line-clamp-1">{product.description}</ItemDescription>
+                      ) : null}
+                    </ItemContent>
+                    <ItemActions>
+                      <Badge variant="secondary">{product.priceRub.toLocaleString("ru-RU")} ₽</Badge>
+                    </ItemActions>
+                  </Item>
                 ))}
-              </div>
+              </ItemGroup>
             )}
           </>
         )}
@@ -147,27 +159,29 @@ function ShopLogo() {
   )
 }
 
-function ProductCover({
+function ProductThumbnail({
   imageDataUrl,
   title,
 }: {
   imageDataUrl: string | null
   title: string
 }) {
-  return (
-    <AspectRatio ratio={1} className="overflow-hidden">
-      {imageDataUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={imageDataUrl} alt={title} className="size-full object-cover" />
-      ) : (
-        <Empty>
-          <EmptyMedia variant="icon">
-            <PackageSearch />
-          </EmptyMedia>
-        </Empty>
-      )}
-    </AspectRatio>
-  )
+  if (imageDataUrl) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={imageDataUrl} alt={title} />
+    )
+  }
+
+  return <PackageSearch />
+}
+
+function renderDelivery(product: Awaited<ReturnType<typeof getProducts>>["products"][number]) {
+  if (product.deliveryType === "AUTO_KEY") {
+    return `${product.availableKeyCount || 0} ключей`
+  }
+
+  return "ручная выдача"
 }
 
 function CatalogEmpty({

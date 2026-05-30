@@ -255,15 +255,21 @@ function PaymentMethodSelect({
   selectedKey: string
   onSelect: (key: string) => void
 }) {
+  const [open, setOpen] = useState(false)
   const selectedOption = options.find((option) => option.key === selectedKey)
 
   return (
     <Field>
       <FieldLabel>Способ оплаты</FieldLabel>
       <Select
+        open={open}
+        onOpenChange={(nextOpen) => setOpen(nextOpen)}
         value={selectedKey}
         onValueChange={(value) => {
-          if (value) onSelect(String(value))
+          if (value) {
+            onSelect(String(value))
+            setOpen(false)
+          }
         }}
         items={options.map((option) => ({ value: option.key, label: option.title }))}
       >

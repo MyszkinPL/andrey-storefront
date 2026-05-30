@@ -1,6 +1,7 @@
 "use client"
 
 import type { PaymentMethodType } from "@prisma/client"
+import Link from "next/link"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
@@ -369,8 +370,16 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
             />
           </CardContent>
 
-          {(order.isPaid && supportLink && isRealBuyerView) || (isRealBuyerView && !order.isPaid && !isClosed) ? (
+          {(order.isPaid && isRealBuyerView) || (isRealBuyerView && !order.isPaid && !isClosed) ? (
             <CardFooter className="mt-auto flex-col items-stretch gap-2">
+              {order.isPaid && isRealBuyerView ? (
+                <Link
+                  href={`/orders/${order.id}/complete`}
+                  className={buttonVariants()}
+                >
+                  Открыть выдачу
+                </Link>
+              ) : null}
               {order.isPaid && supportLink && isRealBuyerView ? (
                 <a
                   href={supportLink}
@@ -546,15 +555,21 @@ function PaymentMethodSelector({
   loading: boolean
   onSelect: (key: string) => void
 }) {
+  const [open, setOpen] = useState(false)
   const selectedOption = options.find((option) => option.key === selectedKey)
 
   return (
     <Field>
       <FieldLabel>Способ оплаты</FieldLabel>
       <Select
+        open={open}
+        onOpenChange={(nextOpen) => setOpen(nextOpen)}
         value={selectedKey || ""}
         onValueChange={(value) => {
-          if (value) onSelect(String(value))
+          if (value) {
+            onSelect(String(value))
+            setOpen(false)
+          }
         }}
         disabled={loading}
         items={options.map((option) => ({ value: option.key, label: option.title }))}

@@ -1,13 +1,14 @@
 "use client"
 
-import type { Dispatch, SetStateAction } from "react"
+import Link from "next/link"
 import { useEffect, useMemo, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { ImagePlus, PencilLine, Plus, RefreshCcw, Trash2 } from "lucide-react"
+import { ImagePlus, PencilLine, Plus, RefreshCcw } from "lucide-react"
 
+import { AccessStateScreen } from "@/components/access-state-screen"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import {
   Card,
   CardAction,
@@ -16,14 +17,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
 import {
   Empty,
   EmptyDescription,
@@ -52,34 +45,9 @@ import {
   ItemTitle,
 } from "@/components/ui/item"
 import { Switch } from "@/components/ui/switch"
-import { Textarea } from "@/components/ui/textarea"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
-import { getCryptoPayCurrencies, getMe, getPaymentMethods, saveSettings } from "@/lib/api"
-import { optimizeSquareImage } from "@/lib/image"
 import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
-
-type PaymentMethodForm = {
-  id?: string
-  title: string
-  details: string
-  iconDataUrl?: string
-  isActive: boolean
-}
-
-const emptyMethod: PaymentMethodForm = {
-  title: "",
-  details: "",
-  iconDataUrl: "",
-  isActive: true,
-}
-
-const templateMethod: PaymentMethodForm = {
-  title: "СБП / Т-Банк",
-  details:
-    "Оплата по номеру телефона: +7...\nПолучатель: ...\nПосле оплаты нажми «Я оплатил».",
-  iconDataUrl: "",
-  isActive: true,
-}
+import { getCryptoPayCurrencies, getMe, getPaymentMethods, saveSettings } from "@/lib/api"
 
 export function AdminSettingsScreen() {
   const queryClient = useQueryClient()
@@ -96,11 +64,11 @@ export function AdminSettingsScreen() {
   const [cryptoPayUseTestnet, setCryptoPayUseTestnet] = useState(false)
   const [cryptoPayFiat, setCryptoPayFiat] = useState("RUB")
   const [cryptoPayDefaultAssets, setCryptoPayDefaultAssets] = useState("")
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethodForm[]>([])
-  const [editorIndex, setEditorIndex] = useState<number | null>(null)
-  const [editorDraft, setEditorDraft] = useState<PaymentMethodForm | null>(null)
-  const [uploadingIcon, setUploadingIcon] = useState(false)
 
+  const paymentMethods = useMemo(
+    () => paymentData?.paymentMethods ?? [],
+    [paymentData?.paymentMethods],
+  )
   const cryptoPayTokenValue = cryptoPayToken.trim()
 
   const {
@@ -132,21 +100,6 @@ export function AdminSettingsScreen() {
     })
   }, [meData])
 
-  useEffect(() => {
-    if (!paymentData) return
-    queueMicrotask(() => {
-      setPaymentMethods(
-        paymentData.paymentMethods.map((method) => ({
-          id: method.id,
-          title: method.title,
-          details: method.details,
-          iconDataUrl: method.iconDataUrl || "",
-          isActive: method.isActive,
-        })),
-      )
-    })
-  }, [paymentData])
-
   const mutation = useMutation({
     mutationFn: () =>
       saveSettings({
@@ -158,8 +111,12 @@ export function AdminSettingsScreen() {
         cryptoPayFiat,
         cryptoPayDefaultAssets,
         paymentMethods: paymentMethods.map((method) => ({
-          ...method,
+          id: method.id,
+          title: method.title,
           type: "MANUAL" as const,
+          details: method.details,
+          iconDataUrl: method.iconDataUrl || undefined,
+          isActive: method.isActive,
         })),
       }),
     onSuccess: async () => {
@@ -187,70 +144,18 @@ export function AdminSettingsScreen() {
 
   if (meData && meData.user.role !== "ADMIN") {
     return (
-      <Screen>
-        <ScreenHeader title="Доступ закрыт" subtitle="Настройки магазина доступны только админу." />
-      </Screen>
+      <AccessStateScreen
+        title="Доступ закрыт"
+        description="Настройки магазина доступны только админу."
+      />
     )
-  }
-
-  function openCreateModal(preset?: PaymentMethodForm) {
-    setEditorIndex(null)
-    setEditorDraft({ ...(preset || emptyMethod) })
-  }
-
-  function openEditModal(index: number) {
-    setEditorIndex(index)
-    setEditorDraft({ ...paymentMethods[index] })
-  }
-
-  function closeModal() {
-    setEditorIndex(null)
-    setEditorDraft(null)
-    setUploadingIcon(false)
-  }
-
-  function saveDraft() {
-    if (!editorDraft?.title.trim()) return
-
-    const normalized = {
-      ...editorDraft,
-      title: editorDraft.title.trim(),
-      details: editorDraft.details.trim(),
-    }
-
-    if (editorIndex === null) {
-      setPaymentMethods((prev) => [...prev, normalized])
-    } else {
-      setPaymentMethods((prev) =>
-        prev.map((method, index) => (index === editorIndex ? normalized : method)),
-      )
-    }
-
-    closeModal()
-  }
-
-  function removeDraft() {
-    if (editorIndex === null) return
-    setPaymentMethods((prev) => prev.filter((_, index) => index !== editorIndex))
-    closeModal()
-  }
-
-  async function handleDraftIcon(file: File | null) {
-    if (!file || !editorDraft) return
-    setUploadingIcon(true)
-    try {
-      const iconDataUrl = await optimizeSquareImage(file, 256)
-      setEditorDraft((prev) => (prev ? { ...prev, iconDataUrl } : prev))
-    } finally {
-      setUploadingIcon(false)
-    }
   }
 
   return (
     <Screen>
       <ScreenHeader
         title="Настройки"
-        subtitle="Магазин, оплата и поддержка"
+        subtitle="Магазин и платежи"
         trailing={
           <Button size="sm" disabled={mutation.isPending} onClick={() => mutation.mutate()}>
             {mutation.isPending ? "Сохраняю..." : "Сохранить"}
@@ -267,12 +172,12 @@ export function AdminSettingsScreen() {
           <CardContent>
             <FieldGroup>
               <Field>
-                <FieldLabel>Название</FieldLabel>
-                <Input value={shopName} onChange={(event) => setShopName(event.target.value)} placeholder="snx.sell" />
+                <FieldLabel htmlFor="shop-name">Название</FieldLabel>
+                <Input id="shop-name" value={shopName} onChange={(event) => setShopName(event.target.value)} placeholder="snx.sell" />
               </Field>
               <Field>
-                <FieldLabel>Поддержка</FieldLabel>
-                <Input value={supportUsername} onChange={(event) => setSupportUsername(event.target.value)} placeholder="@username" />
+                <FieldLabel htmlFor="shop-support">Поддержка</FieldLabel>
+                <Input id="shop-support" value={supportUsername} onChange={(event) => setSupportUsername(event.target.value)} placeholder="@username" />
               </Field>
             </FieldGroup>
           </CardContent>
@@ -284,22 +189,26 @@ export function AdminSettingsScreen() {
             <CardTitle>Crypto Bot</CardTitle>
             <CardDescription>Автооплата через invoice и webhook.</CardDescription>
             <CardAction>
-              <Switch checked={cryptoPayEnabled} onCheckedChange={setCryptoPayEnabled} />
+              <Switch
+                checked={cryptoPayEnabled}
+                onCheckedChange={setCryptoPayEnabled}
+                aria-label="Включить Crypto Bot"
+              />
             </CardAction>
           </CardHeader>
           <CardContent>
             <FieldGroup>
               <Field>
-                <FieldLabel>API token</FieldLabel>
-                <Input value={cryptoPayToken} onChange={(event) => setCryptoPayToken(event.target.value)} placeholder="Token из Crypto Bot" />
+                <FieldLabel htmlFor="crypto-token">API token</FieldLabel>
+                <Input id="crypto-token" value={cryptoPayToken} onChange={(event) => setCryptoPayToken(event.target.value)} placeholder="Token из Crypto Bot" />
               </Field>
               <Field orientation="horizontal">
-                <FieldLabel>Testnet</FieldLabel>
-                <Switch checked={cryptoPayUseTestnet} onCheckedChange={setCryptoPayUseTestnet} />
+                <FieldLabel htmlFor="crypto-testnet">Testnet</FieldLabel>
+                <Switch id="crypto-testnet" checked={cryptoPayUseTestnet} onCheckedChange={setCryptoPayUseTestnet} />
               </Field>
               <Field>
-                <FieldLabel>Fiat</FieldLabel>
-                <Input value={cryptoPayFiat} onChange={(event) => setCryptoPayFiat(event.target.value.toUpperCase())} placeholder="RUB" />
+                <FieldLabel htmlFor="crypto-fiat">Fiat</FieldLabel>
+                <Input id="crypto-fiat" value={cryptoPayFiat} onChange={(event) => setCryptoPayFiat(event.target.value.toUpperCase())} placeholder="RUB" />
               </Field>
               <Field>
                 <FieldLabel>Монеты</FieldLabel>
@@ -324,9 +233,9 @@ export function AdminSettingsScreen() {
                 )}
               </Field>
               <Field>
-                <FieldLabel>Webhook</FieldLabel>
+                <FieldLabel htmlFor="crypto-webhook">Webhook</FieldLabel>
                 <InputGroup>
-                  <InputGroupInput readOnly value={cryptoWebhookUrl || "Появится после открытия на домене деплоя"} />
+                  <InputGroupInput id="crypto-webhook" readOnly value={cryptoWebhookUrl || "Появится после открытия на домене деплоя"} />
                   {cryptoWebhookUrl ? (
                     <InputGroupAddon align="inline-end">
                       <InputGroupButton onClick={() => void navigator.clipboard.writeText(cryptoWebhookUrl)}>
@@ -353,21 +262,24 @@ export function AdminSettingsScreen() {
             <CardTitle>Ручная оплата</CardTitle>
             <CardDescription>{paymentMethods.length} всего · {activeCount} активных</CardDescription>
             <CardAction className="flex gap-2">
-              <Button size="sm" variant="secondary" onClick={() => openCreateModal(templateMethod)}>
+              <Link
+                href="/admin/settings/payments/new?template=bank"
+                className={buttonVariants({ size: "sm", variant: "secondary" })}
+              >
                 Шаблон
-              </Button>
-              <Button size="sm" onClick={() => openCreateModal()}>
+              </Link>
+              <Link href="/admin/settings/payments/new" className={buttonVariants({ size: "sm" })}>
                 <Plus data-icon="inline-start" />
                 Добавить
-              </Button>
+              </Link>
             </CardAction>
           </CardHeader>
           <CardContent>
             <ItemGroup className="gap-2">
-              {paymentMethods.map((method, index) => (
-                <Item key={method.id || `${method.title}-${index}`} variant="muted" size="sm">
+              {paymentMethods.map((method) => (
+                <Item key={method.id} variant="muted" size="sm">
                   <ItemMedia>
-                    <MethodPreview iconDataUrl={method.iconDataUrl} title={method.title} />
+                    <MethodPreview iconDataUrl={method.iconDataUrl || ""} title={method.title} />
                   </ItemMedia>
                   <ItemContent className="min-w-0">
                     <ItemTitle>{method.title}</ItemTitle>
@@ -375,14 +287,13 @@ export function AdminSettingsScreen() {
                   </ItemContent>
                   <ItemActions>
                     {!method.isActive ? <Badge variant="secondary">Скрыт</Badge> : null}
-                    <Button
-                      size="icon-sm"
-                      variant="secondary"
+                    <Link
+                      href={`/admin/settings/payments/${method.id}`}
+                      className={buttonVariants({ size: "icon-sm", variant: "secondary" })}
                       aria-label="Править способ оплаты"
-                      onClick={() => openEditModal(index)}
                     >
                       <PencilLine />
-                    </Button>
+                    </Link>
                   </ItemActions>
                 </Item>
               ))}
@@ -398,114 +309,7 @@ export function AdminSettingsScreen() {
           </CardContent>
         </Card>
       </ScreenBody>
-
-      {editorDraft ? (
-        <MethodEditorDialog
-          open={Boolean(editorDraft)}
-          draft={editorDraft}
-          uploadingIcon={uploadingIcon}
-          onClose={closeModal}
-          onChange={setEditorDraft}
-          onSave={saveDraft}
-          onDelete={removeDraft}
-          onUpload={handleDraftIcon}
-          canDelete={editorIndex !== null}
-        />
-      ) : null}
     </Screen>
-  )
-}
-
-function MethodEditorDialog({
-  open,
-  draft,
-  uploadingIcon,
-  onClose,
-  onChange,
-  onSave,
-  onDelete,
-  onUpload,
-  canDelete,
-}: {
-  open: boolean
-  draft: PaymentMethodForm
-  uploadingIcon: boolean
-  onClose: () => void
-  onChange: Dispatch<SetStateAction<PaymentMethodForm | null>>
-  onSave: () => void
-  onDelete: () => void
-  onUpload: (file: File | null) => void
-  canDelete: boolean
-}) {
-  return (
-    <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && onClose()}>
-      <DialogContent className="max-h-[92dvh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{canDelete ? "Способ оплаты" : "Новый способ"}</DialogTitle>
-          <DialogDescription>Название, иконка и реквизиты ручной оплаты.</DialogDescription>
-        </DialogHeader>
-        <FieldGroup>
-          <Card size="sm">
-            <CardHeader>
-              <MethodPreview iconDataUrl={draft.iconDataUrl} title={draft.title || "PM"} />
-              <CardTitle>Иконка</CardTitle>
-              <CardDescription>{uploadingIcon ? "Обработка изображения..." : "Квадратная иконка платежки"}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Input
-                type="file"
-                accept="image/*"
-                onChange={(event) => onUpload(event.currentTarget.files?.[0] || null)}
-              />
-            </CardContent>
-          </Card>
-
-          <Field>
-            <FieldLabel>Название</FieldLabel>
-            <Input
-              value={draft.title}
-              onChange={(event) =>
-                onChange((prev) => (prev ? { ...prev, title: event.target.value } : prev))
-              }
-              placeholder="СБП / Т-Банк"
-            />
-          </Field>
-          <Field>
-            <FieldLabel>Данные для оплаты</FieldLabel>
-            <Textarea
-              value={draft.details}
-              onChange={(event) =>
-                onChange((prev) => (prev ? { ...prev, details: event.target.value } : prev))
-              }
-              placeholder="Номер, получатель или инструкция"
-            />
-          </Field>
-          <Field orientation="horizontal">
-            <FieldLabel>Показывать покупателю</FieldLabel>
-            <Switch
-              checked={draft.isActive}
-              onCheckedChange={(checked) =>
-                onChange((prev) => (prev ? { ...prev, isActive: checked } : prev))
-              }
-            />
-          </Field>
-        </FieldGroup>
-        <DialogFooter>
-          {canDelete ? (
-            <Button variant="destructive" onClick={onDelete}>
-              <Trash2 data-icon="inline-start" />
-              Удалить
-            </Button>
-          ) : null}
-          <Button variant="secondary" onClick={onClose}>
-            Отмена
-          </Button>
-          <Button onClick={onSave} disabled={!draft.title.trim()}>
-            Сохранить
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
   )
 }
 
@@ -520,7 +324,7 @@ function MethodPreview({
     <Avatar size="lg">
       {iconDataUrl ? <AvatarImage src={iconDataUrl} alt={title} /> : null}
       <AvatarFallback>
-        {title ? title.slice(0, 2).toUpperCase() : <ImagePlus className="size-4" />}
+        {title ? title.slice(0, 2).toUpperCase() : <ImagePlus />}
       </AvatarFallback>
     </Avatar>
   )

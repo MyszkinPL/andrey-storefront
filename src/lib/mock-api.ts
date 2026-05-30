@@ -3,6 +3,46 @@
 import type { PaymentMethodType } from "@prisma/client"
 
 const now = new Date().toISOString()
+const MOCK_STORAGE_KEY = "snx.sell.mock-state:v1"
+let mockStateHydrated = false
+
+type MockProduct = {
+  id: string
+  slug: string
+  title: string
+  category: string | null
+  description: string
+  imageDataUrl: string | null
+  priceRub: number
+  deliveryType: "MANUAL" | "AUTO_KEY"
+  isActive: boolean
+  availableKeyCount: number
+  editableKeys: {
+    id: string
+    value: string
+    createdAt: string
+  }[]
+  specs: {
+    label: string
+    value: string
+  }[]
+}
+
+type MockUser = {
+  id: string
+  telegramId: string
+  firstName: string
+  lastName: string | null
+  username: string | null
+  photoUrl: string | null
+  role: "ADMIN" | "USER"
+  isBanned: boolean
+  bannedAt: string | null
+  banReason: string | null
+  activeOrderCount: number
+  createdAt: string
+  orders: ReturnType<typeof orderListItem>[]
+}
 
 const productImage = svgDataUrl(`
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
@@ -53,7 +93,7 @@ const manualIcon = svgDataUrl(`
 
 const cryptoIcon = "/crypto-bot-logo.svg"
 
-const products = [
+let products: MockProduct[] = [
   {
     id: "mock-product-1",
     slug: "snx-lite",
@@ -93,7 +133,7 @@ const products = [
   },
 ]
 
-const paymentMethods = [
+let paymentMethods = [
   {
     id: "manual-sber",
     title: "сберхуйс",
@@ -115,6 +155,16 @@ const mockUser = {
   role: "ADMIN" as const,
   isBanned: false,
   banReason: null,
+}
+
+let mockSettings = {
+  shopName: "snx.sell",
+  supportUsername: "andreytestmyszkinbot",
+  cryptoPayEnabled: true,
+  cryptoPayToken: null as string | null,
+  cryptoPayUseTestnet: false,
+  cryptoPayFiat: "RUB",
+  cryptoPayDefaultAssets: "USDT",
 }
 
 let orders = [
@@ -159,6 +209,8 @@ export function isLocalMockApiEnabled() {
 }
 
 export async function mockApi<T>(input: RequestInfo, init?: RequestInit): Promise<T> {
+  hydrateMockState()
+
   const url = typeof input === "string" ? input : input.url
   const method = (init?.method || "GET").toUpperCase()
   const path = new URL(url, window.location.origin).pathname
@@ -171,33 +223,45 @@ export async function mockApi<T>(input: RequestInfo, init?: RequestInit): Promis
     return {
       user: mockUser,
       settings: {
-        shopName: "snx.sell",
-        supportUsername: "andreytestmyszkinbot",
-        cryptoPayEnabled: true,
-        cryptoPayToken: null,
-        cryptoPayUseTestnet: false,
-        cryptoPayFiat: "RUB",
-        cryptoPayDefaultAssets: "USDT",
-        appUrl: "http://localhost:3000",
+        ...mockSettings,
+        appUrl: window.location.origin,
       },
     } as T
   }
 
   if (path === "/api/products" && method === "GET") return { products } as T
-  if (path === "/api/products" && method === "POST") return { ok: true } as T
+  if (path === "/api/products" && method === "POST") {
+    const product = makeProductFromPayload(`mock-product-${Date.now()}`, body)
+    products = [product, ...products]
+    persistMockState()
+    return { ok: true } as T
+  }
   if (path.startsWith("/api/products/")) {
-    const product = products.find((item) => item.id === path.split("/").at(-1)) || products[0]
-    return method === "GET" ? ({ product } as T) : ({ ok: true } as T)
+    const id = path.split("/").at(-1) || ""
+    const productIndex = products.findIndex((item) => item.id === id)
+    const product = products[productIndex]
+
+    if (!product) throw new Error(`Mock product not found: ${id}`)
+    if (method === "GET") return { product } as T
+    if (method === "PATCH" && productIndex >= 0) {
+      products = products.map((item, index) =>
+        index === productIndex ? makeProductFromPayload(item.id, body, item) : item,
+      )
+      persistMockState()
+      return { ok: true } as T
+    }
+
+    return { ok: true } as T
   }
 
   if (path === "/api/payment-methods") {
     return {
       paymentMethods,
       cryptoPay: {
-        enabled: true,
+        enabled: mockSettings.cryptoPayEnabled,
         title: "Crypto Bot",
         details: "Crypto Pay",
-        acceptedAssets: "USDT",
+        acceptedAssets: mockSettings.cryptoPayDefaultAssets,
         iconDataUrl: cryptoIcon,
       },
     } as T
@@ -210,40 +274,65 @@ export async function mockApi<T>(input: RequestInfo, init?: RequestInit): Promis
 
   if (path === "/api/orders" && method === "POST") {
     const product = products.find((item) => item.id === body?.productId) || products[0]
+    const methodItem = paymentMethods.find((item) => item.id === body?.paymentMethodId)
+      || paymentMethods.find((item) => item.isActive)
+      || paymentMethods[0]
     const order = makeOrder({
       id: `mock-order-${Date.now()}`,
       number: orders.length + 20,
       product,
       paymentMethodType: body?.paymentMethodType === "CRYPTO_PAY" ? "CRYPTO_PAY" : "MANUAL",
-      paymentMethodTitle: body?.paymentMethodType === "CRYPTO_PAY" ? "Crypto Bot" : "сберхуйс",
-      paymentMethodDetails: body?.paymentMethodType === "CRYPTO_PAY" ? "Crypto Pay invoice" : "+38099999999",
-      paymentMethodIconDataUrl: body?.paymentMethodType === "CRYPTO_PAY" ? cryptoIcon : manualIcon,
+      paymentMethodTitle: body?.paymentMethodType === "CRYPTO_PAY" ? "Crypto Bot" : methodItem?.title || "Ручная оплата",
+      paymentMethodDetails: body?.paymentMethodType === "CRYPTO_PAY" ? "Crypto Pay invoice" : methodItem?.details || "",
+      paymentMethodIconDataUrl: body?.paymentMethodType === "CRYPTO_PAY" ? cryptoIcon : methodItem?.iconDataUrl || manualIcon,
       cryptoInvoiceUrl: body?.paymentMethodType === "CRYPTO_PAY" ? "https://t.me/CryptoBot/app?startapp=invoice-demo" : null,
       cryptoInvoiceAmount: body?.paymentMethodType === "CRYPTO_PAY" ? String(product.priceRub) : null,
     })
+    if (body?.paymentMethodType !== "CRYPTO_PAY" && methodItem) {
+      order.paymentMethodId = methodItem.id
+    }
     orders = [order, ...orders]
+    persistMockState()
     return { orderId: order.id } as T
   }
 
   if (path.startsWith("/api/orders/")) {
     const id = path.split("/").at(-1) || ""
-    const order = orders.find((item) => item.id === id) || orders[0]
+    const order = orders.find((item) => item.id === id)
+
+    if (!order) throw new Error(`Mock order not found: ${id}`)
     if (method === "GET") return { order } as T
     if (method === "DELETE") {
       orders = orders.filter((item) => item.id !== id)
+      persistMockState()
       return { ok: true } as T
     }
     if (method === "PATCH") {
-      if (body?.markManualPaid) order.status = "PAYMENT_REVIEW"
+      if (body?.markManualPaid) {
+        order.status = "PAYMENT_REVIEW"
+        order.manualPaymentRequestedAt = new Date().toISOString()
+      }
       if (body?.confirmPayment) {
         order.isPaid = true
         order.status = "CLOSED"
         order.deliveredKey = order.deliveredKey || "SNX-LITE-TEST-001"
       }
-      if (body?.rejectManualPayment) order.status = "OPEN"
-      if (body?.cancelByUser) order.status = "CANCELLED"
+      if (body?.rejectManualPayment) {
+        order.status = "OPEN"
+        order.manualPaymentRequestedAt = null
+      }
+      if (body?.cancelByUser) {
+        order.status = "CANCELLED"
+      }
+      if (body?.refreshCryptoInvoice && order.paymentMethodType === "CRYPTO_PAY") {
+        order.isPaid = true
+        order.status = "CLOSED"
+        order.deliveredKey = order.deliveredKey || "SNX-LITE-TEST-001"
+        order.cryptoInvoiceStatus = "paid"
+      }
       if (body?.paymentMethodType === "CRYPTO_PAY") {
         order.paymentMethodType = "CRYPTO_PAY"
+        order.paymentMethodId = null
         order.paymentMethodTitle = "Crypto Bot"
         order.paymentMethodDetails = "Crypto Pay invoice"
         order.paymentMethodIconDataUrl = cryptoIcon
@@ -251,31 +340,73 @@ export async function mockApi<T>(input: RequestInfo, init?: RequestInit): Promis
         order.cryptoInvoiceAmount = String(products.find((item) => item.title === order.productTitle)?.priceRub || 12)
       }
       if (body?.paymentMethodId) {
-        const methodItem = paymentMethods[0]
+        const methodItem = paymentMethods.find((item) => item.id === body.paymentMethodId) || paymentMethods[0]
         order.paymentMethodType = "MANUAL"
         order.paymentMethodId = methodItem.id
         order.paymentMethodTitle = methodItem.title
         order.paymentMethodDetails = methodItem.details
         order.paymentMethodIconDataUrl = methodItem.iconDataUrl
         order.cryptoInvoiceUrl = null
+        order.cryptoInvoiceAmount = null
       }
+      persistMockState()
       return { ok: true } as T
     }
   }
 
   if (path === "/api/admin/users") {
+    const users = getMockUsers()
     return {
-      pageInfo: { page: 1, limit: 30, total: 3, hasMore: false },
-      summary: { total: 3, buyers: 2, admins: 1, banned: 0 },
-      users: mockUsers,
+      pageInfo: { page: 1, limit: 30, total: users.length, hasMore: false },
+      summary: {
+        total: users.length,
+        buyers: users.filter((user) => user.role !== "ADMIN").length,
+        admins: users.filter((user) => user.role === "ADMIN").length,
+        banned: users.filter((user) => user.isBanned).length,
+      },
+      users,
     } as T
   }
 
   if (path.startsWith("/api/admin/users/")) {
-    return { user: mockUsers.find((user) => user.id === path.split("/").at(-1)) || mockUsers[0] } as T
+    const id = path.split("/").at(-1) || ""
+    const user = mockUsers.find((item) => item.id === id)
+
+    if (!user) throw new Error(`Mock user not found: ${id}`)
+
+    if (method === "PATCH") {
+      user.isBanned = Boolean(body?.isBanned)
+      user.bannedAt = user.isBanned ? new Date().toISOString() : null
+      user.banReason = user.isBanned ? body?.banReason || null : null
+      persistMockState()
+      return { ok: true } as T
+    }
+
+    return { user: getMockUsers().find((item) => item.id === id) || getMockUsers()[0] } as T
   }
 
-  if (path === "/api/admin/settings") return { ok: true } as T
+  if (path === "/api/admin/settings") {
+    mockSettings = {
+      shopName: body?.shopName || mockSettings.shopName,
+      supportUsername: body?.supportUsername || "",
+      cryptoPayEnabled: Boolean(body?.cryptoPayEnabled),
+      cryptoPayToken: body?.cryptoPayToken || null,
+      cryptoPayUseTestnet: Boolean(body?.cryptoPayUseTestnet),
+      cryptoPayFiat: body?.cryptoPayFiat || "RUB",
+      cryptoPayDefaultAssets: body?.cryptoPayDefaultAssets || "",
+    }
+    paymentMethods = (body?.paymentMethods || []).map((method: (typeof paymentMethods)[number], index: number) => ({
+      id: method.id || `manual-${Date.now()}-${index}`,
+      title: method.title,
+      type: "MANUAL" as PaymentMethodType,
+      details: method.details,
+      iconDataUrl: method.iconDataUrl || "",
+      cryptoAcceptedAssets: null,
+      isActive: method.isActive,
+    }))
+    persistMockState()
+    return { ok: true } as T
+  }
   if (path === "/api/admin/crypto-pay-currencies") {
     return {
       currencies: [
@@ -294,7 +425,7 @@ export async function mockApi<T>(input: RequestInfo, init?: RequestInit): Promis
   throw new Error(`Mock API route not implemented: ${method} ${path}`)
 }
 
-const mockUsers = [
+let mockUsers: MockUser[] = [
   {
     ...mockUser,
     bannedAt: null,
@@ -318,6 +449,100 @@ const mockUsers = [
     orders: [orderListItem(orders[2])],
   },
 ]
+
+function hydrateMockState() {
+  if (mockStateHydrated) return
+  mockStateHydrated = true
+
+  try {
+    const raw = window.localStorage.getItem(MOCK_STORAGE_KEY)
+    if (!raw) return
+
+    const state = JSON.parse(raw) as {
+      products?: typeof products
+      paymentMethods?: typeof paymentMethods
+      mockSettings?: typeof mockSettings
+      orders?: typeof orders
+      mockUsers?: typeof mockUsers
+    }
+
+    if (Array.isArray(state.products)) products = state.products
+    if (Array.isArray(state.paymentMethods)) paymentMethods = state.paymentMethods
+    if (state.mockSettings) mockSettings = state.mockSettings
+    if (Array.isArray(state.orders)) orders = state.orders
+    if (Array.isArray(state.mockUsers)) mockUsers = state.mockUsers
+  } catch {
+    window.localStorage.removeItem(MOCK_STORAGE_KEY)
+  }
+}
+
+function persistMockState() {
+  try {
+    window.localStorage.setItem(
+      MOCK_STORAGE_KEY,
+      JSON.stringify({
+        products,
+        paymentMethods,
+        mockSettings,
+        orders,
+        mockUsers,
+      }),
+    )
+  } catch {}
+}
+
+function makeProductFromPayload(
+  id: string,
+  payload: Partial<(typeof products)[number]> & {
+    keyPoolText?: string
+    removeKeyIds?: string[]
+  },
+  existing?: (typeof products)[number],
+) {
+  const nextKeys = (existing?.editableKeys ?? []).filter(
+    (key) => !(payload.removeKeyIds || []).includes(key.id),
+  )
+  const addedKeys = (payload.keyPoolText || "")
+    .split(/\r?\n/)
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .map((value, index) => ({
+      id: `key-${Date.now()}-${index}`,
+      value,
+      createdAt: new Date().toISOString(),
+    }))
+  const editableKeys = payload.deliveryType === "AUTO_KEY" ? [...nextKeys, ...addedKeys] : []
+
+  return {
+    id,
+    slug: existing?.slug || slugify(payload.title || existing?.title || id),
+    title: payload.title || existing?.title || "Новый товар",
+    category: payload.category || null,
+    description: payload.description || existing?.description || "",
+    imageDataUrl: payload.imageDataUrl || existing?.imageDataUrl || null,
+    priceRub: Number(payload.priceRub ?? existing?.priceRub ?? 0),
+    deliveryType: payload.deliveryType || existing?.deliveryType || ("MANUAL" as const),
+    isActive: payload.isActive ?? existing?.isActive ?? true,
+    availableKeyCount: editableKeys.length,
+    editableKeys,
+    specs: payload.specs || existing?.specs || [],
+  }
+}
+
+function getMockUsers() {
+  return mockUsers.map((user) => {
+    const userOrders =
+      user.id === "mock-user-buyer"
+        ? orders.filter((order) => order.id === "mock-crypto")
+        : orders.filter((order) => order.createdBy?.id === user.id)
+
+    return {
+      ...user,
+      activeOrderCount: userOrders.filter((order) => !["CLOSED", "CANCELLED"].includes(order.status)).length,
+      orders: userOrders.slice(0, 20).map(orderListItem),
+    }
+  })
+}
 
 function makeOrder({
   id,
@@ -409,4 +634,13 @@ function orderListItem(order: (typeof orders)[number]) {
 
 function svgDataUrl(svg: string) {
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg.trim())}`
+}
+
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9а-яё]+/gi, "-")
+    .replace(/^-+|-+$/g, "")
+    || `product-${Date.now()}`
 }

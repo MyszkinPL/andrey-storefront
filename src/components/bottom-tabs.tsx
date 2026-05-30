@@ -27,9 +27,10 @@ export function BottomTabs() {
   const pathname = usePathname()
   const router = useRouter()
   const haptic = useHaptic()
-  const { mode } = useMode()
+  const { mode, canAdmin } = useMode()
 
   if (!isBottomTabsRoute(pathname)) return null
+  if (pathname.startsWith("/admin") && !canAdmin) return null
 
   const tabs = mode === "admin" ? ADMIN_TABS : BUYER_TABS
   const activeTab =

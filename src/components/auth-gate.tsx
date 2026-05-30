@@ -3,13 +3,7 @@
 import { useEffect, useState } from "react"
 import { LoaderCircle } from "lucide-react"
 
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@/components/ui/empty"
+import { AccessStateScreen } from "@/components/access-state-screen"
 import { authenticateWithTelegram } from "@/lib/api"
 import { useTelegram } from "@/hooks/use-telegram"
 import { isLocalMockApiEnabled } from "@/lib/mock-api"
@@ -68,38 +62,17 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
 
   if (state === "outside") {
     return (
-      <AuthState
+      <AccessStateScreen
         title="Открой магазин из Telegram"
         description="Авторизация идёт через Telegram initData. Для локальной разработки можно включить dev auth."
+        icon={<LoaderCircle />}
       />
     )
   }
 
   if (state === "error") {
-    return <AuthState title="Доступ ограничен" description={error} />
+    return <AccessStateScreen title="Доступ ограничен" description={error} />
   }
 
   return <>{children}</>
-}
-
-function AuthState({
-  title,
-  description,
-}: {
-  title: string
-  description: string
-}) {
-  return (
-    <div className="flex min-h-dvh items-center justify-center p-6">
-      <Empty className="max-w-sm">
-        <EmptyMedia variant="icon">
-          <LoaderCircle />
-        </EmptyMedia>
-        <EmptyHeader>
-          <EmptyTitle>{title}</EmptyTitle>
-          <EmptyDescription>{description}</EmptyDescription>
-        </EmptyHeader>
-      </Empty>
-    </div>
-  )
 }
