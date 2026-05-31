@@ -16,40 +16,63 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!ready) return
 
-    if (!isTelegram && isLocalMockApiEnabled()) {
-      authenticateWithTelegram("", true)
-        .then(() => setState("ok"))
-        .catch(() => setState("outside"))
-      return
-    }
+    let cancelled = false
 
-    fetch("/api/me", { credentials: "include" }).then(async (response) => {
+    async function loadMe() {
+      const response = await fetch("/api/me", { credentials: "include" })
       if (response.ok) {
-        setState("ok")
-        return
+        if (!cancelled) setState("ok")
+        return response.status
       }
 
       if (response.status === 403) {
         const body = (await response.json().catch(() => null)) as { error?: string } | null
-        setError(body?.error || "Доступ ограничен")
-        setState("error")
+        if (!cancelled) {
+          setError(body?.error || "Доступ ограничен")
+          setState("error")
+        }
+        return response.status
+      }
+
+      return response.status
+    }
+
+    async function authenticateAndLoad(initDataValue: string, dev = false) {
+      await authenticateWithTelegram(initDataValue, dev)
+      await loadMe()
+    }
+
+    if (!isTelegram && isLocalMockApiEnabled()) {
+      authenticateAndLoad("", true)
+        .catch(() => setState("outside"))
+      return () => {
+        cancelled = true
+      }
+    }
+
+    loadMe().then((status) => {
+      if (status === 200 || status === 403) {
         return
       }
 
       if (!isTelegram) {
-        authenticateWithTelegram("", true)
-          .then(() => setState("ok"))
+        authenticateAndLoad("", true)
           .catch(() => setState("outside"))
         return
       }
 
-      authenticateWithTelegram(initData)
-        .then(() => setState("ok"))
+      authenticateAndLoad(initData)
         .catch((err: unknown) => {
-          setError(err instanceof Error ? err.message : "Auth failed")
-          setState("error")
+          if (!cancelled) {
+            setError(err instanceof Error ? err.message : "Auth failed")
+            setState("error")
+          }
         })
     })
+
+    return () => {
+      cancelled = true
+    }
   }, [initData, isTelegram, ready])
 
   if (state === "loading") {

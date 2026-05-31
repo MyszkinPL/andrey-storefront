@@ -2,7 +2,7 @@ import { PaymentMethodType } from "@prisma/client"
 import { NextResponse } from "next/server"
 import { z } from "zod"
 
-import { requireUser } from "@/lib/auth"
+import { requireInteractiveUser, requireUser } from "@/lib/auth"
 import { createCryptoInvoice } from "@/lib/crypto-pay"
 import { prisma } from "@/lib/prisma"
 
@@ -50,7 +50,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const user = await requireUser()
+    const user = await requireInteractiveUser()
     const payload = schema.parse(await request.json())
 
     if (payload.productId && user.role !== "ADMIN") {

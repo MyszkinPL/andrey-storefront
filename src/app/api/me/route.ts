@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 
-import { getCurrentUser } from "@/lib/auth"
+import { getCurrentUser, hasTelegramUsername, USERNAME_REQUIRED_MESSAGE } from "@/lib/auth"
 import { getServerEnv } from "@/lib/env"
 import { prisma } from "@/lib/prisma"
 
@@ -17,6 +17,10 @@ export async function GET() {
       { status: 403 },
     )
   }
+  if (!hasTelegramUsername(user)) {
+    return NextResponse.json({ error: USERNAME_REQUIRED_MESSAGE }, { status: 403 })
+  }
+
   const env = getServerEnv()
 
   const settings =

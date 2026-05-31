@@ -3,7 +3,7 @@ import { NextResponse } from "next/server"
 import { z } from "zod"
 
 import { createCryptoInvoice, getCryptoInvoice } from "@/lib/crypto-pay"
-import { requireUser } from "@/lib/auth"
+import { requireAdmin, requireInteractiveUser, requireUser } from "@/lib/auth"
 import {
   notifyManualPaymentRejected,
   notifyManualPaymentRequested,
@@ -199,7 +199,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const user = await requireUser()
+    const user = await requireInteractiveUser()
     const { id } = await params
     const payload = schema.parse(await request.json())
 
@@ -493,10 +493,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    await requireUser().then((user) => {
-      if (user.role !== "ADMIN") throw new Error("Forbidden")
-      return user
-    })
+    await requireAdmin()
 
     const { id } = await params
 
