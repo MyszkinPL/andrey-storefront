@@ -5,9 +5,9 @@ import { getCurrentUser, requireAdmin } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 
 const schema = z.object({
-  title: z.string().min(2),
+  title: z.string().trim().min(1),
   category: z.string().optional(),
-  description: z.string().min(8),
+  description: z.string().trim().min(1),
   imageDataUrl: z.string().optional(),
   priceRub: z.number().int().nonnegative(),
   deliveryType: z.enum(["MANUAL", "AUTO_KEY"]),

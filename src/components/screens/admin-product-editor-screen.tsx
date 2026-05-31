@@ -24,7 +24,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty"
-import { Field, FieldDescription, FieldGroup, FieldLabel, FieldTitle } from "@/components/ui/field"
+import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel, FieldTitle } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -200,6 +200,14 @@ export function AdminProductEditorScreen({
 
       <ScreenBody className="mx-auto w-full max-w-2xl">
         <FieldGroup>
+          {mutation.error ? (
+            <Field>
+              <FieldError>
+                {mutation.error instanceof Error ? mutation.error.message : "Товар не сохранился"}
+              </FieldError>
+            </Field>
+          ) : null}
+
           <Card>
             <CardHeader>
               <ProductCoverPreview imageDataUrl={form.imageDataUrl} title={form.title || "Товар"} />
