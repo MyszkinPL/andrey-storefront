@@ -45,11 +45,20 @@ async function getOrderContext(orderId: string) {
 async function sendMany(telegramIds: number[], text: string) {
   if (telegramIds.length === 0) return
   const bot = getBot()
-  await Promise.allSettled(
+  const results = await Promise.allSettled(
     telegramIds.map((telegramId) =>
       bot.api.sendMessage(telegramId, text, { parse_mode: "HTML" }),
     ),
   )
+
+  results.forEach((result, index) => {
+    if (result.status === "rejected") {
+      console.error("Telegram notification failed", {
+        telegramId: telegramIds[index],
+        error: result.reason instanceof Error ? result.reason.message : String(result.reason),
+      })
+    }
+  })
 }
 
 export async function notifyManualPaymentRequested(orderId: string) {
@@ -66,16 +75,20 @@ export async function notifyOrderPaid(orderId: string) {
   const context = await getOrderContext(orderId)
   if (!context) return
 
+  const isAutoKey = context.order.product?.deliveryType === "AUTO_KEY"
   const keyLine = context.order.deliveredKey?.value
-    ? `\nКлюч: <tg-spoiler>${escapeHtml(context.order.deliveredKey.value)}</tg-spoiler>`
+    ? `\nКлюч: <code>${escapeHtml(context.order.deliveredKey.value)}</code>`
     : ""
-  const buyerText = context.order.deliveredKey?.value
-    ? `Оплата подтверждена.\n<b>${escapeHtml(context.title)}</b> · #${context.order.number}\nДоступ выдан.${keyLine}`
-    : `Оплата подтверждена.\n<b>${escapeHtml(context.title)}</b> · #${context.order.number}\nЗаказ передан на выдачу.`
+  let buyerText = `Оплата подтверждена.\n<b>${escapeHtml(context.title)}</b> · #${context.order.number}\nЗаказ передан на выдачу.`
+  let adminText = `Оплата подтверждена.\n<b>${escapeHtml(context.title)}</b> · #${context.order.number}\nПокупатель: ${escapeHtml(context.buyerName)}`
 
-  const adminText = context.order.deliveredKey?.value
-    ? `Оплата подтверждена.\n<b>${escapeHtml(context.title)}</b> · #${context.order.number}\nПокупатель: ${escapeHtml(context.buyerName)}\nКлюч выдан автоматически.`
-    : `Оплата подтверждена.\n<b>${escapeHtml(context.title)}</b> · #${context.order.number}\nПокупатель: ${escapeHtml(context.buyerName)}`
+  if (context.order.deliveredKey?.value) {
+    buyerText = `Оплата подтверждена.\n<b>${escapeHtml(context.title)}</b> · #${context.order.number}\nДоступ выдан.${keyLine}`
+    adminText = `Оплата подтверждена.\n<b>${escapeHtml(context.title)}</b> · #${context.order.number}\nПокупатель: ${escapeHtml(context.buyerName)}\nКлюч выдан автоматически.`
+  } else if (isAutoKey) {
+    buyerText = `Оплата подтверждена.\n<b>${escapeHtml(context.title)}</b> · #${context.order.number}\nСвободные ключи закончились. Заказ передан на ручную выдачу.`
+    adminText = `Оплата подтверждена.\n<b>${escapeHtml(context.title)}</b> · #${context.order.number}\nПокупатель: ${escapeHtml(context.buyerName)}\nСвободные ключи закончились. Нужна ручная выдача.`
+  }
 
   await Promise.allSettled([
     sendMany([context.buyerTelegramId], buyerText),

@@ -145,33 +145,46 @@ async function ensureBootstrapData() {
 
     const existing = await prisma.product.findFirst({
       where: { title: "DRIP LITE LIFETIME" },
+      include: {
+        specs: {
+          select: { id: true },
+          take: 1,
+        },
+      },
     })
 
     if (existing) {
-      await prisma.$transaction([
-        prisma.product.update({
+      const productUpdate = {}
+
+      if (!existing.category) productUpdate.category = "майнкрафт"
+      if (!existing.description?.trim()) productUpdate.description = description
+      if (!existing.priceRub || existing.priceRub < 0) productUpdate.priceRub = 4990
+
+      const operations = []
+
+      if (Object.keys(productUpdate).length > 0) {
+        operations.push(prisma.product.update({
           where: { id: existing.id },
-          data: {
-            category: "майнкрафт",
-            description,
-            priceRub: 4990,
-            deliveryType: "MANUAL",
-            isActive: true,
-            sortOrder: 0,
-          },
-        }),
-        prisma.productSpec.deleteMany({
-          where: { productId: existing.id },
-        }),
-        prisma.productSpec.createMany({
-          data: specs.map(([label, value], index) => ({
-            productId: existing.id,
-            label,
-            value,
-            sortOrder: index,
-          })),
-        }),
-      ])
+          data: productUpdate,
+        }))
+      }
+
+      if (existing.specs.length === 0) {
+        operations.push(
+          prisma.productSpec.createMany({
+            data: specs.map(([label, value], index) => ({
+              productId: existing.id,
+              label,
+              value,
+              sortOrder: index,
+            })),
+          }),
+        )
+      }
+
+      if (operations.length > 0) {
+        await prisma.$transaction(operations)
+      }
     } else {
       await prisma.product.create({
         data: {
