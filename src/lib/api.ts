@@ -425,6 +425,12 @@ export function updateAdminProduct(
   })
 }
 
+export function deleteAdminProduct(id: string) {
+  return api<{ ok: true }>(`/api/products/${id}`, {
+    method: "DELETE",
+  })
+}
+
 export function saveSettings(payload: ShopSettingsPayload) {
   return api<{ ok: true }>("/api/admin/settings", {
     method: "POST",

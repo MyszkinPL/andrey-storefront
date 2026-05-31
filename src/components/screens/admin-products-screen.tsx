@@ -1,13 +1,24 @@
 "use client"
 
 import Link from "next/link"
-import { useMemo } from "react"
-import { useQuery } from "@tanstack/react-query"
-import { CopyPlus, ImagePlus, PackagePlus, PencilLine } from "lucide-react"
+import { useMemo, useState } from "react"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { CopyPlus, ImagePlus, PackagePlus, PencilLine, Trash2 } from "lucide-react"
 
 import { AccessStateScreen } from "@/components/access-state-screen"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogMedia,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
-import { buttonVariants } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import {
   Empty,
@@ -25,13 +36,25 @@ import {
   ItemMedia,
   ItemTitle,
 } from "@/components/ui/item"
+import { Field, FieldError } from "@/components/ui/field"
 import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
-import { getMe, getProducts } from "@/lib/api"
+import { deleteAdminProduct, getMe, getProducts } from "@/lib/api"
+
+type AdminProduct = Awaited<ReturnType<typeof getProducts>>["products"][number]
 
 export function AdminProductsScreen() {
+  const queryClient = useQueryClient()
+  const [deleteProduct, setDeleteProduct] = useState<AdminProduct | null>(null)
   const { data: meData } = useQuery({ queryKey: ["me"], queryFn: getMe })
   const { data } = useQuery({ queryKey: ["products"], queryFn: getProducts })
   const products = useMemo(() => data?.products ?? [], [data?.products])
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteAdminProduct(id),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["products"] })
+      setDeleteProduct(null)
+    },
+  })
 
   if (meData && meData.user.role !== "ADMIN") {
     return (
@@ -103,12 +126,59 @@ export function AdminProductsScreen() {
                   >
                     <CopyPlus />
                   </Link>
+                  <Button
+                    size="icon-sm"
+                    variant="destructive"
+                    aria-label="Удалить товар"
+                    onClick={() => setDeleteProduct(product)}
+                  >
+                    <Trash2 />
+                  </Button>
                 </ItemActions>
               </Item>
             ))}
           </ItemGroup>
         )}
       </ScreenBody>
+
+      <AlertDialog
+        open={Boolean(deleteProduct)}
+        onOpenChange={(open) => {
+          if (!open && !deleteMutation.isPending) setDeleteProduct(null)
+        }}
+      >
+        <AlertDialogContent size="sm">
+          <AlertDialogHeader>
+            <AlertDialogMedia>
+              <Trash2 />
+            </AlertDialogMedia>
+            <AlertDialogTitle>Удалить товар?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Карточка исчезнет из каталога. История заказов сохранит название, цену и уже выданные ключи.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {deleteMutation.error ? (
+            <Field>
+              <FieldError>
+                {deleteMutation.error instanceof Error ? deleteMutation.error.message : "Товар не удалился"}
+              </FieldError>
+            </Field>
+          ) : null}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteMutation.isPending}>Отмена</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={!deleteProduct || deleteMutation.isPending}
+              onClick={() => {
+                if (deleteProduct) deleteMutation.mutate(deleteProduct.id)
+              }}
+            >
+              <Trash2 data-icon="inline-start" />
+              {deleteMutation.isPending ? "Удаляю..." : "Удалить"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Screen>
   )
 }
@@ -130,7 +200,7 @@ function ProductThumbnail({
   return <ImagePlus />
 }
 
-function renderDelivery(product: Awaited<ReturnType<typeof getProducts>>["products"][number]) {
+function renderDelivery(product: AdminProduct) {
   if (product.deliveryType === "AUTO_KEY") {
     return `${product.availableKeyCount || 0} ключей`
   }

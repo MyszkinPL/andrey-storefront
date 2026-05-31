@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { LoaderCircle } from "lucide-react"
 
 import { AccessStateScreen } from "@/components/access-state-screen"
-import { authenticateWithTelegram } from "@/lib/api"
+import { ApiError, authenticateWithTelegram, getMe } from "@/lib/api"
 import { useTelegram } from "@/hooks/use-telegram"
 import { isLocalMockApiEnabled } from "@/lib/mock-api"
 
@@ -19,27 +19,27 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     let cancelled = false
 
     async function loadMe() {
-      const response = await fetch("/api/me", { credentials: "include" })
-      if (response.ok) {
+      try {
+        await getMe()
         if (!cancelled) setState("ok")
-        return response.status
-      }
-
-      if (response.status === 403) {
-        const body = (await response.json().catch(() => null)) as { error?: string } | null
-        if (!cancelled) {
-          setError(body?.error || "Доступ ограничен")
-          setState("error")
+        return 200
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 403) {
+          if (!cancelled) {
+            setError(err.message || "Доступ ограничен")
+            setState("error")
+          }
+          return err.status
         }
-        return response.status
-      }
 
-      return response.status
+        return err instanceof ApiError ? err.status : 500
+      }
     }
 
     async function authenticateAndLoad(initDataValue: string, dev = false) {
       await authenticateWithTelegram(initDataValue, dev)
-      await loadMe()
+      const status = await loadMe()
+      if (status !== 200 && status !== 403 && !cancelled) setState("outside")
     }
 
     if (!isTelegram && isLocalMockApiEnabled()) {

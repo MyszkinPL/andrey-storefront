@@ -3,7 +3,7 @@ import { DeliveryType, Prisma, OrderStatus } from "@prisma/client"
 type Tx = Prisma.TransactionClient
 
 async function issueAutoKey(tx: Tx, orderId: string, productId: string | null) {
-  if (!productId) return false
+  if (!productId) return null
 
   const freeKey = await tx.productKey.findFirst({
     where: {
@@ -14,7 +14,7 @@ async function issueAutoKey(tx: Tx, orderId: string, productId: string | null) {
     orderBy: { createdAt: "asc" },
   })
 
-  if (!freeKey) return false
+  if (!freeKey) return null
 
   const issuedAt = new Date()
   const result = await tx.productKey.updateMany({
@@ -29,7 +29,7 @@ async function issueAutoKey(tx: Tx, orderId: string, productId: string | null) {
     },
   })
 
-  return result.count > 0
+  return result.count > 0 ? freeKey.value : null
 }
 
 export async function confirmOrderPaymentFlow(
@@ -45,11 +45,13 @@ export async function confirmOrderPaymentFlow(
   if (!order) return order
 
   const isAutoKey = order.product?.deliveryType === DeliveryType.AUTO_KEY
-  let hasDeliveredKey = Boolean(order.deliveredKey)
+  let deliveredKeyValue = order.deliveredKey?.value || order.deliveredKeyValue || null
 
-  if (isAutoKey && !hasDeliveredKey) {
-    hasDeliveredKey = await issueAutoKey(tx, orderId, order.productId)
+  if (isAutoKey && !deliveredKeyValue) {
+    deliveredKeyValue = await issueAutoKey(tx, orderId, order.productId)
   }
+
+  const hasDeliveredKey = Boolean(deliveredKeyValue)
 
   if (order.isPaid) {
     if (isAutoKey) {
@@ -58,6 +60,7 @@ export async function confirmOrderPaymentFlow(
         data: {
           status: hasDeliveredKey ? OrderStatus.CLOSED : OrderStatus.OPEN,
           closedAt: hasDeliveredKey ? new Date() : null,
+          deliveredKeyValue,
         },
       })
     }
@@ -79,6 +82,7 @@ export async function confirmOrderPaymentFlow(
       status: nextStatus,
       assignedToId: adminUserId,
       closedAt: nextStatus === OrderStatus.CLOSED ? new Date() : null,
+      deliveredKeyValue,
     },
   })
 

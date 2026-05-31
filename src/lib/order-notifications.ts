@@ -28,7 +28,7 @@ async function getOrderContext(orderId: string) {
 
   if (!order) return null
 
-  const title = order.product?.title || order.subject || `Заказ #${order.number}`
+  const title = order.product?.title || order.productTitleSnapshot || order.subject || `Заказ #${order.number}`
   const buyerName = order.createdBy.username
     ? `@${order.createdBy.username}`
     : order.createdBy.firstName
@@ -76,13 +76,14 @@ export async function notifyOrderPaid(orderId: string) {
   if (!context) return
 
   const isAutoKey = context.order.product?.deliveryType === "AUTO_KEY"
-  const keyLine = context.order.deliveredKey?.value
-    ? `\nКлюч: <code>${escapeHtml(context.order.deliveredKey.value)}</code>`
+  const deliveredKey = context.order.deliveredKey?.value || context.order.deliveredKeyValue || ""
+  const keyLine = deliveredKey
+    ? `\nКлюч: <code>${escapeHtml(deliveredKey)}</code>`
     : ""
   let buyerText = `Оплата подтверждена.\n<b>${escapeHtml(context.title)}</b> · #${context.order.number}\nЗаказ передан на выдачу.`
   let adminText = `Оплата подтверждена.\n<b>${escapeHtml(context.title)}</b> · #${context.order.number}\nПокупатель: ${escapeHtml(context.buyerName)}`
 
-  if (context.order.deliveredKey?.value) {
+  if (deliveredKey) {
     buyerText = `Оплата подтверждена.\n<b>${escapeHtml(context.title)}</b> · #${context.order.number}\nДоступ выдан.${keyLine}`
     adminText = `Оплата подтверждена.\n<b>${escapeHtml(context.title)}</b> · #${context.order.number}\nПокупатель: ${escapeHtml(context.buyerName)}\nКлюч выдан автоматически.`
   } else if (isAutoKey) {

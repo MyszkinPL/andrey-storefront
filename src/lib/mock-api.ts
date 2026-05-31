@@ -250,6 +250,11 @@ export async function mockApi<T>(input: RequestInfo, init?: RequestInit): Promis
       persistMockState()
       return { ok: true } as T
     }
+    if (method === "DELETE" && productIndex >= 0) {
+      products = products.filter((_, index) => index !== productIndex)
+      persistMockState()
+      return { ok: true } as T
+    }
 
     return { ok: true } as T
   }
@@ -649,7 +654,7 @@ function orderListItem(order: (typeof orders)[number]) {
     paymentMethodTitle: order.paymentMethodTitle,
     paymentMethodType: order.paymentMethodType,
     manualPaymentRequestedAt: order.manualPaymentRequestedAt,
-    priceRub: products.find((product) => product.title === order.productTitle)?.priceRub || null,
+    priceRub: order.priceRub || products.find((product) => product.title === order.productTitle)?.priceRub || null,
   }
 }
 

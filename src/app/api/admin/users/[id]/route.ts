@@ -84,8 +84,11 @@ export async function PATCH(
       const activeOrders = await prisma.order.findMany({
         where: {
           createdById: id,
-          productId: { not: null },
           status: { notIn: ["CLOSED", "CANCELLED"] },
+          OR: [
+            { productId: { not: null } },
+            { productTitleSnapshot: { not: null } },
+          ],
         },
         select: {
           id: true,
@@ -97,8 +100,11 @@ export async function PATCH(
           await tx.order.updateMany({
             where: {
               createdById: id,
-              productId: { not: null },
               status: { notIn: ["CLOSED", "CANCELLED"] },
+              OR: [
+                { productId: { not: null } },
+                { productTitleSnapshot: { not: null } },
+              ],
             },
             data: {
               status: "CANCELLED",
@@ -131,7 +137,10 @@ export async function GET(
       include: {
         orders: {
           where: {
-            productId: { not: null },
+            OR: [
+              { productId: { not: null } },
+              { productTitleSnapshot: { not: null } },
+            ],
           },
           include: {
             product: true,
@@ -145,8 +154,11 @@ export async function GET(
           select: {
             orders: {
               where: {
-                productId: { not: null },
                 status: { notIn: ["CLOSED", "CANCELLED"] },
+                OR: [
+                  { productId: { not: null } },
+                  { productTitleSnapshot: { not: null } },
+                ],
               },
             },
           },
@@ -177,9 +189,9 @@ export async function GET(
           status: order.status,
           isPaid: order.isPaid,
           updatedAt: order.updatedAt.toISOString(),
-          productTitle: order.product?.title || null,
-          productCategory: order.product?.category || null,
-          priceRub: order.product?.priceRub || null,
+          productTitle: order.product?.title || order.productTitleSnapshot || null,
+          productCategory: order.product?.category || order.productCategorySnapshot || null,
+          priceRub: order.product?.priceRub ?? order.priceRubSnapshot ?? null,
         })),
       },
     })

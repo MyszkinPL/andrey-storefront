@@ -7,6 +7,17 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { ImagePlus, KeyRound, Plus, Trash2 } from "lucide-react"
 
 import { AccessStateScreen } from "@/components/access-state-screen"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogMedia,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { AspectRatio } from "@/components/ui/aspect-ratio"
 import { Button } from "@/components/ui/button"
 import {
@@ -32,7 +43,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
 import { useBackButton } from "@/hooks/use-telegram"
-import { getMe, getProduct, getProducts, saveAdminProduct, updateAdminProduct } from "@/lib/api"
+import { deleteAdminProduct, getMe, getProduct, getProducts, saveAdminProduct, updateAdminProduct } from "@/lib/api"
 import { optimizeSquareImage } from "@/lib/image"
 
 type SpecForm = {
@@ -79,6 +90,7 @@ export function AdminProductEditorScreen({
   const queryClient = useQueryClient()
   const [form, setForm] = useState<ProductForm>(emptyForm)
   const [uploading, setUploading] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
   const sourceProductId = productId || copyProductId || ""
 
   const { data: meData } = useQuery({ queryKey: ["me"], queryFn: getMe })
@@ -156,6 +168,15 @@ export function AdminProductEditorScreen({
     },
   })
 
+  const deleteMutation = useMutation({
+    mutationFn: () => deleteAdminProduct(productId || ""),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["products"] })
+      if (productId) await queryClient.invalidateQueries({ queryKey: ["admin-product-editor", productId] })
+      router.replace("/admin/products")
+    },
+  })
+
   useBackButton(() => router.push("/admin/products"))
 
   async function handleImageChange(file: File | null) {
@@ -192,9 +213,22 @@ export function AdminProductEditorScreen({
         title={productId ? "Редактирование" : copyProductId ? "Дубликат товара" : "Новый товар"}
         subtitle="Карточка, выдача и ключи"
         trailing={
-          <Button size="sm" disabled={!canSave || mutation.isPending} onClick={() => mutation.mutate()}>
-            {mutation.isPending ? "Сохраняю..." : "Сохранить"}
-          </Button>
+          <div className="flex items-center gap-2">
+            {productId ? (
+              <Button
+                size="sm"
+                variant="destructive"
+                disabled={deleteMutation.isPending}
+                onClick={() => setDeleteOpen(true)}
+              >
+                <Trash2 data-icon="inline-start" />
+                Удалить
+              </Button>
+            ) : null}
+            <Button size="sm" disabled={!canSave || mutation.isPending} onClick={() => mutation.mutate()}>
+              {mutation.isPending ? "Сохраняю..." : "Сохранить"}
+            </Button>
+          </div>
         }
       />
 
@@ -204,6 +238,13 @@ export function AdminProductEditorScreen({
             <Field>
               <FieldError>
                 {mutation.error instanceof Error ? mutation.error.message : "Товар не сохранился"}
+              </FieldError>
+            </Field>
+          ) : null}
+          {deleteMutation.error ? (
+            <Field>
+              <FieldError>
+                {deleteMutation.error instanceof Error ? deleteMutation.error.message : "Товар не удалился"}
               </FieldError>
             </Field>
           ) : null}
@@ -380,6 +421,36 @@ export function AdminProductEditorScreen({
           ) : null}
         </FieldGroup>
       </ScreenBody>
+
+      <AlertDialog
+        open={deleteOpen}
+        onOpenChange={(open) => {
+          if (!open && !deleteMutation.isPending) setDeleteOpen(false)
+        }}
+      >
+        <AlertDialogContent size="sm">
+          <AlertDialogHeader>
+            <AlertDialogMedia>
+              <Trash2 />
+            </AlertDialogMedia>
+            <AlertDialogTitle>Удалить товар?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Карточка исчезнет из каталога. История заказов сохранит название, цену и уже выданные ключи.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteMutation.isPending}>Отмена</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={!productId || deleteMutation.isPending}
+              onClick={() => deleteMutation.mutate()}
+            >
+              <Trash2 data-icon="inline-start" />
+              {deleteMutation.isPending ? "Удаляю..." : "Удалить"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Screen>
   )
 }

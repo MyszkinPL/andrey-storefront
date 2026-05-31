@@ -29,36 +29,36 @@ enum PaymentMethodType {
 }
 
 model User {
-  id         String          @id @default(cuid())
-  telegramId BigInt          @unique
+  id         String    @id @default(cuid())
+  telegramId BigInt    @unique
   username   String?
   firstName  String
   lastName   String?
   photoUrl   String?
-  role       Role            @default(USER)
-  isBanned   Boolean         @default(false)
+  role       Role      @default(USER)
+  isBanned   Boolean   @default(false)
   bannedAt   DateTime?
   banReason  String?
-  createdAt  DateTime        @default(now())
-  updatedAt  DateTime        @updatedAt
-  orders    Order[]        @relation("OrderAuthor")
-  assigned   Order[]        @relation("OrderAssignee")
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  orders     Order[]   @relation("OrderAuthor")
+  assigned   Order[]   @relation("OrderAssignee")
 }
 
 model Product {
-  id           String       @id @default(cuid())
-  slug         String       @unique
+  id           String        @id @default(cuid())
+  slug         String        @unique
   title        String
   category     String?
   description  String
   imageDataUrl String?
   priceRub     Int
-  deliveryType DeliveryType @default(MANUAL)
-  isActive     Boolean      @default(true)
-  sortOrder    Int          @default(0)
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
-  orders      Order[]
+  deliveryType DeliveryType  @default(MANUAL)
+  isActive     Boolean       @default(true)
+  sortOrder    Int           @default(0)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  orders       Order[]
   keys         ProductKey[]
   specs        ProductSpec[]
 }
@@ -80,41 +80,45 @@ model ProductKey {
   value           String
   createdAt       DateTime  @default(now())
   issuedAt        DateTime?
-  issuedToOrderId String?  @unique
+  issuedToOrderId String?   @unique
   product         Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
-  issuedToOrder   Order?   @relation(fields: [issuedToOrderId], references: [id])
+  issuedToOrder   Order?    @relation(fields: [issuedToOrderId], references: [id])
 }
 
 model Order {
-  id               String          @id @default(cuid())
-  number           Int             @unique @default(autoincrement())
-  subject          String
-  status           OrderStatus    @default(OPEN)
-  createdById      String
-  assignedToId     String?
-  productId        String?
-  paymentMethodId  String?
-  paymentMethodType PaymentMethodType?
-  paymentMethodTitle String?
-  paymentMethodDetails String?
+  id                       String             @id @default(cuid())
+  number                   Int                @unique @default(autoincrement())
+  subject                  String
+  status                   OrderStatus        @default(OPEN)
+  createdById              String
+  assignedToId             String?
+  productId                String?
+  productTitleSnapshot     String?
+  productCategorySnapshot  String?
+  priceRubSnapshot         Int?
+  paymentMethodId          String?
+  paymentMethodType        PaymentMethodType?
+  paymentMethodTitle       String?
+  paymentMethodDetails     String?
   paymentMethodIconDataUrl String?
-  isPaid           Boolean         @default(false)
-  cryptoInvoiceId  String?
-  cryptoInvoiceUrl String?
-  cryptoInvoiceStatus String?
-  cryptoInvoiceAsset String?
-  cryptoInvoiceAmount String?
-  cryptoInvoiceExpiresAt DateTime?
-  paymentConfirmedAt DateTime?
+  deliveredKeyValue        String?
+  isPaid                   Boolean            @default(false)
+  cryptoInvoiceId          String?
+  cryptoInvoiceUrl         String?
+  cryptoInvoiceStatus      String?
+  cryptoInvoiceAsset       String?
+  cryptoInvoiceAmount      String?
+  cryptoInvoiceExpiresAt   DateTime?
+  paymentConfirmedAt       DateTime?
   manualPaymentRequestedAt DateTime?
-  createdAt        DateTime        @default(now())
-  updatedAt        DateTime        @updatedAt
-  closedAt         DateTime?
-  createdBy        User            @relation("OrderAuthor", fields: [createdById], references: [id])
-  assignedTo       User?           @relation("OrderAssignee", fields: [assignedToId], references: [id])
-  product          Product?        @relation(fields: [productId], references: [id])
-  paymentMethod    PaymentMethod?  @relation(fields: [paymentMethodId], references: [id], onDelete: SetNull)
-  deliveredKey     ProductKey?
+  createdAt                DateTime           @default(now())
+  updatedAt                DateTime           @updatedAt
+  closedAt                 DateTime?
+  createdBy                User               @relation("OrderAuthor", fields: [createdById], references: [id])
+  assignedTo               User?              @relation("OrderAssignee", fields: [assignedToId], references: [id])
+  product                  Product?           @relation(fields: [productId], references: [id], onDelete: SetNull)
+  paymentMethod            PaymentMethod?     @relation(fields: [paymentMethodId], references: [id], onDelete: SetNull)
+  deliveredKey             ProductKey?
 }
 
 model PaymentMethod {
@@ -128,7 +132,7 @@ model PaymentMethod {
   sortOrder            Int               @default(0)
   createdAt            DateTime          @default(now())
   updatedAt            DateTime          @updatedAt
-  orders              Order[]
+  orders               Order[]
 }
 
 model ShopSettings {

@@ -49,7 +49,10 @@ export async function GET(request: Request) {
         include: {
           orders: {
             where: {
-              productId: { not: null },
+              OR: [
+                { productId: { not: null } },
+                { productTitleSnapshot: { not: null } },
+              ],
             },
             orderBy: { createdAt: "desc" },
             select: {
@@ -59,6 +62,9 @@ export async function GET(request: Request) {
               isPaid: true,
               createdAt: true,
               updatedAt: true,
+              productTitleSnapshot: true,
+              productCategorySnapshot: true,
+              priceRubSnapshot: true,
               product: {
                 select: {
                   title: true,
@@ -122,9 +128,9 @@ export async function GET(request: Request) {
           isPaid: order.isPaid,
           createdAt: order.createdAt.toISOString(),
           updatedAt: order.updatedAt.toISOString(),
-          productTitle: order.product?.title || null,
-          productCategory: order.product?.category || null,
-          priceRub: order.product?.priceRub || null,
+          productTitle: order.product?.title || order.productTitleSnapshot || null,
+          productCategory: order.product?.category || order.productCategorySnapshot || null,
+          priceRub: order.product?.priceRub ?? order.priceRubSnapshot ?? null,
         })),
       })),
     })

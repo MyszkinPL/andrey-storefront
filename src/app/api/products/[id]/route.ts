@@ -170,3 +170,66 @@ export async function PATCH(
     )
   }
 }
+
+export async function DELETE(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    await requireAdmin()
+    const { id } = await params
+
+    const product = await prisma.product.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        title: true,
+        category: true,
+        priceRub: true,
+      },
+    })
+
+    if (!product) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 })
+    }
+
+    await prisma.$transaction(async (tx) => {
+      const orders = await tx.order.findMany({
+        where: { productId: id },
+        select: {
+          id: true,
+          deliveredKeyValue: true,
+          deliveredKey: {
+            select: {
+              value: true,
+            },
+          },
+        },
+      })
+
+      for (const order of orders) {
+        await tx.order.update({
+          where: { id: order.id },
+          data: {
+            productId: null,
+            productTitleSnapshot: product.title,
+            productCategorySnapshot: product.category,
+            priceRubSnapshot: product.priceRub,
+            deliveredKeyValue: order.deliveredKey?.value || order.deliveredKeyValue,
+          },
+        })
+      }
+
+      await tx.product.delete({
+        where: { id },
+      })
+    })
+
+    return NextResponse.json({ ok: true })
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Delete failed" },
+      { status: 400 },
+    )
+  }
+}
