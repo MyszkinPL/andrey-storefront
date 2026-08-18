@@ -18,7 +18,6 @@ import {
   AlertDialogMedia,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { AspectRatio } from "@/components/ui/aspect-ratio"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -554,7 +553,7 @@ function ProductCoverPreview({
   title: string
 }) {
   return (
-    <AspectRatio ratio={1} className="mx-auto w-full max-w-48 overflow-hidden">
+    <div className="mx-auto aspect-square w-full max-w-48 overflow-hidden">
       {imageDataUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={imageDataUrl} alt={title} className="size-full object-cover" />
@@ -565,7 +564,7 @@ function ProductCoverPreview({
           </EmptyMedia>
         </Empty>
       )}
-    </AspectRatio>
+    </div>
   )
 }
 

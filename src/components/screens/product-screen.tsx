@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { KeyRound, PackageSearch, ShoppingBag } from "lucide-react"
 
-import { AspectRatio } from "@/components/ui/aspect-ratio"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -236,7 +235,7 @@ function ProductImage({
   title: string
 }) {
   return (
-    <AspectRatio ratio={1} className="mx-auto w-full max-w-64 overflow-hidden">
+    <div className="mx-auto aspect-square w-full max-w-64 overflow-hidden">
       {imageDataUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={imageDataUrl} alt={title} className="size-full object-cover" />
@@ -247,7 +246,7 @@ function ProductImage({
           </EmptyMedia>
         </Empty>
       )}
-    </AspectRatio>
+    </div>
   )
 }
 
