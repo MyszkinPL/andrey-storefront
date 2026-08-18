@@ -24,6 +24,7 @@ import {
 import type { PaymentOption } from "@/components/order-detail/types"
 import { ReceiptStatus, ReceiptUpload } from "@/components/receipt-upload"
 import { useI18n } from "@/components/i18n-provider"
+import { useNotify } from "@/hooks/use-notify"
 import { formatDateTime, formatInvoiceAmount, formatPrice } from "@/lib/format"
 import { Badge } from "@/components/ui/badge"
 import { Button, buttonVariants } from "@/components/ui/button"
@@ -61,6 +62,7 @@ import { cn } from "@/lib/utils"
 export function OrderDetailScreen({ orderId }: { orderId: string }) {
   const router = useRouter()
   const { t, locale, currency } = useI18n()
+  const notify = useNotify()
   const queryClient = useQueryClient()
   const { mode } = useMode()
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
@@ -93,15 +95,27 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
 
   const confirmMutation = useMutation({
     mutationFn: () => confirmOrderPayment(orderId),
-    onSuccess: invalidate,
+    onError: notify.failure,
+    onSuccess: async () => {
+      notify.success("uiNotify.paymentConfirmed")
+      await invalidate()
+    },
   })
   const rejectManualPaymentMutation = useMutation({
     mutationFn: () => rejectManualOrderPayment(orderId),
-    onSuccess: invalidate,
+    onError: notify.failure,
+    onSuccess: async () => {
+      notify.success("uiNotify.paymentRejected")
+      await invalidate()
+    },
   })
   const cancelOrderMutation = useMutation({
     mutationFn: () => cancelOwnOrder(orderId),
-    onSuccess: invalidate,
+    onError: notify.failure,
+    onSuccess: async () => {
+      notify.success("uiNotify.orderCancelled")
+      await invalidate()
+    },
   })
   const refreshMutation = useMutation({
     mutationFn: () => refreshCryptoInvoice(orderId),
@@ -109,7 +123,11 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
   })
   const markManualPaidMutation = useMutation({
     mutationFn: () => markManualOrderPaid(orderId),
-    onSuccess: invalidate,
+    onError: notify.failure,
+    onSuccess: async () => {
+      notify.success("uiNotify.markedPaid")
+      await invalidate()
+    },
   })
   const changePaymentMethodMutation = useMutation({
     mutationFn: (payload: { paymentMethodId?: string; paymentMethodType?: PaymentMethodType }) =>
@@ -126,7 +144,9 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
   })
   const deleteOrderMutation = useMutation({
     mutationFn: () => deleteAdminOrder(orderId),
+    onError: notify.failure,
     onSuccess: async () => {
+      notify.success("uiNotify.deleted")
       await queryClient.invalidateQueries({ queryKey: ["orders"] })
       router.push("/admin/orders")
     },

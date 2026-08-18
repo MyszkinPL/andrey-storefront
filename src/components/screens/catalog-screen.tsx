@@ -101,6 +101,7 @@ export function CatalogScreen() {
                 <Search />
               </InputGroupAddon>
               <InputGroupInput
+                aria-label={t("catalog.searchPlaceholder")}
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder={t("catalog.searchPlaceholder")}

@@ -43,12 +43,14 @@ import { ListGroup, ListRow, ListRowMedia } from "@/components/list-row"
 import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
 import { useBackButton } from "@/hooks/use-telegram"
 import { useI18n } from "@/components/i18n-provider"
+import { useNotify } from "@/hooks/use-notify"
 import { formatPrice } from "@/lib/format"
 import type { TranslationKey } from "@/lib/i18n"
 import { getAdminUser, getMe, updateAdminUserModeration } from "@/lib/api"
 
 export function AdminUserDetailScreen({ userId }: { userId: string }) {
   const { t, tp, locale, currency } = useI18n()
+  const notify = useNotify()
   const router = useRouter()
   const queryClient = useQueryClient()
   const [confirmBanOpen, setConfirmBanOpen] = useState(false)
@@ -64,7 +66,15 @@ export function AdminUserDetailScreen({ userId }: { userId: string }) {
   const moderationMutation = useMutation({
     mutationFn: (payload: { isBanned?: boolean; role?: "USER" | "ADMIN" }) =>
       updateAdminUserModeration(userId, payload),
-    onSuccess: async () => {
+    onError: notify.failure,
+    onSuccess: async (_result, payload) => {
+      notify.success(
+        payload.role
+          ? "uiNotify.roleChanged"
+          : payload.isBanned
+            ? "uiNotify.userBanned"
+            : "uiNotify.userUnbanned",
+      )
       setConfirmBanOpen(false)
       setConfirmRole(null)
       await queryClient.invalidateQueries({ queryKey: ["admin-user", userId] })
@@ -197,11 +207,6 @@ export function AdminUserDetailScreen({ userId }: { userId: string }) {
                 <FieldLabel>{t("adminUserDetail.activeOrders")}</FieldLabel>
                 <FieldDescription className="text-right">{user.activeOrderCount}</FieldDescription>
               </Field>
-              {moderationMutation.error ? (
-                <Field>
-                  <FieldDescription>{moderationMutation.error.message}</FieldDescription>
-                </Field>
-              ) : null}
             </FieldGroup>
           </CardContent>
         </Card>

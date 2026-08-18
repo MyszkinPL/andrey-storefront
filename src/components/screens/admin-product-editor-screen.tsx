@@ -529,6 +529,7 @@ function SpecEditor({
       </Field>
       <Field>
         <Input
+          aria-label={t("adminProductEditor.specName")}
           id={`product-spec-label-${index}`}
           value={spec.label}
           onChange={(event) =>
@@ -544,6 +545,7 @@ function SpecEditor({
       </Field>
       <Field>
         <Input
+          aria-label={t("adminProductEditor.specValue")}
           id={`product-spec-value-${index}`}
           value={spec.value}
           onChange={(event) =>

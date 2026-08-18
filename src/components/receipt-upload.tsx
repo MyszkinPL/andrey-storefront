@@ -12,7 +12,7 @@ import {
   FieldDescription,
   FieldTitle,
 } from "@/components/ui/field"
-import { useHaptic } from "@/hooks/use-telegram"
+import { useNotify } from "@/hooks/use-notify"
 import { uploadOrderReceipt } from "@/lib/api"
 import { RECEIPT_MAX_MB, validateReceiptFile } from "@/lib/receipt-constants"
 
@@ -79,14 +79,14 @@ export function ReceiptUpload({
   onUploaded: () => void
 }) {
   const { t, locale } = useI18n()
-  const haptic = useHaptic()
+  const notify = useNotify()
   const inputRef = useRef<HTMLInputElement>(null)
   const [error, setError] = useState("")
 
   const mutation = useMutation({
     mutationFn: (file: File) => uploadOrderReceipt(orderId, file),
     onSuccess: () => {
-      haptic.success()
+      notify.success("uiNotify.receiptUploaded")
       setError("")
       onUploaded()
     },

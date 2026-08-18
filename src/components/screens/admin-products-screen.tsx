@@ -6,17 +6,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { CopyPlus, ImagePlus, PackagePlus, PencilLine, Trash2 } from "lucide-react"
 
 import { AccessStateScreen } from "@/components/access-state-screen"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogMedia,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -28,9 +17,9 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty"
 import { ListGroup, ListRow, ListRowMedia } from "@/components/list-row"
-import { Field, FieldError } from "@/components/ui/field"
 import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
 import { useI18n } from "@/components/i18n-provider"
+import { ResponsiveDialog } from "@/components/responsive-dialog"
 import { deleteAdminProduct, getMe, getProducts } from "@/lib/api"
 import { formatPrice } from "@/lib/format"
 
@@ -147,44 +136,22 @@ export function AdminProductsScreen() {
         )}
       </ScreenBody>
 
-      <AlertDialog
-        open={Boolean(deleteProduct)}
-        onOpenChange={(open) => {
-          if (!open && !deleteMutation.isPending) setDeleteProduct(null)
+      <ResponsiveDialog
+        confirmLabel={
+          deleteMutation.isPending ? t("adminProducts.deleting") : t("common.delete")
+        }
+        confirmVariant="destructive"
+        description={t("adminProducts.deleteDescription")}
+        loading={deleteMutation.isPending}
+        onConfirm={() => {
+          if (deleteProduct) deleteMutation.mutate(deleteProduct.id)
         }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogMedia>
-              <Trash2 />
-            </AlertDialogMedia>
-            <AlertDialogTitle>{t("adminProducts.deleteTitle")}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t("adminProducts.deleteDescription")}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          {deleteMutation.error ? (
-            <Field>
-              <FieldError>
-                {deleteMutation.error instanceof Error ? deleteMutation.error.message : t("adminProducts.deleteFailed")}
-              </FieldError>
-            </Field>
-          ) : null}
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleteMutation.isPending}>{t("common.cancel")}</AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              disabled={!deleteProduct || deleteMutation.isPending}
-              onClick={() => {
-                if (deleteProduct) deleteMutation.mutate(deleteProduct.id)
-              }}
-            >
-              <Trash2 data-icon="inline-start" />
-              {deleteMutation.isPending ? t("adminProducts.deleting") : t("common.delete")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        onOpenChange={(open) => {
+          if (!open) setDeleteProduct(null)
+        }}
+        open={Boolean(deleteProduct)}
+        title={t("adminProducts.deleteTitle")}
+      />
     </Screen>
   )
 }

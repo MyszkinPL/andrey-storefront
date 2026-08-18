@@ -47,6 +47,7 @@ import { Switch } from "@/components/ui/switch"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
 import { useTranslate } from "@/components/i18n-provider"
+import { useNotify } from "@/hooks/use-notify"
 import { getCryptoPayCurrencies, getMe, getPaymentMethods, saveSettings } from "@/lib/api"
 
 /** Fiat currencies Crypto Pay supports, shown until the live list loads. */
@@ -57,6 +58,7 @@ const FALLBACK_FIATS = [
 
 export function AdminSettingsScreen() {
   const t = useTranslate()
+  const notify = useNotify()
   const queryClient = useQueryClient()
   const { data: meData } = useQuery({ queryKey: ["me"], queryFn: getMe })
   const { data: paymentData } = useQuery({
@@ -126,7 +128,9 @@ export function AdminSettingsScreen() {
           isActive: method.isActive,
         })),
       }),
+    onError: notify.failure,
     onSuccess: async () => {
+      notify.success("uiNotify.saved")
       await queryClient.invalidateQueries({ queryKey: ["me"] })
       await queryClient.invalidateQueries({ queryKey: ["payment-methods"] })
     },

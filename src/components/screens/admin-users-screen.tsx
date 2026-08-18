@@ -75,7 +75,8 @@ export function AdminUsersScreen() {
           </InputGroupAddon>
           <InputGroupInput
             value={search}
-            placeholder={t("adminUsers.searchPlaceholder")}
+            aria-label={t("adminUsers.searchPlaceholder")}
+              placeholder={t("adminUsers.searchPlaceholder")}
             onChange={(event) => {
               setSearch(event.target.value)
               setPage(1)

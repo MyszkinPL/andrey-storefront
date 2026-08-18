@@ -1,18 +1,7 @@
 "use client"
 
-
-
 import { useTranslate } from "@/components/i18n-provider"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+import { ResponsiveDialog } from "@/components/responsive-dialog"
 
 export function ConfirmDeleteDialog({
   open,
@@ -28,21 +17,15 @@ export function ConfirmDeleteDialog({
   const t = useTranslate()
 
   return (
-    <AlertDialog open={open} onOpenChange={(nextOpen) => !loading && onOpenChange(nextOpen)}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>{t("orderDetail.deleteTitle")}</AlertDialogTitle>
-          <AlertDialogDescription>
-            {t("orderDetail.deleteDescription")}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-          <AlertDialogAction variant="destructive" disabled={loading} onClick={onConfirm}>
-            {t("common.delete")}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <ResponsiveDialog
+      confirmLabel={t("common.delete")}
+      confirmVariant="destructive"
+      description={t("orderDetail.deleteDescription")}
+      loading={loading}
+      onConfirm={onConfirm}
+      onOpenChange={onOpenChange}
+      open={open}
+      title={t("orderDetail.deleteTitle")}
+    />
   )
 }
