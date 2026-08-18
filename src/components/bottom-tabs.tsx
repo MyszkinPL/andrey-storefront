@@ -21,6 +21,7 @@ export function BottomTabs() {
   if (!isBottomTabsRoute(pathname)) return null
   if (pathname.startsWith("/admin") && !canAdmin) return null
 
+  const isAdmin = mode === "admin"
   const tabs = navItemsFor(mode)
   const activeTab = activeNavHref(tabs, pathname)
 
@@ -33,18 +34,23 @@ export function BottomTabs() {
       }}
       value={activeTab}
     >
-      <TabsList className={cn("grid !h-14 w-full", mode === "admin" ? "grid-cols-5" : "grid-cols-3")}>
+      <TabsList className="w-full">
         {tabs.map((tab) => {
           const Icon = tab.icon
 
           return (
             <TabsTrigger
-              className="!h-full min-w-0 flex-col gap-1 px-1 py-1 text-[11px] leading-none sm:text-xs"
+              aria-label={t(tab.labelKey)}
+              className="min-w-0 flex-1"
               key={tab.href}
               value={tab.href}
             >
               <Icon aria-hidden="true" />
-              {t(tab.labelKey)}
+              {/* Five admin tabs will not fit a narrow phone with labels, so
+                  they fall back to coss's icon-only tab there. */}
+              <span className={cn("truncate", isAdmin && "max-sm:hidden")}>
+                {t(tab.labelKey)}
+              </span>
             </TabsTrigger>
           )
         })}

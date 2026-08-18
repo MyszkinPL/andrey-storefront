@@ -631,7 +631,7 @@ function PaymentMethodSelector({
         disabled={loading}
         items={options.map((option) => ({ value: option.key, label: option.title }))}
       >
-        <SelectTrigger className="h-11 w-full">
+        <SelectTrigger size="lg">
           {selectedOption ? (
             <Avatar className="size-6">
               {selectedOption.iconDataUrl ? (

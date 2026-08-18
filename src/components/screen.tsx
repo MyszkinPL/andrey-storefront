@@ -31,7 +31,8 @@ export function Screen({
         "lg:px-8 lg:pt-8 lg:pb-10",
         !noTabBar && "min-h-[calc(100dvh-3rem)] lg:min-h-0",
         noTabBar && "min-h-0",
-        !noTabBar && "pb-[calc(env(safe-area-inset-bottom)+5.75rem)]",
+        // Clears the tab bar: 0.75rem offset + its natural coss height.
+        !noTabBar && "pb-[calc(env(safe-area-inset-bottom)+4.5rem)]",
         noTabBar && "pb-[calc(env(safe-area-inset-bottom)+1rem)]",
         className,
       )}
