@@ -7,17 +7,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { ImagePlus, KeyRound, Plus, Trash2 } from "lucide-react"
 
 import { AccessStateScreen } from "@/components/access-state-screen"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogMedia,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -44,6 +33,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
 import { useBackButton } from "@/hooks/use-telegram"
 import { useTranslate } from "@/components/i18n-provider"
+import { ResponsiveDialog } from "@/components/responsive-dialog"
 import { deleteAdminProduct, getMe, getProduct, getProducts, saveAdminProduct, updateAdminProduct } from "@/lib/api"
 import { optimizeSquareImage } from "@/lib/image"
 
@@ -418,14 +408,19 @@ export function AdminProductEditorScreen({
               <CardContent className="flex flex-col gap-3">
                 {productId ? (
                   <>
-                    <FieldDescription>
-                      {t("adminProductEditor.keysInStock", { count: visibleKeys.length })}
-                      {form.removeKeyIds.length > 0
-                        ? t("adminProductEditor.pendingRemoval", {
-                            count: form.removeKeyIds.length,
-                          })
-                        : ""}
-                    </FieldDescription>
+                    {/* Base UI field parts need a Field.Root ancestor. */}
+                    <Field>
+                      <FieldDescription>
+                        {t("adminProductEditor.keysInStock", {
+                          count: visibleKeys.length,
+                        })}
+                        {form.removeKeyIds.length > 0
+                          ? t("adminProductEditor.pendingRemoval", {
+                              count: form.removeKeyIds.length,
+                            })
+                          : ""}
+                      </FieldDescription>
+                    </Field>
                     {visibleKeys.map((key) => (
                       <Field key={key.id} orientation="horizontal">
                         <KeyRound />
@@ -461,35 +456,18 @@ export function AdminProductEditorScreen({
         </FieldGroup>
       </ScreenBody>
 
-      <AlertDialog
+      <ResponsiveDialog
+        confirmLabel={
+          deleteMutation.isPending ? t("adminProducts.deleting") : t("common.delete")
+        }
+        confirmVariant="destructive"
+        description={t("adminProducts.deleteDescription")}
+        loading={deleteMutation.isPending}
+        onConfirm={() => deleteMutation.mutate()}
+        onOpenChange={setDeleteOpen}
         open={deleteOpen}
-        onOpenChange={(open) => {
-          if (!open && !deleteMutation.isPending) setDeleteOpen(false)
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogMedia>
-              <Trash2 />
-            </AlertDialogMedia>
-            <AlertDialogTitle>{t("adminProducts.deleteTitle")}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t("adminProducts.deleteDescription")}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleteMutation.isPending}>{t("common.cancel")}</AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              disabled={!productId || deleteMutation.isPending}
-              onClick={() => deleteMutation.mutate()}
-            >
-              <Trash2 data-icon="inline-start" />
-              {deleteMutation.isPending ? t("adminProducts.deleting") : t("common.delete")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        title={t("adminProducts.deleteTitle")}
+      />
     </Screen>
   )
 }

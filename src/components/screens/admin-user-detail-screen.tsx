@@ -7,16 +7,6 @@ import { Ban, History, ShieldCheck, ShieldX } from "lucide-react"
 
 import { AccessStateScreen } from "@/components/access-state-screen"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -43,6 +33,7 @@ import { ListGroup, ListRow, ListRowMedia } from "@/components/list-row"
 import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
 import { useBackButton } from "@/hooks/use-telegram"
 import { useI18n } from "@/components/i18n-provider"
+import { ResponsiveDialog } from "@/components/responsive-dialog"
 import { useNotify } from "@/hooks/use-notify"
 import { formatPrice } from "@/lib/format"
 import type { TranslationKey } from "@/lib/i18n"
@@ -254,72 +245,41 @@ export function AdminUserDetailScreen({ userId }: { userId: string }) {
         </Card>
       </ScreenBody>
 
-      {confirmBanOpen && !user.isBanned ? (
-        <AlertDialog
-          open
-          onOpenChange={(open) => !moderationMutation.isPending && setConfirmBanOpen(open)}
-        >
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>{t("adminUserDetail.banTitle")}</AlertDialogTitle>
-              <AlertDialogDescription>
-                {t("adminUserDetail.banDescription")}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-              <AlertDialogAction
-                variant="destructive"
-                disabled={moderationMutation.isPending}
-                onClick={() => {
-                  setConfirmBanOpen(false)
-                  moderationMutation.mutate({ isBanned: true })
-                }}
-              >
-                {t("adminUserDetail.ban")}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      ) : null}
+      <ResponsiveDialog
+        confirmLabel={t("adminUserDetail.ban")}
+        confirmVariant="destructive"
+        description={t("adminUserDetail.banDescription")}
+        loading={moderationMutation.isPending}
+        onConfirm={() => moderationMutation.mutate({ isBanned: true })}
+        onOpenChange={setConfirmBanOpen}
+        open={confirmBanOpen && !user.isBanned}
+        title={t("adminUserDetail.banTitle")}
+      />
 
-      {confirmRole ? (
-        <AlertDialog
-          open
-          onOpenChange={(open) => !moderationMutation.isPending && setConfirmRole(open ? confirmRole : null)}
-        >
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>
-                {confirmRole === "ADMIN"
-                  ? t("adminUserDetail.grantTitle")
-                  : t("adminUserDetail.revokeTitle")}
-              </AlertDialogTitle>
-              <AlertDialogDescription>
-                {confirmRole === "ADMIN"
-                  ? t("adminUserDetail.grantDescription")
-                  : t("adminUserDetail.revokeDescription")}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-              <AlertDialogAction
-                variant={confirmRole === "USER" ? "destructive" : "default"}
-                disabled={moderationMutation.isPending}
-                onClick={() => {
-                  const nextRole = confirmRole
-                  setConfirmRole(null)
-                  moderationMutation.mutate({ role: nextRole })
-                }}
-              >
-                {confirmRole === "ADMIN"
-                  ? t("adminUserDetail.grantAction")
-                  : t("adminUserDetail.revokeAction")}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      ) : null}
+      <ResponsiveDialog
+        confirmLabel={
+          confirmRole === "ADMIN"
+            ? t("adminUserDetail.grantAction")
+            : t("adminUserDetail.revokeAction")
+        }
+        confirmVariant={confirmRole === "USER" ? "destructive" : "default"}
+        description={
+          confirmRole === "ADMIN"
+            ? t("adminUserDetail.grantDescription")
+            : t("adminUserDetail.revokeDescription")
+        }
+        loading={moderationMutation.isPending}
+        onConfirm={() => {
+          if (confirmRole) moderationMutation.mutate({ role: confirmRole })
+        }}
+        onOpenChange={(open) => setConfirmRole(open ? confirmRole : null)}
+        open={Boolean(confirmRole)}
+        title={
+          confirmRole === "ADMIN"
+            ? t("adminUserDetail.grantTitle")
+            : t("adminUserDetail.revokeTitle")
+        }
+      />
     </Screen>
   )
 }
