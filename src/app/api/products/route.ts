@@ -2,13 +2,15 @@ import { NextResponse } from "next/server"
 import { z } from "zod"
 
 import { requireAdmin } from "@/lib/auth"
+import { mediaUrl } from "@/lib/media"
 import { prisma } from "@/lib/prisma"
 
 const schema = z.object({
   title: z.string().trim().min(1),
   category: z.string().optional(),
   description: z.string().trim().min(1),
-  imageDataUrl: z.string().optional(),
+  // Absent keeps the stored image, null clears it.
+  imageDataUrl: z.string().nullish(),
   priceRub: z.number().int().nonnegative(),
   deliveryType: z.enum(["MANUAL", "AUTO_KEY"]),
   keyPoolText: z.string().optional(),
@@ -53,12 +55,24 @@ function cleanSpecs(
 const PRODUCT_LIMIT = 200
 
 export async function GET() {
+  // `select` deliberately omits imageDataUrl: covers are served by
+  // /api/media, so the list never reads or ships the base64 blob.
   const products = await prisma.product.findMany({
     orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
     take: PRODUCT_LIMIT,
-    include: {
+    select: {
+      id: true,
+      slug: true,
+      title: true,
+      category: true,
+      description: true,
+      priceRub: true,
+      deliveryType: true,
+      isActive: true,
+      imageUpdatedAt: true,
       specs: {
         orderBy: { sortOrder: "asc" },
+        select: { label: true, value: true },
       },
       _count: {
         select: {
@@ -77,15 +91,12 @@ export async function GET() {
       title: product.title,
       category: product.category,
       description: product.description,
-      imageDataUrl: product.imageDataUrl,
+      imageUrl: mediaUrl("product", product.id, product.imageUpdatedAt),
       priceRub: product.priceRub,
       deliveryType: product.deliveryType,
       isActive: product.isActive,
       availableKeyCount: product._count.keys,
-      specs: product.specs.map((spec) => ({
-        label: spec.label,
-        value: spec.value,
-      })),
+      specs: product.specs,
     })),
   })
 }
@@ -103,6 +114,7 @@ export async function POST(request: Request) {
         category: payload.category,
         description: payload.description,
         imageDataUrl: payload.imageDataUrl,
+        imageUpdatedAt: payload.imageDataUrl ? new Date() : null,
         priceRub: payload.priceRub,
         deliveryType: payload.deliveryType,
         isActive: payload.isActive,

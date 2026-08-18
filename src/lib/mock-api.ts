@@ -12,7 +12,7 @@ type MockProduct = {
   title: string
   category: string | null
   description: string
-  imageDataUrl: string | null
+  imageUrl: string | null
   priceRub: number
   deliveryType: "MANUAL" | "AUTO_KEY"
   isActive: boolean
@@ -100,7 +100,7 @@ let products: MockProduct[] = [
     title: "биба боба",
     category: "пися попа",
     description: "Лицензия с автоматической выдачей ключа после оплаты.",
-    imageDataUrl: productImage,
+    imageUrl: productImage,
     priceRub: 12,
     deliveryType: "AUTO_KEY" as const,
     isActive: true,
@@ -120,7 +120,7 @@ let products: MockProduct[] = [
     title: "DRIP LITE LIFETIME",
     category: "майнкрафт",
     description: "Lifetime-доступ с ручной выдачей после оплаты.",
-    imageDataUrl: productImageAlt,
+    imageUrl: productImageAlt,
     priceRub: 4990,
     deliveryType: "MANUAL" as const,
     isActive: true,
@@ -139,7 +139,7 @@ let paymentMethods = [
     title: "сберхуйс",
     type: "MANUAL" as PaymentMethodType,
     details: "+38099999999",
-    iconDataUrl: manualIcon,
+    iconUrl: manualIcon,
     cryptoAcceptedAssets: null,
     isActive: true,
   },
@@ -278,7 +278,7 @@ export async function mockApi<T>(input: RequestInfo, init?: RequestInit): Promis
         title: "Crypto Bot",
         details: "Crypto Pay",
         acceptedAssets: mockSettings.cryptoPayDefaultAssets,
-        iconDataUrl: cryptoIcon,
+        iconUrl: cryptoIcon,
       },
     } as T
   }
@@ -301,7 +301,7 @@ export async function mockApi<T>(input: RequestInfo, init?: RequestInit): Promis
       paymentMethodType: body?.paymentMethodType === "CRYPTO_PAY" ? "CRYPTO_PAY" : "MANUAL",
       paymentMethodTitle: body?.paymentMethodType === "CRYPTO_PAY" ? "Crypto Bot" : methodItem?.title || "Ручная оплата",
       paymentMethodDetails: body?.paymentMethodType === "CRYPTO_PAY" ? "Crypto Pay invoice" : methodItem?.details || "",
-      paymentMethodIconDataUrl: body?.paymentMethodType === "CRYPTO_PAY" ? cryptoIcon : methodItem?.iconDataUrl || manualIcon,
+      paymentMethodIconDataUrl: body?.paymentMethodType === "CRYPTO_PAY" ? cryptoIcon : methodItem?.iconUrl || manualIcon,
       cryptoInvoiceUrl: body?.paymentMethodType === "CRYPTO_PAY" ? "https://t.me/CryptoBot/app?startapp=invoice-demo" : null,
       cryptoInvoiceAmount: body?.paymentMethodType === "CRYPTO_PAY" ? String(product.priceRub) : null,
     })
@@ -383,7 +383,7 @@ export async function mockApi<T>(input: RequestInfo, init?: RequestInit): Promis
         order.paymentMethodId = methodItem.id
         order.paymentMethodTitle = methodItem.title
         order.paymentMethodDetails = methodItem.details
-        order.paymentMethodIconDataUrl = methodItem.iconDataUrl
+        order.paymentMethodIconDataUrl = methodItem.iconUrl
         order.cryptoInvoiceUrl = null
         order.cryptoInvoiceAmount = null
       }
@@ -459,7 +459,7 @@ export async function mockApi<T>(input: RequestInfo, init?: RequestInit): Promis
       title: method.title,
       type: "MANUAL" as PaymentMethodType,
       details: method.details,
-      iconDataUrl: method.iconDataUrl || "",
+      iconUrl: method.iconUrl || null,
       cryptoAcceptedAssets: null,
       isActive: method.isActive,
     }))
@@ -555,6 +555,8 @@ function makeProductFromPayload(
   payload: Partial<(typeof products)[number]> & {
     keyPoolText?: string
     removeKeyIds?: string[]
+    /** Same contract as the API: absent keeps the cover, null clears it. */
+    imageDataUrl?: string | null
   },
   existing?: (typeof products)[number],
 ) {
@@ -578,7 +580,11 @@ function makeProductFromPayload(
     title: payload.title || existing?.title || "Новый товар",
     category: payload.category || null,
     description: payload.description || existing?.description || "",
-    imageDataUrl: payload.imageDataUrl || existing?.imageDataUrl || null,
+    // Mirrors the server: undefined keeps the cover, null clears it.
+    imageUrl:
+      payload.imageDataUrl === undefined
+        ? (existing?.imageUrl ?? null)
+        : (payload.imageDataUrl ?? null),
     priceRub: Number(payload.priceRub ?? existing?.priceRub ?? 0),
     deliveryType: payload.deliveryType || existing?.deliveryType || ("MANUAL" as const),
     isActive: payload.isActive ?? existing?.isActive ?? true,

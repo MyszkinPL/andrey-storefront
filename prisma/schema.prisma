@@ -54,21 +54,24 @@ model User {
 }
 
 model Product {
-  id           String        @id @default(cuid())
-  slug         String        @unique
-  title        String
-  category     String?
-  description  String
-  imageDataUrl String?
-  priceRub     Int
-  deliveryType DeliveryType  @default(MANUAL)
-  isActive     Boolean       @default(true)
-  sortOrder    Int           @default(0)
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  orders       Order[]
-  keys         ProductKey[]
-  specs        ProductSpec[]
+  id             String        @id @default(cuid())
+  slug           String        @unique
+  title          String
+  category       String?
+  description    String
+  imageDataUrl   String?
+  /// Set whenever the cover changes; lets queries know an image exists and
+  /// gives its URL a cache key without reading the base64 blob.
+  imageUpdatedAt DateTime?
+  priceRub       Int
+  deliveryType   DeliveryType  @default(MANUAL)
+  isActive       Boolean       @default(true)
+  sortOrder      Int           @default(0)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  orders         Order[]
+  keys           ProductKey[]
+  specs          ProductSpec[]
 
   @@index([isActive, sortOrder])
 }
@@ -160,6 +163,8 @@ model PaymentMethod {
   type                 PaymentMethodType @default(MANUAL)
   details              String
   iconDataUrl          String?
+  /// Cache key for the icon URL, see Product.imageUpdatedAt.
+  iconUpdatedAt        DateTime?
   cryptoAcceptedAssets String?
   isActive             Boolean           @default(true)
   sortOrder            Int               @default(0)

@@ -57,7 +57,10 @@ type ProductForm = {
   title: string
   category: string
   description: string
-  imageDataUrl: string
+  /** Existing cover, shown as a preview. */
+  imageUrl: string | null
+  /** Set only when the admin picks a new file; null clears the cover. */
+  imageDataUrl: string | null | undefined
   priceRub: string
   deliveryType: "MANUAL" | "AUTO_KEY"
   keyPoolText: string
@@ -71,7 +74,8 @@ const emptyForm: ProductForm = {
   title: "",
   category: "",
   description: "",
-  imageDataUrl: "",
+  imageUrl: null,
+  imageDataUrl: undefined,
   priceRub: "0",
   deliveryType: "MANUAL",
   keyPoolText: "",
@@ -121,7 +125,8 @@ export function AdminProductEditorScreen({
         title: copyProductId ? `${product.title} copy` : product.title,
         category: product.category || "",
         description: product.description,
-        imageDataUrl: product.imageDataUrl || "",
+        imageUrl: product.imageUrl,
+        imageDataUrl: undefined,
         priceRub: String(product.priceRub),
         deliveryType: product.deliveryType,
         keyPoolText: "",
@@ -146,7 +151,7 @@ export function AdminProductEditorScreen({
         title: form.title.trim(),
         category: form.category.trim() || undefined,
         description: form.description.trim(),
-        imageDataUrl: form.imageDataUrl || undefined,
+        imageDataUrl: form.imageDataUrl,
         priceRub: Number(form.priceRub),
         deliveryType: form.deliveryType,
         keyPoolText: form.keyPoolText,
@@ -186,7 +191,7 @@ export function AdminProductEditorScreen({
     setUploading(true)
     try {
       const imageDataUrl = await optimizeSquareImage(file, 768)
-      setForm((prev) => ({ ...prev, imageDataUrl }))
+      setForm((prev) => ({ ...prev, imageDataUrl, imageUrl: imageDataUrl }))
     } finally {
       setUploading(false)
     }
@@ -269,7 +274,7 @@ export function AdminProductEditorScreen({
 
           <Card>
             <CardHeader>
-              <ProductCoverPreview imageDataUrl={form.imageDataUrl} title={form.title || t("adminProductEditor.productFallback")} />
+              <ProductCoverPreview imageUrl={form.imageUrl} title={form.title || t("adminProductEditor.productFallback")} />
               <CardTitle>{t("adminProductEditor.cover")}</CardTitle>
               <CardDescription>
                 {uploading
@@ -280,9 +285,11 @@ export function AdminProductEditorScreen({
             <CardContent>
               <ImagePicker
                 disabled={uploading}
-                hasImage={Boolean(form.imageDataUrl)}
+                hasImage={Boolean(form.imageUrl)}
                 id="product-cover"
-                onClear={() => setForm((prev) => ({ ...prev, imageDataUrl: "" }))}
+                onClear={() =>
+                  setForm((prev) => ({ ...prev, imageDataUrl: null, imageUrl: null }))
+                }
                 onSelect={handleImageChange}
               />
             </CardContent>
@@ -555,17 +562,17 @@ function SpecEditor({
 }
 
 function ProductCoverPreview({
-  imageDataUrl,
+  imageUrl,
   title,
 }: {
-  imageDataUrl?: string | null
+  imageUrl?: string | null
   title: string
 }) {
   return (
     <div className="mx-auto aspect-square w-full max-w-48 overflow-hidden">
-      {imageDataUrl ? (
+      {imageUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={imageDataUrl} alt={title} className="size-full object-cover" />
+        <img src={imageUrl} alt={title} className="size-full object-cover" />
       ) : (
         <Empty>
           <EmptyMedia variant="icon">

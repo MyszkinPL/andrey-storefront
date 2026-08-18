@@ -36,14 +36,18 @@ type PaymentMethodForm = {
   id?: string
   title: string
   details: string
-  iconDataUrl?: string
+  /** Existing icon, shown as a preview. */
+  iconUrl?: string | null
+  /** Set only when the admin picks a new file; null clears the icon. */
+  iconDataUrl?: string | null
   isActive: boolean
 }
 
 const emptyMethod: PaymentMethodForm = {
   title: "",
   details: "",
-  iconDataUrl: "",
+  iconUrl: null,
+  iconDataUrl: undefined,
   isActive: true,
 }
 
@@ -51,7 +55,8 @@ const templateMethod: PaymentMethodForm = {
   title: "СБП / Т-Банк",
   details:
     "Оплата по номеру телефона: +7...\nПолучатель: ...\nПосле оплаты нажми «Я оплатил».",
-  iconDataUrl: "",
+  iconUrl: null,
+  iconDataUrl: undefined,
   isActive: true,
 }
 
@@ -81,7 +86,8 @@ export function AdminPaymentMethodEditorScreen({
         id: method.id,
         title: method.title,
         details: method.details,
-        iconDataUrl: method.iconDataUrl || "",
+        iconUrl: method.iconUrl,
+        iconDataUrl: undefined,
         isActive: method.isActive,
       })),
     [paymentData?.paymentMethods],
@@ -148,7 +154,7 @@ export function AdminPaymentMethodEditorScreen({
     setUploadingIcon(true)
     try {
       const iconDataUrl = await optimizeSquareImage(file, 256)
-      setDraft((prev) => (prev ? { ...prev, iconDataUrl } : prev))
+      setDraft((prev) => (prev ? { ...prev, iconDataUrl, iconUrl: iconDataUrl } : prev))
     } finally {
       setUploadingIcon(false)
     }
@@ -201,7 +207,7 @@ export function AdminPaymentMethodEditorScreen({
         <FieldGroup>
           <Card>
             <CardHeader>
-              <MethodPreview iconDataUrl={draft.iconDataUrl} title={draft.title || "PM"} />
+              <MethodPreview iconUrl={draft.iconUrl} title={draft.title || "PM"} />
               <CardTitle>{t("adminPaymentEditor.icon")}</CardTitle>
               <CardDescription>
                 {uploadingIcon
@@ -212,10 +218,12 @@ export function AdminPaymentMethodEditorScreen({
             <CardContent>
               <ImagePicker
                 disabled={uploadingIcon}
-                hasImage={Boolean(draft.iconDataUrl)}
+                hasImage={Boolean(draft.iconUrl)}
                 id="payment-method-icon"
                 onClear={() =>
-                  setDraft((prev) => (prev ? { ...prev, iconDataUrl: "" } : prev))
+                  setDraft((prev) =>
+                    prev ? { ...prev, iconDataUrl: null, iconUrl: null } : prev,
+                  )
                 }
                 onSelect={handleIcon}
               />
@@ -268,15 +276,15 @@ export function AdminPaymentMethodEditorScreen({
 }
 
 function MethodPreview({
-  iconDataUrl,
+  iconUrl,
   title,
 }: {
-  iconDataUrl?: string
+  iconUrl?: string | null
   title: string
 }) {
   return (
     <Avatar className="size-10">
-      {iconDataUrl ? <AvatarImage src={iconDataUrl} alt={title} /> : null}
+      {iconUrl ? <AvatarImage src={iconUrl} alt={title} /> : null}
       <AvatarFallback>{title ? title.slice(0, 2).toUpperCase() : "PM"}</AvatarFallback>
     </Avatar>
   )

@@ -118,14 +118,14 @@ export function ProfileScreen() {
                   {methods.map((method) => (
                     <PaymentMethodRow
                       key={method.id}
-                      iconDataUrl={method.iconDataUrl}
+                      iconUrl={method.iconUrl}
                       title={method.title}
                       subtitle={method.details}
                     />
                   ))}
                   {hasCryptoPay ? (
                     <PaymentMethodRow
-                      iconDataUrl={paymentData?.cryptoPay.iconDataUrl || null}
+                      iconUrl={paymentData?.cryptoPay.iconUrl || null}
                       title={paymentData?.cryptoPay.title || "Crypto Bot"}
                       subtitle={
                         paymentData?.cryptoPay.acceptedAssets
@@ -147,11 +147,11 @@ export function ProfileScreen() {
 }
 
 function PaymentMethodRow({
-  iconDataUrl,
+  iconUrl,
   title,
   subtitle,
 }: {
-  iconDataUrl: string | null
+  iconUrl: string | null
   title: string
   subtitle: string
 }) {
@@ -160,7 +160,7 @@ function PaymentMethodRow({
       description={subtitle}
       media={
         <Avatar className="size-10">
-          {iconDataUrl ? <AvatarImage src={iconDataUrl} alt={title} /> : null}
+          {iconUrl ? <AvatarImage src={iconUrl} alt={title} /> : null}
           <AvatarFallback>{title.slice(0, 2).toUpperCase()}</AvatarFallback>
         </Avatar>
       }

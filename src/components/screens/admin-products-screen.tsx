@@ -108,7 +108,7 @@ export function AdminProductsScreen() {
                 media={
                   <ListRowMedia>
                     <ProductThumbnail
-                      imageDataUrl={product.imageDataUrl}
+                      imageUrl={product.imageUrl}
                       title={product.title}
                     />
                   </ListRowMedia>
@@ -190,16 +190,16 @@ export function AdminProductsScreen() {
 }
 
 function ProductThumbnail({
-  imageDataUrl,
+  imageUrl,
   title,
 }: {
-  imageDataUrl?: string | null
+  imageUrl?: string | null
   title: string
 }) {
-  if (imageDataUrl) {
+  if (imageUrl) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
-      <img src={imageDataUrl} alt={title} />
+      <img src={imageUrl} alt={title} />
     )
   }
 

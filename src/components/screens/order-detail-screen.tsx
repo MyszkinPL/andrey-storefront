@@ -93,7 +93,7 @@ type PaymentOption = {
   type: "MANUAL" | "CRYPTO_PAY"
   title: string
   subtitle: string
-  iconDataUrl: string | null
+  iconUrl: string | null
 }
 
 export function OrderDetailScreen({ orderId }: { orderId: string }) {
@@ -179,7 +179,7 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
       type: "MANUAL" as const,
       title: method.title,
       subtitle: method.details,
-      iconDataUrl: method.iconDataUrl,
+      iconUrl: method.iconUrl,
     })) ?? []),
     ...(paymentData?.cryptoPay.enabled
       ? [
@@ -193,7 +193,7 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
                   assets: paymentData.cryptoPay.acceptedAssets,
                 })
               : t("product.cryptoAuto"),
-            iconDataUrl: paymentData.cryptoPay.iconDataUrl || null,
+            iconUrl: paymentData.cryptoPay.iconUrl || null,
           },
         ]
       : []),
@@ -345,7 +345,7 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
                   order.paymentMethodType ||
                   t("common.notSelected")
                 }
-                iconDataUrl={order.paymentMethodIconDataUrl}
+                iconUrl={order.paymentMethodIconDataUrl}
               />
             )}
 
@@ -632,8 +632,8 @@ function PaymentMethodSelector({
         <SelectTrigger size="lg">
           {selectedOption ? (
             <Avatar className="size-6">
-              {selectedOption.iconDataUrl ? (
-                <AvatarImage src={selectedOption.iconDataUrl} alt={selectedOption.title} />
+              {selectedOption.iconUrl ? (
+                <AvatarImage src={selectedOption.iconUrl} alt={selectedOption.title} />
               ) : null}
               <AvatarFallback>{getAvatarFallback(selectedOption.title)}</AvatarFallback>
             </Avatar>
@@ -645,7 +645,7 @@ function PaymentMethodSelector({
             {options.map((option) => (
               <SelectItem key={option.key} value={option.key} label={option.title}>
                 <Avatar className="size-6">
-                  {option.iconDataUrl ? <AvatarImage src={option.iconDataUrl} alt={option.title} /> : null}
+                  {option.iconUrl ? <AvatarImage src={option.iconUrl} alt={option.title} /> : null}
                   <AvatarFallback>{getAvatarFallback(option.title)}</AvatarFallback>
                 </Avatar>
                 {option.title}
@@ -664,16 +664,16 @@ function PaymentMethodSelector({
 function PaymentMethodSummary({
   title,
   description,
-  iconDataUrl,
+  iconUrl,
 }: {
   title: string
   description: string
-  iconDataUrl: string | null
+  iconUrl: string | null
 }) {
   return (
     <Field orientation="horizontal">
       <Avatar className="size-10">
-        {iconDataUrl ? <AvatarImage src={iconDataUrl} alt={title} /> : null}
+        {iconUrl ? <AvatarImage src={iconUrl} alt={title} /> : null}
         <AvatarFallback>{getAvatarFallback(title)}</AvatarFallback>
       </Avatar>
       <FieldContent>

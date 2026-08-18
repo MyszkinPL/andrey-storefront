@@ -74,7 +74,7 @@ export function ProductScreen({ productId }: { productId: string }) {
         id: method.id,
         title: method.title,
         subtitle: method.details,
-        iconDataUrl: method.iconDataUrl,
+        iconUrl: method.iconUrl,
       })),
       ...(paymentData?.cryptoPay.enabled
         ? [
@@ -88,7 +88,7 @@ export function ProductScreen({ productId }: { productId: string }) {
                     assets: paymentData.cryptoPay.acceptedAssets,
                   })
                 : t("product.cryptoAuto"),
-              iconDataUrl: paymentData.cryptoPay.iconDataUrl || null,
+              iconUrl: paymentData.cryptoPay.iconUrl || null,
             },
           ]
         : []),
@@ -163,7 +163,7 @@ export function ProductScreen({ productId }: { productId: string }) {
             </CardAction>
           </CardHeader>
           <CardContent className="flex flex-1 flex-col gap-4">
-            <ProductImage imageDataUrl={product.imageDataUrl} title={product.title} />
+            <ProductImage imageUrl={product.imageUrl} title={product.title} />
             <CardDescription>{product.description}</CardDescription>
             <Separator />
             <Field orientation="horizontal">
@@ -233,17 +233,17 @@ export function ProductScreen({ productId }: { productId: string }) {
 }
 
 function ProductImage({
-  imageDataUrl,
+  imageUrl,
   title,
 }: {
-  imageDataUrl: string | null
+  imageUrl: string | null
   title: string
 }) {
   return (
     <div className="mx-auto aspect-square w-full max-w-64 overflow-hidden">
-      {imageDataUrl ? (
+      {imageUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={imageDataUrl} alt={title} className="size-full object-cover" />
+        <img src={imageUrl} alt={title} className="size-full object-cover" />
       ) : (
         <Empty>
           <EmptyMedia variant="icon">
@@ -264,7 +264,7 @@ function PaymentMethodSelect({
     key: string
     title: string
     subtitle: string
-    iconDataUrl: string | null
+    iconUrl: string | null
   }>
   selectedKey: string
   onSelect: (key: string) => void
@@ -291,8 +291,8 @@ function PaymentMethodSelect({
         <SelectTrigger size="lg">
           {selectedOption ? (
             <Avatar className="size-6">
-              {selectedOption.iconDataUrl ? (
-                <AvatarImage src={selectedOption.iconDataUrl} alt={selectedOption.title} />
+              {selectedOption.iconUrl ? (
+                <AvatarImage src={selectedOption.iconUrl} alt={selectedOption.title} />
               ) : null}
               <AvatarFallback>{getAvatarFallback(selectedOption.title)}</AvatarFallback>
             </Avatar>
@@ -304,7 +304,7 @@ function PaymentMethodSelect({
             {options.map((option) => (
               <SelectItem key={option.key} value={option.key} label={option.title}>
                 <Avatar className="size-6">
-                  {option.iconDataUrl ? <AvatarImage src={option.iconDataUrl} alt={option.title} /> : null}
+                  {option.iconUrl ? <AvatarImage src={option.iconUrl} alt={option.title} /> : null}
                   <AvatarFallback>{getAvatarFallback(option.title)}</AvatarFallback>
                 </Avatar>
                 {option.title}

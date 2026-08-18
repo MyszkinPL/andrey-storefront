@@ -29,7 +29,8 @@ export type PaymentMethodInput = {
   title: string
   type: Extract<PaymentMethodType, "MANUAL">
   details: string
-  iconDataUrl?: string
+  /** Omit to keep the current icon, null to clear it. */
+  iconDataUrl?: string | null
   isActive: boolean
 }
 
@@ -136,7 +137,7 @@ export function getProducts() {
       title: string
       category: string | null
       description: string
-      imageDataUrl: string | null
+      imageUrl: string | null
       priceRub: number
       deliveryType: "MANUAL" | "AUTO_KEY"
       isActive: boolean
@@ -154,7 +155,7 @@ export function getProduct(id: string) {
       title: string
       category: string | null
       description: string
-      imageDataUrl: string | null
+      imageUrl: string | null
       priceRub: number
       deliveryType: "MANUAL" | "AUTO_KEY"
       isActive: boolean
@@ -403,7 +404,7 @@ export function getPaymentMethods() {
       title: string
       type: PaymentMethodType
       details: string
-      iconDataUrl: string | null
+      iconUrl: string | null
       cryptoAcceptedAssets: string | null
       isActive: boolean
     }>
@@ -412,7 +413,7 @@ export function getPaymentMethods() {
       title: string
       details: string
       acceptedAssets: string | null
-      iconDataUrl: string | null
+      iconUrl: string | null
     }
   }>("/api/payment-methods")
 }
@@ -421,7 +422,8 @@ export function saveAdminProduct(payload: {
   title: string
   category?: string
   description: string
-  imageDataUrl?: string
+  /** Omit to keep the current cover, null to clear it. */
+  imageDataUrl?: string | null
   priceRub: number
   deliveryType: "MANUAL" | "AUTO_KEY"
   isActive: boolean
@@ -440,7 +442,8 @@ export function updateAdminProduct(
     title: string
     category?: string
     description: string
-    imageDataUrl?: string
+    /** Omit to keep the current cover, null to clear it. */
+  imageDataUrl?: string | null
     priceRub: number
     deliveryType: "MANUAL" | "AUTO_KEY"
     isActive: boolean

@@ -2,13 +2,15 @@ import { NextResponse } from "next/server"
 import { z } from "zod"
 
 import { getCurrentUser, requireAdmin } from "@/lib/auth"
+import { mediaUrl } from "@/lib/media"
 import { prisma } from "@/lib/prisma"
 
 const schema = z.object({
   title: z.string().trim().min(1),
   category: z.string().optional(),
   description: z.string().trim().min(1),
-  imageDataUrl: z.string().optional(),
+  // Absent keeps the stored image, null clears it.
+  imageDataUrl: z.string().nullish(),
   priceRub: z.number().int().nonnegative(),
   deliveryType: z.enum(["MANUAL", "AUTO_KEY"]),
   keyPoolText: z.string().optional(),
@@ -82,7 +84,7 @@ export async function GET(
       title: product.title,
       category: product.category,
       description: product.description,
-      imageDataUrl: product.imageDataUrl,
+      imageUrl: mediaUrl("product", product.id, product.imageUpdatedAt),
       priceRub: product.priceRub,
       deliveryType: product.deliveryType,
       isActive: product.isActive,
@@ -121,7 +123,15 @@ export async function PATCH(
           title: payload.title,
           category: payload.category,
           description: payload.description,
+          // undefined keeps the current cover, null clears it — the editor
+          // only sends the field when the admin actually changed it.
           imageDataUrl: payload.imageDataUrl,
+          imageUpdatedAt:
+            payload.imageDataUrl === undefined
+              ? undefined
+              : payload.imageDataUrl
+                ? new Date()
+                : null,
           priceRub: payload.priceRub,
           deliveryType: payload.deliveryType,
           isActive: payload.isActive,

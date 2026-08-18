@@ -122,7 +122,7 @@ export function AdminSettingsScreen() {
           title: method.title,
           type: "MANUAL" as const,
           details: method.details,
-          iconDataUrl: method.iconDataUrl || undefined,
+          iconDataUrl: undefined,
           isActive: method.isActive,
         })),
       }),
@@ -200,7 +200,7 @@ export function AdminSettingsScreen() {
 
         <Card>
           <CardHeader>
-            <MethodPreview iconDataUrl="/crypto-bot-logo.svg" title="Crypto Bot" />
+            <MethodPreview iconUrl="/crypto-bot-logo.svg" title="Crypto Bot" />
             <CardTitle>Crypto Bot</CardTitle>
             <CardDescription>{t("adminSettings.cryptoHint")}</CardDescription>
             <CardAction>
@@ -318,7 +318,7 @@ export function AdminSettingsScreen() {
                   key={method.id}
                   media={
                     <MethodPreview
-                      iconDataUrl={method.iconDataUrl || ""}
+                      iconUrl={method.iconUrl}
                       title={method.title}
                     />
                   }
@@ -356,15 +356,15 @@ export function AdminSettingsScreen() {
 }
 
 function MethodPreview({
-  iconDataUrl,
+  iconUrl,
   title,
 }: {
-  iconDataUrl?: string
+  iconUrl?: string | null
   title: string
 }) {
   return (
     <Avatar className="size-10">
-      {iconDataUrl ? <AvatarImage src={iconDataUrl} alt={title} /> : null}
+      {iconUrl ? <AvatarImage src={iconUrl} alt={title} /> : null}
       <AvatarFallback>
         {title ? title.slice(0, 2).toUpperCase() : <ImagePlus />}
       </AvatarFallback>

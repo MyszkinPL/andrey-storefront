@@ -3,6 +3,7 @@ import { NextResponse } from "next/server"
 import { getCurrentUser } from "@/lib/auth"
 import { translate } from "@/lib/i18n"
 import { DEFAULT_LOCALE, resolveUserLocale } from "@/lib/i18n/config"
+import { mediaUrl } from "@/lib/media"
 import { prisma } from "@/lib/prisma"
 
 export async function GET() {
@@ -14,12 +15,25 @@ export async function GET() {
         ...(user?.role === "ADMIN" ? {} : { isActive: true }),
       },
       orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+      select: {
+        id: true,
+        title: true,
+        type: true,
+        details: true,
+        isActive: true,
+        sortOrder: true,
+        cryptoAcceptedAssets: true,
+        iconUpdatedAt: true,
+      },
     }),
     prisma.shopSettings.findUnique({ where: { id: 1 } }),
   ])
 
   return NextResponse.json({
-    paymentMethods,
+    paymentMethods: paymentMethods.map((method) => ({
+      ...method,
+      iconUrl: mediaUrl("payment-method", method.id, method.iconUpdatedAt),
+    })),
     cryptoPay: {
       enabled: Boolean(settings?.cryptoPayEnabled && settings?.cryptoPayToken),
       title: "Crypto Bot",

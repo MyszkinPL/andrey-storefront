@@ -139,7 +139,7 @@ export function CatalogScreen() {
                     <FramePanel className="flex h-full items-center gap-3 p-3 transition-colors hover:bg-accent/40">
                       <div className="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-muted font-medium text-muted-foreground sm:size-20">
                         <ProductThumbnail
-                          imageDataUrl={product.imageDataUrl}
+                          imageUrl={product.imageUrl}
                           title={product.title}
                         />
                       </div>
@@ -196,16 +196,16 @@ function stockClassName(product: { deliveryType: string; availableKeyCount?: num
 }
 
 function ProductThumbnail({
-  imageDataUrl,
+  imageUrl,
   title,
 }: {
-  imageDataUrl: string | null
+  imageUrl: string | null
   title: string
 }) {
-  if (imageDataUrl) {
+  if (imageUrl) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
-      <img alt={title} className="size-full object-cover" src={imageDataUrl} />
+      <img alt={title} className="size-full object-cover" src={imageUrl} />
     )
   }
 
