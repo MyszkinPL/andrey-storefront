@@ -2,6 +2,7 @@ import { OrderStatus, Role } from "@prisma/client"
 import { InlineKeyboard, type Context } from "grammy"
 
 import { resolveActor } from "@/lib/bot-locale"
+import { clearPending, setPending, takePending } from "@/lib/bot-pending"
 import { formatPrice } from "@/lib/format"
 import type { Locale } from "@/lib/i18n/config"
 import type { TranslateFn } from "@/lib/i18n"
@@ -16,37 +17,6 @@ import { prisma } from "@/lib/prisma"
 import { escapeHtml } from "@/lib/telegram-format"
 
 const PAGE_SIZE = 8
-const PENDING_TTL_MS = 10 * 60 * 1000
-
-type PendingAction =
-  | { kind: "deliverKey"; orderId: string }
-  | { kind: "setPrice"; productId: string }
-  | { kind: "addKeys"; productId: string }
-  | { kind: "newProductTitle" }
-  | { kind: "newProductPrice"; title: string }
-
-/**
- * Multi-step admin actions (typing a key, a price, a title) need to remember
- * what the next message means. Kept in memory with a short TTL: the state is
- * cheap to rebuild by tapping the button again, so it is not worth a table.
- */
-const pending = new Map<number, { action: PendingAction; at: number }>()
-
-export function setPending(telegramId: number, action: PendingAction) {
-  pending.set(telegramId, { action, at: Date.now() })
-}
-
-export function takePending(telegramId: number): PendingAction | null {
-  const entry = pending.get(telegramId)
-  if (!entry) return null
-  pending.delete(telegramId)
-  if (Date.now() - entry.at > PENDING_TTL_MS) return null
-  return entry.action
-}
-
-export function clearPending(telegramId: number) {
-  pending.delete(telegramId)
-}
 
 function cancelRow(t: TranslateFn) {
   return new InlineKeyboard().text(t("bot.cancelAction"), "x")
@@ -374,6 +344,7 @@ export async function toggleUserRole(userId: string) {
 // ------------------------------------------------------------------ shared
 
 export { cancelRow, resolveActor, PAGE_SIZE }
+export { clearPending, setPending, takePending }
 
 /** Replaces the message a button belongs to, ignoring "not modified" errors. */
 export async function replaceMessage(

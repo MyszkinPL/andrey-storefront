@@ -7,7 +7,6 @@ import { AccessStateScreen } from "@/components/access-state-screen"
 import { useTranslate } from "@/components/i18n-provider"
 import { ApiError, authenticateWithTelegram, getMe } from "@/lib/api"
 import { useTelegram } from "@/hooks/use-telegram"
-import { isLocalMockApiEnabled } from "@/lib/mock-api"
 
 export function AuthGate({ children }: { children: React.ReactNode }) {
   const t = useTranslate()
@@ -20,57 +19,61 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
 
     let cancelled = false
 
-    async function loadMe() {
+    async function fetchMe() {
       try {
         await getMe()
-        if (!cancelled) setState("ok")
-        return 200
+        return { status: 200, message: "" }
       } catch (err) {
-        if (err instanceof ApiError && err.status === 403) {
-          if (!cancelled) {
-            setError(err.message || t("auth.restrictedTitle"))
-            setState("error")
-          }
-          return err.status
+        if (err instanceof ApiError) {
+          return { status: err.status, message: err.message }
         }
-
-        return err instanceof ApiError ? err.status : 500
+        return { status: 500, message: "" }
       }
     }
 
-    async function authenticateAndLoad(initDataValue: string, dev = false) {
-      await authenticateWithTelegram(initDataValue, dev)
-      const status = await loadMe()
-      if (status !== 200 && status !== 403 && !cancelled) setState("outside")
-    }
-
-    if (!isTelegram && isLocalMockApiEnabled()) {
-      authenticateAndLoad("", true)
-        .catch(() => setState("outside"))
-      return () => {
-        cancelled = true
+    function settle(result: { status: number; message: string }) {
+      if (cancelled) return
+      if (result.status === 200) {
+        setState("ok")
+        return
       }
+      if (result.status === 403) {
+        setError(result.message || t("auth.restrictedTitle"))
+        setState("error")
+        return
+      }
+      setState("outside")
     }
 
-    loadMe().then((status) => {
-      if (status === 200 || status === 403) {
+    async function run() {
+      const first = await fetchMe()
+      if (first.status === 200) {
+        settle(first)
         return
       }
 
-      if (!isTelegram) {
-        authenticateAndLoad("", true)
-          .catch(() => setState("outside"))
+      // The Telegram profile — username included — only reaches the server
+      // through initData. A stale session can therefore report 403 for a
+      // username the user has since added, so refresh the stored profile once
+      // before trusting the answer.
+      try {
+        await authenticateWithTelegram(isTelegram ? initData : "", !isTelegram)
+      } catch (err) {
+        if (first.status === 403) {
+          settle(first)
+          return
+        }
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : t("auth.failed"))
+          setState(isTelegram ? "error" : "outside")
+        }
         return
       }
 
-      authenticateAndLoad(initData)
-        .catch((err: unknown) => {
-          if (!cancelled) {
-            setError(err instanceof Error ? err.message : t("auth.failed"))
-            setState("error")
-          }
-        })
-    })
+      settle(await fetchMe())
+    }
+
+    void run()
 
     return () => {
       cancelled = true

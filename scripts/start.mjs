@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process"
+import { createHmac } from "node:crypto"
 import { PrismaPg } from "@prisma/adapter-pg"
 import { PrismaClient } from "@prisma/client"
 import pg from "pg"
@@ -23,7 +24,28 @@ await ensureBootstrapData()
 
 if (appUrl && botToken) {
   const webhookUrl = `${appUrl.replace(/\/$/, "")}/api/telegram/webhook`
-  await telegram("setWebhook", { url: webhookUrl })
+
+  // Must match src/lib/webhook-secret.ts — the webhook drives the admin panel,
+  // so Telegram has to prove that an update really came from it.
+  const webhookSecret =
+    process.env.TELEGRAM_WEBHOOK_SECRET?.trim() ||
+    (process.env.SESSION_SECRET
+      ? createHmac("sha256", process.env.SESSION_SECRET)
+          .update("telegram-webhook")
+          .digest("hex")
+      : null)
+
+  if (!webhookSecret) {
+    throw new Error(
+      "SESSION_SECRET or TELEGRAM_WEBHOOK_SECRET is required to secure the Telegram webhook",
+    )
+  }
+
+  await telegram("setWebhook", {
+    url: webhookUrl,
+    secret_token: webhookSecret,
+    allowed_updates: ["message", "callback_query"],
+  })
   // Telegram picks the command list by the client's language, so register the
   // English set as the default and Russian as a language-scoped override.
   await telegram("setMyCommands", {

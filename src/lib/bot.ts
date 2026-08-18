@@ -24,25 +24,31 @@ import {
   toggleProduct,
   toggleUserRole,
 } from "@/lib/bot-admin"
+import { parseCallback, parseKeys, parsePrice } from "@/lib/bot-callback"
 import { resolveActor } from "@/lib/bot-locale"
 import { getServerEnv } from "@/lib/env"
 import { formatPrice } from "@/lib/format"
 import { prisma } from "@/lib/prisma"
 
 let botInstance: Bot | null = null
+let initPromise: Promise<void> | null = null
 
-/** Parses `prefix:id` callback data. */
-function parseCallback(data: string) {
-  const separator = data.indexOf(":")
-  if (separator === -1) return { action: data, id: "" }
-  return { action: data.slice(0, separator), id: data.slice(separator + 1) }
-}
-
-function parsePrice(input: string) {
-  const normalized = input.replace(/[^\d]/g, "")
-  if (!normalized) return null
-  const value = Number(normalized)
-  return Number.isFinite(value) && value >= 0 ? value : null
+/**
+ * grammy refuses to route an update until it knows who the bot is, so the
+ * webhook has to await `init()` at least once per process. The promise is
+ * cached: one extra getMe on cold start, none afterwards.
+ */
+export async function getReadyBot() {
+  const bot = getBot()
+  if (!initPromise) {
+    initPromise = bot.init().catch((error) => {
+      // Let the next request retry instead of caching a failed init.
+      initPromise = null
+      throw error
+    })
+  }
+  await initPromise
+  return bot
 }
 
 export function getBot() {
@@ -286,11 +292,7 @@ export function getBot() {
       }
 
       case "addKeys": {
-        const values = text
-          .split("\n")
-          .map((line) => line.trim())
-          .filter(Boolean)
-        const count = await addProductKeys(action.productId, values)
+        const count = await addProductKeys(action.productId, parseKeys(text))
         await ctx.reply(t("bot.keysAdded", { count }))
         await replaceMessage(ctx, await renderProduct(action.productId, t, locale))
         return
