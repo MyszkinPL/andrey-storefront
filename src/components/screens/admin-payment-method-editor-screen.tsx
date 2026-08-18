@@ -22,6 +22,7 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty"
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
+import { ImagePicker } from "@/components/image-picker"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
@@ -209,11 +210,14 @@ export function AdminPaymentMethodEditorScreen({
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Input
+              <ImagePicker
+                disabled={uploadingIcon}
+                hasImage={Boolean(draft.iconDataUrl)}
                 id="payment-method-icon"
-                type="file"
-                accept="image/*"
-                onChange={(event) => handleIcon(event.currentTarget.files?.[0] || null)}
+                onClear={() =>
+                  setDraft((prev) => (prev ? { ...prev, iconDataUrl: "" } : prev))
+                }
+                onSelect={handleIcon}
               />
             </CardContent>
           </Card>

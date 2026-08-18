@@ -516,6 +516,11 @@ export const en: Widen<typeof ru> = {
     specLabel: "Specification {index}",
     pendingRemoval: " · {count} to remove",
   },
+  imagePicker: {
+    choose: "Choose file",
+    replace: "Replace",
+    remove: "Remove image",
+  },
   errors: {
     manualNeedsBuyerMark: "A manual payment can be confirmed only after the buyer marks it",
     cantConfirmClosed: "A closed order cannot be confirmed",

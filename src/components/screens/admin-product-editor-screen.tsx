@@ -35,6 +35,7 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty"
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel, FieldTitle } from "@/components/ui/field"
+import { ImagePicker } from "@/components/image-picker"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -277,11 +278,12 @@ export function AdminProductEditorScreen({
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Input
+              <ImagePicker
+                disabled={uploading}
+                hasImage={Boolean(form.imageDataUrl)}
                 id="product-cover"
-                type="file"
-                accept="image/*"
-                onChange={(event) => handleImageChange(event.currentTarget.files?.[0] || null)}
+                onClear={() => setForm((prev) => ({ ...prev, imageDataUrl: "" }))}
+                onSelect={handleImageChange}
               />
             </CardContent>
           </Card>
@@ -306,14 +308,21 @@ export function AdminProductEditorScreen({
             />
             {categoryOptions.length > 0 ? (
               <ToggleGroup
-                value={form.category.trim() ? [form.category.trim()] : []}
-                onValueChange={(value) => setForm((prev) => ({ ...prev, category: value[0] || "" }))}
-                variant="outline"
+                className="flex flex-wrap gap-1.5"
+                onValueChange={(value) =>
+                  setForm((prev) => ({ ...prev, category: value[0] || "" }))
+                }
                 size="sm"
-                className="flex-wrap"
+                value={form.category.trim() ? [form.category.trim()] : []}
+                variant="default"
               >
                 {categoryOptions.map((category) => (
-                  <ToggleGroupItem key={category} value={category}>
+                  <ToggleGroupItem
+                    className="shrink-0 rounded-full px-3"
+                    key={category}
+                    value={category}
+                    variant="outline"
+                  >
                     {category}
                   </ToggleGroupItem>
                 ))}

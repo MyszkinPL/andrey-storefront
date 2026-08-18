@@ -208,14 +208,19 @@ export function AdminSettingsScreen() {
                 <FieldLabel>{t("adminSettings.coins")}</FieldLabel>
                 {assetOptions.length > 0 ? (
                   <ToggleGroup
-                    value={selectedCryptoAssets}
+                    className="flex flex-wrap gap-1.5"
                     onValueChange={(value) => setCryptoPayDefaultAssets(value.join(","))}
-                    variant="outline"
                     size="sm"
-                    className="flex-wrap"
+                    value={selectedCryptoAssets}
+                    variant="default"
                   >
                     {assetOptions.map((asset) => (
-                      <ToggleGroupItem key={asset.code} value={asset.code}>
+                      <ToggleGroupItem
+                        className="shrink-0 rounded-full px-3"
+                        key={asset.code}
+                        value={asset.code}
+                        variant="outline"
+                      >
                         {asset.code}
                       </ToggleGroupItem>
                     ))}

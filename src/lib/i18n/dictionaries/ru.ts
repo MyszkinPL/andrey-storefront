@@ -509,6 +509,11 @@ export const ru = {
     specLabel: "Характеристика {index}",
     pendingRemoval: " · к удалению {count}",
   },
+  imagePicker: {
+    choose: "Выбрать файл",
+    replace: "Заменить",
+    remove: "Удалить картинку",
+  },
   errors: {
     manualNeedsBuyerMark: "Ручную оплату можно подтвердить только после отметки покупателя",
     cantConfirmClosed: "Закрытый заказ нельзя подтверждать",
