@@ -13,14 +13,7 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty"
 import { Field, FieldDescription, FieldTitle } from "@/components/ui/field"
-import {
-  Item,
-  ItemContent,
-  ItemDescription,
-  ItemGroup,
-  ItemMedia,
-  ItemTitle,
-} from "@/components/ui/item"
+import { ListGroup, ListRow, ListRowMedia } from "@/components/list-row"
 import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
 import { LanguageSwitcher } from "@/components/language-switcher"
 import { useTranslate } from "@/components/i18n-provider"
@@ -78,21 +71,21 @@ export function ProfileScreen() {
           />
         ) : (
           <>
-            <ItemGroup className="gap-2">
-              <Item variant="muted" size="sm">
-                <ItemMedia variant="icon">
-                  <LifeBuoy />
-                </ItemMedia>
-                <ItemContent>
-                  <ItemTitle>{t("profile.account")}</ItemTitle>
-                  <ItemDescription>
-                    {meData?.user.role === "ADMIN"
-                      ? t("profile.administrator")
-                      : t("profile.buyer")}
-                  </ItemDescription>
-                </ItemContent>
-              </Item>
-            </ItemGroup>
+            <ListGroup>
+              <ListRow
+                description={
+                  meData?.user.role === "ADMIN"
+                    ? t("profile.administrator")
+                    : t("profile.buyer")
+                }
+                media={
+                  <ListRowMedia>
+                    <LifeBuoy />
+                  </ListRowMedia>
+                }
+                title={t("profile.account")}
+              />
+            </ListGroup>
 
             <Field className="gap-1 px-1">
               <FieldTitle>{t("language.label")}</FieldTitle>
@@ -111,7 +104,7 @@ export function ProfileScreen() {
                   <FieldTitle>{t("profile.paymentMethods")}</FieldTitle>
                   <FieldDescription>{t("profile.paymentMethodsHint")}</FieldDescription>
                 </Field>
-                <ItemGroup className="gap-2">
+                <ListGroup>
                   {methods.map((method) => (
                     <PaymentMethodRow
                       key={method.id}
@@ -133,7 +126,7 @@ export function ProfileScreen() {
                       }
                     />
                   ) : null}
-                </ItemGroup>
+                </ListGroup>
               </>
             )}
           </>
@@ -153,18 +146,16 @@ function PaymentMethodRow({
   subtitle: string
 }) {
   return (
-    <Item variant="muted" size="sm">
-      <ItemMedia>
+    <ListRow
+      description={subtitle}
+      media={
         <Avatar className="size-10">
           {iconDataUrl ? <AvatarImage src={iconDataUrl} alt={title} /> : null}
           <AvatarFallback>{title.slice(0, 2).toUpperCase()}</AvatarFallback>
         </Avatar>
-      </ItemMedia>
-      <ItemContent className="min-w-0">
-        <ItemTitle>{title}</ItemTitle>
-        <ItemDescription>{subtitle}</ItemDescription>
-      </ItemContent>
-    </Item>
+      }
+      title={title}
+    />
   )
 }
 

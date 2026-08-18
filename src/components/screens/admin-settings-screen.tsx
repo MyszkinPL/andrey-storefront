@@ -35,15 +35,7 @@ import {
   InputGroupButton,
   InputGroupInput,
 } from "@/components/ui/input-group"
-import {
-  Item,
-  ItemActions,
-  ItemContent,
-  ItemDescription,
-  ItemGroup,
-  ItemMedia,
-  ItemTitle,
-} from "@/components/ui/item"
+import { ListGroup, ListRow } from "@/components/list-row"
 import { Switch } from "@/components/ui/switch"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
@@ -277,29 +269,35 @@ export function AdminSettingsScreen() {
             </CardAction>
           </CardHeader>
           <CardContent>
-            <ItemGroup className="gap-2">
+            <ListGroup>
               {paymentMethods.map((method) => (
-                <Item key={method.id} variant="muted" size="sm">
-                  <ItemMedia>
-                    <MethodPreview iconDataUrl={method.iconDataUrl || ""} title={method.title} />
-                  </ItemMedia>
-                  <ItemContent className="min-w-0">
-                    <ItemTitle>{method.title}</ItemTitle>
-                    <ItemDescription>{method.details || t("adminSettings.noDetails")}</ItemDescription>
-                  </ItemContent>
-                  <ItemActions>
-                    {!method.isActive ? <Badge variant="secondary">{t("adminSettings.hidden")}</Badge> : null}
-                    <Link
-                      href={`/admin/settings/payments/${method.id}`}
-                      className={buttonVariants({ size: "icon-sm", variant: "secondary" })}
-                      aria-label={t("adminSettings.editMethod")}
-                    >
-                      <PencilLine />
-                    </Link>
-                  </ItemActions>
-                </Item>
+                <ListRow
+                  description={method.details || t("adminSettings.noDetails")}
+                  key={method.id}
+                  media={
+                    <MethodPreview
+                      iconDataUrl={method.iconDataUrl || ""}
+                      title={method.title}
+                    />
+                  }
+                  title={method.title}
+                  trailing={
+                    <div className="flex items-center gap-1">
+                      {!method.isActive ? (
+                        <Badge variant="secondary">{t("adminSettings.hidden")}</Badge>
+                      ) : null}
+                      <Link
+                        href={`/admin/settings/payments/${method.id}`}
+                        className={buttonVariants({ size: "icon-sm", variant: "secondary" })}
+                        aria-label={t("adminSettings.editMethod")}
+                      >
+                        <PencilLine />
+                      </Link>
+                    </div>
+                  }
+                />
               ))}
-            </ItemGroup>
+            </ListGroup>
             {paymentMethods.length === 0 ? (
               <Empty>
                 <EmptyHeader>

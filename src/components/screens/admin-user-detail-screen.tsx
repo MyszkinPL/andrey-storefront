@@ -1,6 +1,5 @@
 "use client"
 
-import Link from "next/link"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
@@ -40,22 +39,16 @@ import {
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field"
-import {
-  Item,
-  ItemContent,
-  ItemDescription,
-  ItemGroup,
-  ItemMedia,
-  ItemTitle,
-} from "@/components/ui/item"
+import { ListGroup, ListRow, ListRowMedia } from "@/components/list-row"
 import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
 import { useBackButton } from "@/hooks/use-telegram"
 import { useI18n } from "@/components/i18n-provider"
+import { formatPrice } from "@/lib/format"
 import type { TranslationKey } from "@/lib/i18n"
 import { getAdminUser, getMe, updateAdminUserModeration } from "@/lib/api"
 
 export function AdminUserDetailScreen({ userId }: { userId: string }) {
-  const { t, tp } = useI18n()
+  const { t, tp, locale } = useI18n()
   const router = useRouter()
   const queryClient = useQueryClient()
   const [confirmBanOpen, setConfirmBanOpen] = useState(false)
@@ -222,28 +215,28 @@ export function AdminUserDetailScreen({ userId }: { userId: string }) {
           </CardHeader>
           <CardContent>
             {user.orders.length > 0 ? (
-              <ItemGroup className="gap-2">
+              <ListGroup>
                 {user.orders.map((order) => (
-                  <Item key={order.id} render={<Link href={`/orders/${order.id}`} />} variant="muted" size="sm">
-                    <ItemMedia variant="icon">
-                      <History />
-                    </ItemMedia>
-                    <ItemContent className="min-w-0">
-                      <ItemTitle>
-                        {order.productTitle ||
-                          t("adminUserDetail.orderFallback", { number: order.number })}
-                      </ItemTitle>
-                      <ItemDescription>
-                        #{order.number}
-                        {order.productCategory ? ` · ${order.productCategory}` : ""}
-                        {order.priceRub ? ` · ${order.priceRub.toLocaleString("ru-RU")} ₽` : ""}
-                        {" · "}
-                        {t(orderStatusKey2(order.status, order.isPaid))}
-                      </ItemDescription>
-                    </ItemContent>
-                  </Item>
+                  <ListRow
+                    description={`#${order.number}${
+                      order.productCategory ? ` · ${order.productCategory}` : ""
+                    }${
+                      order.priceRub ? ` · ${formatPrice(order.priceRub, locale)}` : ""
+                    } · ${t(orderStatusKey2(order.status, order.isPaid))}`}
+                    href={`/orders/${order.id}`}
+                    key={order.id}
+                    media={
+                      <ListRowMedia>
+                        <History />
+                      </ListRowMedia>
+                    }
+                    title={
+                      order.productTitle ||
+                      t("adminUserDetail.orderFallback", { number: order.number })
+                    }
+                  />
                 ))}
-              </ItemGroup>
+              </ListGroup>
             ) : (
               <Empty>
                 <EmptyHeader>

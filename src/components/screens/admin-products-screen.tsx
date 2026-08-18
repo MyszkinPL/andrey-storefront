@@ -27,15 +27,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty"
-import {
-  Item,
-  ItemActions,
-  ItemContent,
-  ItemDescription,
-  ItemGroup,
-  ItemMedia,
-  ItemTitle,
-} from "@/components/ui/item"
+import { ListGroup, ListRow, ListRowMedia } from "@/components/list-row"
 import { Field, FieldError } from "@/components/ui/field"
 import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
 import { useI18n } from "@/components/i18n-provider"
@@ -100,23 +92,30 @@ export function AdminProductsScreen() {
             </CardContent>
           </Card>
         ) : (
-          <ItemGroup className="gap-2 lg:grid lg:grid-cols-2">
+          <ListGroup className="lg:grid lg:grid-cols-2">
             {products.map((product) => (
-              <Item key={product.id} variant="muted" size="sm">
-                <ItemMedia variant={product.imageDataUrl ? "image" : "icon"}>
-                  <ProductThumbnail imageDataUrl={product.imageDataUrl} title={product.title} />
-                </ItemMedia>
-                <ItemContent className="min-w-0">
-                  <ItemTitle>{product.title}</ItemTitle>
-                  <ItemDescription>
-                    {product.category || t("catalog.noCategory")} · {formatPrice(product.priceRub, locale)} ·{" "}
-                    {product.deliveryType === "AUTO_KEY"
-                      ? tp("catalog.keys", product.availableKeyCount || 0)
-                      : t("catalog.manualDelivery")}
-                  </ItemDescription>
-                </ItemContent>
-                <ItemActions>
-                  {!product.isActive ? <Badge variant="secondary">{t("adminProducts.hidden")}</Badge> : null}
+              <ListRow
+                description={`${product.category || t("catalog.noCategory")} · ${formatPrice(
+                  product.priceRub,
+                  locale,
+                )} · ${
+                  product.deliveryType === "AUTO_KEY"
+                    ? tp("catalog.keys", product.availableKeyCount || 0)
+                    : t("catalog.manualDelivery")
+                }`}
+                key={product.id}
+                media={
+                  <ListRowMedia>
+                    <ProductThumbnail
+                      imageDataUrl={product.imageDataUrl}
+                      title={product.title}
+                    />
+                  </ListRowMedia>
+                }
+                title={product.title}
+                trailing={
+                  <div className="flex items-center gap-1">
+                    {!product.isActive ? <Badge variant="secondary">{t("adminProducts.hidden")}</Badge> : null}
                   <Link
                     href={`/admin/products/${product.id}/edit`}
                     className={buttonVariants({ size: "icon-sm", variant: "secondary" })}
@@ -139,10 +138,11 @@ export function AdminProductsScreen() {
                   >
                     <Trash2 />
                   </Button>
-                </ItemActions>
-              </Item>
+                  </div>
+                }
+              />
             ))}
-          </ItemGroup>
+          </ListGroup>
         )}
       </ScreenBody>
 

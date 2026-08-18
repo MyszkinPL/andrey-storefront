@@ -1,6 +1,5 @@
 "use client"
 
-import Link from "next/link"
 import { useMemo, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { ExternalLink, Receipt } from "lucide-react"
@@ -15,15 +14,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty"
-import {
-  Item,
-  ItemActions,
-  ItemContent,
-  ItemDescription,
-  ItemGroup,
-  ItemMedia,
-  ItemTitle,
-} from "@/components/ui/item"
+import { ListGroup, ListRow, ListRowMedia } from "@/components/list-row"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
 import { useI18n } from "@/components/i18n-provider"
@@ -120,28 +111,32 @@ export function OrdersScreen() {
           {visibleOrders.length === 0 ? (
             <OrdersEmpty title={t("orders.filterEmptyTitle")} description={t("orders.filterEmptyDescription")} />
           ) : (
-            <ItemGroup className="gap-2 lg:grid lg:grid-cols-2">
+            <ListGroup className="lg:grid lg:grid-cols-2">
               {visibleOrders.map((order) => (
-                <Item key={order.id} render={<Link href={`/orders/${order.id}`} />} variant="muted" size="sm">
-                  <ItemMedia variant="icon">
-                    <Receipt />
-                  </ItemMedia>
-                  <ItemContent className="min-w-0">
-                    <ItemTitle>{order.productTitle || order.subject}</ItemTitle>
-                    <ItemDescription>
-                      #{order.number}
-                      {order.productCategory ? ` · ${order.productCategory}` : ""}
-                      {order.paymentMethodTitle && !order.isPaid ? ` · ${order.paymentMethodTitle}` : ""}
-                      {" · "}
-                      {formatRelative(order.updatedAt)}
-                    </ItemDescription>
-                  </ItemContent>
-                  <ItemActions>
-                    <Badge variant={orderBadgeVariant(order)}>{t(orderStatusKey(order))}</Badge>
-                  </ItemActions>
-                </Item>
+                <ListRow
+                  description={`#${order.number}${
+                    order.productCategory ? ` · ${order.productCategory}` : ""
+                  }${
+                    order.paymentMethodTitle && !order.isPaid
+                      ? ` · ${order.paymentMethodTitle}`
+                      : ""
+                  } · ${formatRelative(order.updatedAt)}`}
+                  href={`/orders/${order.id}`}
+                  key={order.id}
+                  media={
+                    <ListRowMedia>
+                      <Receipt />
+                    </ListRowMedia>
+                  }
+                  title={order.productTitle || order.subject}
+                  trailing={
+                    <Badge variant={orderBadgeVariant(order)}>
+                      {t(orderStatusKey(order))}
+                    </Badge>
+                  }
+                />
               ))}
-            </ItemGroup>
+            </ListGroup>
           )}
         </ScreenBody>
       )}

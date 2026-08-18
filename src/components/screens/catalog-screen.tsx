@@ -15,16 +15,8 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty"
+import { Frame, FrameDescription, FramePanel, FrameTitle } from "@/components/ui/frame"
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group"
-import {
-  Item,
-  ItemActions,
-  ItemContent,
-  ItemDescription,
-  ItemGroup,
-  ItemMedia,
-  ItemTitle,
-} from "@/components/ui/item"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
 import { ShopLogo } from "@/components/shop-logo"
@@ -138,38 +130,41 @@ export function CatalogScreen() {
                 description={t("catalog.emptyDescription")}
               />
             ) : (
-              <ItemGroup className="gap-2 lg:grid lg:grid-cols-2 xl:grid-cols-3">
+              <Frame className="gap-1 lg:grid lg:grid-cols-2 xl:grid-cols-3">
                 {filtered.map((product) => (
-                  <Item
+                  <Link
+                    className="block"
+                    href={`/product/${product.id}`}
                     key={product.id}
-                    render={<Link href={`/product/${product.id}`} />}
-                    variant="muted"
-                    className="p-2.5"
                   >
-                    <ItemMedia
-                      variant={product.imageDataUrl ? "image" : "icon"}
-                      className={product.imageDataUrl ? "size-20" : "size-20 rounded-xl"}
-                    >
-                      <ProductThumbnail imageDataUrl={product.imageDataUrl} title={product.title} />
-                    </ItemMedia>
-                    <ItemContent className="min-w-0">
-                      <ItemTitle>{product.title}</ItemTitle>
-                      <ItemDescription>
-                        {product.category || t("catalog.noCategory")} ·{" "}
-                        {product.deliveryType === "AUTO_KEY"
-                          ? tp("catalog.keys", product.availableKeyCount || 0)
-                          : t("catalog.manualDelivery")}
-                      </ItemDescription>
-                      {product.description ? (
-                        <ItemDescription className="line-clamp-1">{product.description}</ItemDescription>
-                      ) : null}
-                    </ItemContent>
-                    <ItemActions>
-                      <Badge variant="secondary">{formatPrice(product.priceRub, locale)}</Badge>
-                    </ItemActions>
-                  </Item>
+                    <FramePanel className="flex h-full items-center gap-3 p-3 transition-colors hover:bg-accent/40">
+                      <div className="flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-muted text-muted-foreground">
+                        <ProductThumbnail
+                          imageDataUrl={product.imageDataUrl}
+                          title={product.title}
+                        />
+                      </div>
+                      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                        <FrameTitle className="truncate">{product.title}</FrameTitle>
+                        <FrameDescription className="truncate text-xs">
+                          {product.category || t("catalog.noCategory")} ·{" "}
+                          {product.deliveryType === "AUTO_KEY"
+                            ? tp("catalog.keys", product.availableKeyCount || 0)
+                            : t("catalog.manualDelivery")}
+                        </FrameDescription>
+                        {product.description ? (
+                          <FrameDescription className="line-clamp-1 text-xs">
+                            {product.description}
+                          </FrameDescription>
+                        ) : null}
+                      </div>
+                      <Badge variant="secondary">
+                        {formatPrice(product.priceRub, locale)}
+                      </Badge>
+                    </FramePanel>
+                  </Link>
                 ))}
-              </ItemGroup>
+              </Frame>
             )}
           </>
         )}
@@ -189,7 +184,7 @@ function ProductThumbnail({
   if (imageDataUrl) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
-      <img src={imageDataUrl} alt={title} />
+      <img alt={title} className="size-full object-cover" src={imageDataUrl} />
     )
   }
 

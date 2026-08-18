@@ -1,6 +1,5 @@
 "use client"
 
-import Link from "next/link"
 import { useMemo, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { Search, ShieldCheck } from "lucide-react"
@@ -17,15 +16,7 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty"
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group"
-import {
-  Item,
-  ItemActions,
-  ItemContent,
-  ItemDescription,
-  ItemGroup,
-  ItemMedia,
-  ItemTitle,
-} from "@/components/ui/item"
+import { ListGroup, ListRow } from "@/components/list-row"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
 import { useI18n } from "@/components/i18n-provider"
@@ -126,37 +117,36 @@ export function AdminUsersScreen() {
             description={t("adminUsers.emptyDescription")}
           />
         ) : (
-          <ItemGroup className="gap-2 lg:grid lg:grid-cols-2">
+          <ListGroup className="lg:grid lg:grid-cols-2">
             {users.map((user) => (
-              <Item
+              <ListRow
+                description={`${
+                  user.username ? `@${user.username}` : `tg:${user.telegramId}`
+                } · ID ${user.telegramId} · ${tp(
+                  "adminUsers.countActive",
+                  user.activeOrderCount,
+                )}`}
+                href={`/admin/users/${user.id}`}
                 key={user.id}
-                render={<Link href={`/admin/users/${user.id}`} />}
-                variant="muted"
-                size="sm"
-              >
-                <ItemMedia>
-                  <Avatar className="size-6">
-                    {user.photoUrl ? <AvatarImage src={user.photoUrl} alt={user.firstName} /> : null}
+                media={
+                  <Avatar className="size-10">
+                    {user.photoUrl ? (
+                      <AvatarImage src={user.photoUrl} alt={user.firstName} />
+                    ) : null}
                     <AvatarFallback>{user.firstName.slice(0, 1)}</AvatarFallback>
                   </Avatar>
-                </ItemMedia>
-                <ItemContent className="min-w-0">
-                  <ItemTitle>{[user.firstName, user.lastName || ""].join(" ").trim()}</ItemTitle>
-                  <ItemDescription>
-                    {user.username ? `@${user.username}` : `tg:${user.telegramId}`} · ID {user.telegramId} ·{" "}
-                    {tp("adminUsers.countActive", user.activeOrderCount)}
-                  </ItemDescription>
-                </ItemContent>
-                <ItemActions>
-                  {user.isBanned ? (
+                }
+                title={[user.firstName, user.lastName || ""].join(" ").trim()}
+                trailing={
+                  user.isBanned ? (
                     <Badge variant="destructive">{t("adminUsers.banned")}</Badge>
                   ) : user.role === "ADMIN" ? (
                     <Badge variant="secondary">{t("adminUsers.admin")}</Badge>
-                  ) : null}
-                </ItemActions>
-              </Item>
+                  ) : null
+                }
+              />
             ))}
-          </ItemGroup>
+          </ListGroup>
         )}
 
         {data?.pageInfo?.hasMore ? (
