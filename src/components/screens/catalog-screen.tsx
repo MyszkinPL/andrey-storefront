@@ -25,7 +25,7 @@ import {
   ItemMedia,
   ItemTitle,
 } from "@/components/ui/item"
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
 import { ShopLogo } from "@/components/shop-logo"
 import { useI18n } from "@/components/i18n-provider"
@@ -34,7 +34,7 @@ import { formatPrice } from "@/lib/format"
 
 /**
  * Sentinel for "no category filter". A real value rather than an empty string,
- * because a toggle group cannot mark an empty value as selected.
+ * because a tab with an empty value cannot be marked active.
  */
 const ALL_CATEGORIES = "__all__"
 
@@ -116,32 +116,19 @@ export function CatalogScreen() {
               />
             </InputGroup>
 
-            {/* One scrolling row instead of a wrapping grid: the number of
-                categories is unknown, and both a fixed grid and a wrapped
-                segmented group leave ragged, half-empty rows. */}
+            {/* Tabs rather than a toggle group: exactly one category is always
+                active, so the catalog can never end up filtered to nothing.
+                The row scrolls because the number of categories is unbounded. */}
             <div className="-mx-3 overflow-x-auto px-3 [-ms-overflow-style:none] [scrollbar-width:none] sm:-mx-4 sm:px-4 lg:mx-0 lg:px-0 [&::-webkit-scrollbar]:hidden">
-              <ToggleGroup
-                className="w-max flex-nowrap gap-1.5"
-                onValueChange={(value) =>
-                  // Deselecting the active chip clears the filter rather than
-                  // leaving the catalog matching nothing.
-                  setCategory(value[0] ?? ALL_CATEGORIES)
-                }
-                size="sm"
-                value={[category]}
-                variant="default"
-              >
-                {categories.map((item) => (
-                  <ToggleGroupItem
-                    className="shrink-0 rounded-full px-3"
-                    key={item}
-                    value={item}
-                    variant="outline"
-                  >
-                    {item === ALL_CATEGORIES ? t("catalog.allCategories") : item}
-                  </ToggleGroupItem>
-                ))}
-              </ToggleGroup>
+              <Tabs onValueChange={(value) => setCategory(String(value))} value={category}>
+                <TabsList className="w-max">
+                  {categories.map((item) => (
+                    <TabsTrigger className="shrink-0" key={item} value={item}>
+                      {item === ALL_CATEGORIES ? t("catalog.allCategories") : item}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </Tabs>
             </div>
             </div>
 
