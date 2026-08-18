@@ -1,5 +1,5 @@
 import { OrderStatus, Role } from "@prisma/client"
-import { InlineKeyboard, type Context } from "grammy"
+import { InlineKeyboard } from "grammy"
 
 import { resolveActor } from "@/lib/bot-locale"
 import { clearPending, setPending, takePending } from "@/lib/bot-pending"
@@ -15,6 +15,7 @@ import { confirmOrderPaymentFlow } from "@/lib/order-payment"
 import { orderStatusKey } from "@/lib/order-status"
 import { prisma } from "@/lib/prisma"
 import { escapeHtml } from "@/lib/telegram-format"
+import { replaceMessage } from "@/lib/bot-view"
 
 const PAGE_SIZE = 8
 
@@ -343,23 +344,6 @@ export async function toggleUserRole(userId: string) {
 
 // ------------------------------------------------------------------ shared
 
-export { cancelRow, resolveActor, PAGE_SIZE }
+export { cancelRow, resolveActor, PAGE_SIZE, replaceMessage }
 export { clearPending, setPending, takePending }
 
-/** Replaces the message a button belongs to, ignoring "not modified" errors. */
-export async function replaceMessage(
-  ctx: Context,
-  view: { text: string; keyboard: InlineKeyboard },
-) {
-  try {
-    await ctx.editMessageText(view.text, {
-      parse_mode: "HTML",
-      reply_markup: view.keyboard,
-    })
-  } catch {
-    await ctx.reply(view.text, {
-      parse_mode: "HTML",
-      reply_markup: view.keyboard,
-    })
-  }
-}

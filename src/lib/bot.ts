@@ -16,7 +16,6 @@ import {
   renderProducts,
   renderUser,
   renderUsers,
-  replaceMessage,
   setPending,
   setProductPrice,
   setUserBanned,
@@ -39,6 +38,7 @@ import {
   shopMenu,
 } from "@/lib/bot-shop"
 import { resolveActor } from "@/lib/bot-locale"
+import { replaceMessage } from "@/lib/bot-view"
 import { isLocale } from "@/lib/i18n/config"
 import { OrderCreateError } from "@/lib/order-create"
 import { getServerEnv } from "@/lib/env"
@@ -77,14 +77,11 @@ export function getBot() {
   bot.command("start", async (ctx) => {
     const { t, isAdmin } = await resolveActor(ctx)
     const settings = await prisma.shopSettings.findUnique({ where: { id: 1 } })
-    const menu = shopMenu(t, settings?.shopName || "Shop", isAdmin)
+    const menu = shopMenu(t, settings?.shopName || "Shop", isAdmin, env.APP_URL)
 
     await ctx.reply(menu.text, {
       parse_mode: "HTML",
       reply_markup: menu.keyboard,
-    })
-    await ctx.reply(t("bot.fallback"), {
-      reply_markup: new InlineKeyboard().webApp(t("bot.openShop"), env.APP_URL),
     })
   })
 
@@ -139,7 +136,10 @@ export function getBot() {
         case "sm": {
           const settings = await prisma.shopSettings.findUnique({ where: { id: 1 } })
           await ctx.answerCallbackQuery()
-          await replaceMessage(ctx, shopMenu(t, settings?.shopName || "Shop", isAdmin))
+          await replaceMessage(
+            ctx,
+            shopMenu(t, settings?.shopName || "Shop", isAdmin, env.APP_URL),
+          )
           return
         }
 
@@ -153,7 +153,7 @@ export function getBot() {
 
         case "sb":
           await ctx.answerCallbackQuery()
-          await replaceMessage(ctx, await renderPaymentOptions(id, t))
+          await replaceMessage(ctx, await renderPaymentOptions(id, t, locale))
           return
 
         case "sq": {

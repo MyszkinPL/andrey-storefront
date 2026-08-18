@@ -10,6 +10,7 @@ import { notifyManualPaymentRequested, notifyOrderCancelled } from "@/lib/order-
 import { orderStatusKey } from "@/lib/order-status"
 import { prisma } from "@/lib/prisma"
 import { escapeHtml } from "@/lib/telegram-format"
+import { CAPTION_LIMIT, clamp, dataUrlToBuffer, type View } from "@/lib/bot-view"
 
 const PAGE_SIZE = 8
 
@@ -22,11 +23,14 @@ export type BotUser = {
   languageCode?: string | null
 }
 
-type View = { text: string; keyboard: InlineKeyboard }
-
 // ------------------------------------------------------------------- menu
 
-export function shopMenu(t: TranslateFn, shopName: string, isAdmin: boolean): View {
+export function shopMenu(
+  t: TranslateFn,
+  shopName: string,
+  isAdmin: boolean,
+  appUrl: string,
+): View {
   const keyboard = new InlineKeyboard()
     .text(t("shop.menuCatalog"), "sc")
     .row()
@@ -34,6 +38,9 @@ export function shopMenu(t: TranslateFn, shopName: string, isAdmin: boolean): Vi
     .text(t("shop.menuProfile"), "su")
 
   if (isAdmin) keyboard.row().text(t("shop.menuAdmin"), "m")
+
+  // The web app lives in the same keyboard instead of a second message.
+  keyboard.row().webApp(t("shop.menuOpenApp"), appUrl)
 
   return { text: t("shop.menuTitle", { shop: escapeHtml(shopName) }), keyboard }
 }
@@ -81,11 +88,15 @@ export async function renderShopProduct(
   }
 
   const isAuto = product.deliveryType === "AUTO_KEY"
+  const photo = dataUrlToBuffer(product.imageDataUrl)
+
   const lines = [
     t("shop.productCard", {
       title: escapeHtml(product.title),
       category: escapeHtml(product.category || "—"),
-      description: escapeHtml(product.description.slice(0, 600)),
+      // A caption is capped at 1024 characters, so the description gets the
+      // room left over once the rest of the card is accounted for.
+      description: escapeHtml(clamp(product.description, photo ? 500 : 1500)),
       price: formatPrice(product.priceRub, locale),
       delivery: isAuto ? t("bot.deliveryAuto") : t("bot.deliveryManual"),
     }),
@@ -94,7 +105,8 @@ export async function renderShopProduct(
   if (isAuto && product._count.keys === 0) lines.push(t("shop.outOfStock"))
 
   return {
-    text: lines.join("\n"),
+    photo,
+    text: clamp(lines.join("\n"), photo ? CAPTION_LIMIT : 4096),
     keyboard: new InlineKeyboard()
       .text(t("shop.buy"), `sb:${product.id}`)
       .row()
@@ -107,9 +119,13 @@ export async function renderShopProduct(
 export async function renderPaymentOptions(
   productId: string,
   t: TranslateFn,
+  locale: Locale,
 ): Promise<View> {
   const [product, methods, settings] = await Promise.all([
-    prisma.product.findUnique({ where: { id: productId }, select: { title: true } }),
+    prisma.product.findUnique({
+      where: { id: productId },
+      select: { title: true, priceRub: true },
+    }),
     prisma.paymentMethod.findMany({
       where: { isActive: true, type: PaymentMethodType.MANUAL },
       orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
@@ -131,7 +147,10 @@ export async function renderPaymentOptions(
   keyboard.text(t("bot.back"), `sc:${productId}`)
 
   return {
-    text: t("shop.choosePayment", { title: escapeHtml(product.title) }),
+    text: t("shop.choosePayment", {
+      price: formatPrice(product.priceRub, locale),
+      title: escapeHtml(product.title),
+    }),
     keyboard,
   }
 }
@@ -175,7 +194,10 @@ export async function renderMyOrders(
   for (const order of orders) {
     const title = order.product?.title || order.productTitleSnapshot || order.subject
     keyboard
-      .text(`#${order.number} · ${title.slice(0, 22)} · ${t(orderStatusKey(order))}`, `so:${order.id}`)
+      .text(
+        `${orderStatusIcon(order)} #${order.number} · ${title.slice(0, 24)}`,
+        `so:${order.id}`,
+      )
       .row()
   }
   keyboard.text(t("bot.back"), "sm")
@@ -186,6 +208,15 @@ export async function renderMyOrders(
       : `${t("shop.ordersTitle")}\n${t("shop.ordersEmpty")}`,
     keyboard,
   }
+}
+
+/** A glanceable state marker for order cards and list buttons. */
+function orderStatusIcon(order: { status: string; isPaid: boolean }) {
+  if (order.status === "CANCELLED") return "\u{1F6AB}"
+  if (order.status === "PAYMENT_REVIEW") return "\u{1F50D}"
+  if (order.status === "CLOSED") return order.isPaid ? "\u2705" : "\u26AA"
+  if (order.isPaid) return "\u2705"
+  return "\u23F3"
 }
 
 export async function renderMyOrder(
@@ -211,6 +242,7 @@ export async function renderMyOrder(
     t("shop.orderCard", {
       title: escapeHtml(title),
       number: order.number,
+      statusIcon: orderStatusIcon(order),
       status: t(orderStatusKey(order)),
       amount: amount === null ? "—" : formatPrice(amount, locale),
       method: escapeHtml(order.paymentMethodTitle || "—"),
@@ -280,6 +312,7 @@ export function renderProfile(user: BotUser, t: TranslateFn, locale: Locale): Vi
 
   return {
     text: t("shop.profileTitle", {
+      language: LOCALE_LABELS[locale].native,
       name: escapeHtml(name),
       role: user.role === Role.ADMIN ? t("shop.roleAdmin") : t("shop.roleBuyer"),
     }),
