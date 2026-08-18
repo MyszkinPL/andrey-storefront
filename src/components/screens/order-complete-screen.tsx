@@ -8,7 +8,7 @@ import { Check, CheckCircle2, CircleDashed, Copy } from "lucide-react"
 
 import { useI18n } from "@/components/i18n-provider"
 import type { TranslationKey } from "@/lib/i18n"
-import { formatDateTime, formatPrice } from "@/lib/format"
+import { formatDateTime, formatInvoiceAmount, formatPrice } from "@/lib/format"
 
 import { Badge } from "@/components/ui/badge"
 import { buttonVariants } from "@/components/ui/button"
@@ -83,11 +83,9 @@ export function OrderCompleteScreen({ orderId }: { orderId: string }) {
 
   const order = data.order
   const createdAtLabel = formatDateTime(order.createdAt, locale)
-  const amountLabel = order.cryptoInvoiceAmount
-    ? `${order.cryptoInvoiceAmount} ${order.cryptoInvoiceFiat || "RUB"}`
-    : order.priceRub
-      ? formatPrice(order.priceRub, locale)
-      : "—"
+  const amountLabel =
+    formatInvoiceAmount(order.cryptoInvoiceAmount, order.cryptoInvoiceFiat, locale) ??
+    (order.priceRub ? formatPrice(order.priceRub, locale) : "—")
 
   return (
     <Screen noTabBar>

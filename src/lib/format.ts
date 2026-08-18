@@ -10,15 +10,30 @@ export function intlLocale(locale: Locale) {
 }
 
 /**
- * Prices are stored in roubles, so the currency is fixed while grouping and
- * symbol placement follow the reader's locale.
+ * Catalogue prices are stored in roubles; Crypto Pay invoices carry their own
+ * fiat code. Either way grouping and symbol placement follow the reader.
  */
-export function formatPrice(value: number, locale: Locale) {
+export function formatPrice(value: number, locale: Locale, currency = "RUB") {
   return new Intl.NumberFormat(intlLocale(locale), {
-    currency: "RUB",
+    currency,
     maximumFractionDigits: 0,
     style: "currency",
   }).format(value)
+}
+
+/**
+ * Invoice amounts arrive as strings from Crypto Pay. Anything unparseable is
+ * shown as-is rather than silently dropped.
+ */
+export function formatInvoiceAmount(
+  amount: string | null,
+  fiat: string | null,
+  locale: Locale,
+) {
+  if (!amount) return null
+  const value = Number(amount)
+  if (!Number.isFinite(value)) return `${amount} ${fiat || "RUB"}`
+  return formatPrice(value, locale, fiat || "RUB")
 }
 
 /**

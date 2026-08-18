@@ -17,7 +17,7 @@ import {
 import { ReceiptStatus, ReceiptUpload } from "@/components/receipt-upload"
 import { useI18n, useTranslate } from "@/components/i18n-provider"
 import type { TranslateFn, TranslationKey } from "@/lib/i18n"
-import { formatDateTime, formatPrice } from "@/lib/format"
+import { formatDateTime, formatInvoiceAmount, formatPrice } from "@/lib/format"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   AlertDialog,
@@ -260,11 +260,9 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
     !order.isPaid &&
     !isClosed &&
     order.paymentMethodType !== "CRYPTO_PAY"
-  const amountLabel = order.cryptoInvoiceAmount
-    ? `${order.cryptoInvoiceAmount} ${order.cryptoInvoiceFiat || "RUB"}`
-    : order.priceRub
-      ? formatPrice(order.priceRub, locale)
-    : null
+  const amountLabel =
+    formatInvoiceAmount(order.cryptoInvoiceAmount, order.cryptoInvoiceFiat, locale) ??
+    (order.priceRub ? formatPrice(order.priceRub, locale) : null)
   const selectedPaymentKey = draftPaymentKey || currentPaymentKey
   const showOrderNotice =
     Boolean(order.deliveredKey) ||
