@@ -29,20 +29,24 @@ enum PaymentMethodType {
 }
 
 model User {
-  id         String    @id @default(cuid())
-  telegramId BigInt    @unique
-  username   String?
-  firstName  String
-  lastName   String?
-  photoUrl   String?
-  role       Role      @default(USER)
-  isBanned   Boolean   @default(false)
-  bannedAt   DateTime?
-  banReason  String?
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-  orders     Order[]   @relation("OrderAuthor")
-  assigned   Order[]   @relation("OrderAssignee")
+  id           String    @id @default(cuid())
+  telegramId   BigInt    @unique
+  username     String?
+  firstName    String
+  lastName     String?
+  photoUrl     String?
+  role         Role      @default(USER)
+  isBanned     Boolean   @default(false)
+  bannedAt     DateTime?
+  banReason    String?
+  /// Explicit language choice ("ru" | "en"). Null means follow Telegram.
+  language     String?
+  /// Last language_code reported by Telegram, used when no explicit choice.
+  languageCode String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  orders       Order[]   @relation("OrderAuthor")
+  assigned     Order[]   @relation("OrderAssignee")
 }
 
 model Product {
@@ -119,6 +123,21 @@ model Order {
   product                  Product?           @relation(fields: [productId], references: [id], onDelete: SetNull)
   paymentMethod            PaymentMethod?     @relation(fields: [paymentMethodId], references: [id], onDelete: SetNull)
   deliveredKey             ProductKey?
+  receipt                  OrderReceipt?
+}
+
+/// Buyer-uploaded payment receipt. The PDF itself lives in Telegram: we send
+/// it to the admin chat through the bot and keep only the file reference, so
+/// the database stays small and the admin sees the receipt in their chat.
+model OrderReceipt {
+  id                   String   @id @default(cuid())
+  orderId              String   @unique
+  telegramFileId       String
+  telegramFileUniqueId String?
+  fileName             String
+  fileSize             Int
+  uploadedAt           DateTime @default(now())
+  order                Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
 }
 
 model PaymentMethod {

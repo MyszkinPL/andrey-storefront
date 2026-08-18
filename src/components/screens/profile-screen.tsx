@@ -22,9 +22,12 @@ import {
   ItemTitle,
 } from "@/components/ui/item"
 import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
+import { LanguageSwitcher } from "@/components/language-switcher"
+import { useTranslate } from "@/components/i18n-provider"
 import { getMe, getPaymentMethods } from "@/lib/api"
 
 export function ProfileScreen() {
+  const t = useTranslate()
   const { data: meData, isLoading: isLoadingMe, isError: isErrorMe } = useQuery({
     queryKey: ["me"],
     queryFn: getMe,
@@ -44,16 +47,16 @@ export function ProfileScreen() {
   return (
     <Screen>
       <ScreenHeader
-        title={meData?.user.firstName || "Профиль"}
+        title={meData?.user.firstName || t("profile.title")}
         subtitle={
           meData?.user.username
             ? `@${meData.user.username}`
             : meData?.user.role === "ADMIN"
-              ? "Администратор"
-              : "Покупатель"
+              ? t("profile.administrator")
+              : t("profile.buyer")
         }
         trailing={
-          <Avatar size="lg">
+          <Avatar className="size-10">
             {meData?.user.photoUrl ? (
               <AvatarImage src={meData.user.photoUrl} alt={meData.user.firstName} />
             ) : null}
@@ -64,9 +67,15 @@ export function ProfileScreen() {
 
       <ScreenBody>
         {isLoadingMe || isLoadingPayments ? (
-          <ProfileEmpty title="Загружаю профиль" description="Подтягиваю данные магазина и оплаты." />
+          <ProfileEmpty
+            title={t("profile.loadingTitle")}
+            description={t("profile.loadingDescription")}
+          />
         ) : isErrorMe || isErrorPayments ? (
-          <ProfileEmpty title="Профиль не загрузился" description="Обнови экран или попробуй позже." />
+          <ProfileEmpty
+            title={t("profile.errorTitle")}
+            description={t("profile.errorDescription")}
+          />
         ) : (
           <>
             <ItemGroup className="gap-2">
@@ -75,21 +84,32 @@ export function ProfileScreen() {
                   <LifeBuoy />
                 </ItemMedia>
                 <ItemContent>
-                  <ItemTitle>Аккаунт</ItemTitle>
+                  <ItemTitle>{t("profile.account")}</ItemTitle>
                   <ItemDescription>
-                    {meData?.user.role === "ADMIN" ? "Администратор" : "Покупатель"}
+                    {meData?.user.role === "ADMIN"
+                      ? t("profile.administrator")
+                      : t("profile.buyer")}
                   </ItemDescription>
                 </ItemContent>
               </Item>
             </ItemGroup>
 
+            <Field className="gap-1 px-1">
+              <FieldTitle>{t("language.label")}</FieldTitle>
+              <FieldDescription>{t("language.description")}</FieldDescription>
+              <LanguageSwitcher className="mt-1 w-full" />
+            </Field>
+
             {methods.length === 0 && !hasCryptoPay ? (
-              <ProfileEmpty title="Реквизитов пока нет" description="Админ добавит способы оплаты позже." />
+              <ProfileEmpty
+                title={t("profile.noMethodsTitle")}
+                description={t("profile.noMethodsDescription")}
+              />
             ) : (
               <>
                 <Field className="gap-1 px-1">
-                  <FieldTitle>Способы оплаты</FieldTitle>
-                  <FieldDescription>Доступны при оформлении заказа.</FieldDescription>
+                  <FieldTitle>{t("profile.paymentMethods")}</FieldTitle>
+                  <FieldDescription>{t("profile.paymentMethodsHint")}</FieldDescription>
                 </Field>
                 <ItemGroup className="gap-2">
                   {methods.map((method) => (
@@ -106,8 +126,10 @@ export function ProfileScreen() {
                       title={paymentData?.cryptoPay.title || "Crypto Bot"}
                       subtitle={
                         paymentData?.cryptoPay.acceptedAssets
-                          ? `Автооплата · ${paymentData.cryptoPay.acceptedAssets}`
-                          : "Автооплата через invoice"
+                          ? t("product.cryptoAutoWithAssets", {
+                              assets: paymentData.cryptoPay.acceptedAssets,
+                            })
+                          : t("product.cryptoAuto")
                       }
                     />
                   ) : null}
@@ -133,7 +155,7 @@ function PaymentMethodRow({
   return (
     <Item variant="muted" size="sm">
       <ItemMedia>
-        <Avatar size="lg">
+        <Avatar className="size-10">
           {iconDataUrl ? <AvatarImage src={iconDataUrl} alt={title} /> : null}
           <AvatarFallback>{title.slice(0, 2).toUpperCase()}</AvatarFallback>
         </Avatar>

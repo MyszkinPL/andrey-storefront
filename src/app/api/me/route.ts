@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 
-import { getCurrentUser, hasTelegramUsername, USERNAME_REQUIRED_MESSAGE } from "@/lib/auth"
+import { bannedMessage, getCurrentUser, hasTelegramUsername, usernameRequiredMessage } from "@/lib/auth"
 import { getServerEnv } from "@/lib/env"
 import { prisma } from "@/lib/prisma"
 
@@ -9,16 +9,12 @@ export async function GET() {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   if (user.isBanned) {
     return NextResponse.json(
-      {
-        error: user.banReason
-          ? `Аккаунт заблокирован: ${user.banReason}`
-          : "Аккаунт заблокирован",
-      },
+      { error: bannedMessage(user) },
       { status: 403 },
     )
   }
   if (!hasTelegramUsername(user)) {
-    return NextResponse.json({ error: USERNAME_REQUIRED_MESSAGE }, { status: 403 })
+    return NextResponse.json({ error: usernameRequiredMessage(user) }, { status: 403 })
   }
 
   const env = getServerEnv()
@@ -36,6 +32,7 @@ export async function GET() {
       username: user.username,
       photoUrl: user.photoUrl,
       role: user.role,
+      language: user.language,
     },
     settings:
       user.role === "ADMIN"

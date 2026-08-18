@@ -4,9 +4,11 @@ import Link from "next/link"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
-import { format } from "date-fns"
-import { ru } from "date-fns/locale"
 import { Check, CheckCircle2, CircleDashed, Copy } from "lucide-react"
+
+import { useI18n } from "@/components/i18n-provider"
+import type { TranslationKey } from "@/lib/i18n"
+import { formatDateTime, formatPrice } from "@/lib/format"
 
 import { Badge } from "@/components/ui/badge"
 import { buttonVariants } from "@/components/ui/button"
@@ -44,6 +46,7 @@ import { getOrder } from "@/lib/api"
 type Order = Awaited<ReturnType<typeof getOrder>>["order"]
 
 export function OrderCompleteScreen({ orderId }: { orderId: string }) {
+  const { t, locale } = useI18n()
   const router = useRouter()
   const [copied, setCopied] = useState(false)
   const { data, isLoading, isError } = useQuery({
@@ -61,26 +64,36 @@ export function OrderCompleteScreen({ orderId }: { orderId: string }) {
   }
 
   if (isLoading) {
-    return <CompleteState title="Загружаю результат" description="Проверяю оплату и выдачу." />
+    return (
+      <CompleteState
+        title={t("orderComplete.loadingTitle")}
+        description={t("orderComplete.loadingDescription")}
+      />
+    )
   }
 
   if (isError || !data?.order) {
-    return <CompleteState title="Результат не загрузился" description="Вернись к заказу и попробуй ещё раз." />
+    return (
+      <CompleteState
+        title={t("orderComplete.errorTitle")}
+        description={t("orderComplete.errorDescription")}
+      />
+    )
   }
 
   const order = data.order
-  const createdAtLabel = format(new Date(order.createdAt), "dd MMMM · HH:mm", { locale: ru })
+  const createdAtLabel = formatDateTime(order.createdAt, locale)
   const amountLabel = order.cryptoInvoiceAmount
     ? `${order.cryptoInvoiceAmount} ${order.cryptoInvoiceFiat || "RUB"}`
     : order.priceRub
-      ? `${order.priceRub.toLocaleString("ru-RU")} ₽`
+      ? formatPrice(order.priceRub, locale)
       : "—"
 
   return (
     <Screen noTabBar>
       <ScreenHeader
-        title={renderTitle(order)}
-        subtitle={`Заказ #${order.number}`}
+        title={t(titleKey(order))}
+        subtitle={t("orderComplete.orderNumber", { number: order.number })}
         trailing={<Badge variant={order.isPaid ? "default" : "secondary"}>{amountLabel}</Badge>}
       />
 
@@ -92,59 +105,61 @@ export function OrderCompleteScreen({ orderId }: { orderId: string }) {
                 {order.isPaid ? <CheckCircle2 /> : <CircleDashed />}
               </EmptyMedia>
               <EmptyHeader>
-                <EmptyTitle>{renderTitle(order)}</EmptyTitle>
-                <EmptyDescription>{renderDescription(order)}</EmptyDescription>
+                <EmptyTitle>{t(titleKey(order))}</EmptyTitle>
+                <EmptyDescription>{t(descriptionKey(order))}</EmptyDescription>
               </EmptyHeader>
             </Empty>
             <CardAction>
-              {order.status === "CANCELLED" ? <Badge variant="destructive">Отменён</Badge> : null}
+              {order.status === "CANCELLED" ? <Badge variant="destructive">{t("orderStatus.cancelled")}</Badge> : null}
             </CardAction>
           </CardHeader>
 
           <CardContent className="flex flex-1 flex-col gap-3">
             {order.deliveredKey ? (
               <Field>
-                <FieldLabel>Ключ</FieldLabel>
+                <FieldLabel>{t("orderComplete.key")}</FieldLabel>
                 <InputGroup>
                   <InputGroupInput readOnly value={order.deliveredKey} />
                   <InputGroupAddon align="inline-end">
                     <InputGroupButton onClick={() => copyKey(order.deliveredKey || "")}>
                       {copied ? <Check data-icon="inline-start" /> : <Copy data-icon="inline-start" />}
-                      {copied ? "Готово" : "Копировать"}
+                      {copied ? t("common.copied") : t("common.copy")}
                     </InputGroupButton>
                   </InputGroupAddon>
                 </InputGroup>
               </Field>
             ) : (
               <Field>
-                <FieldTitle>{order.isPaid ? "Выдача" : "Оплата"}</FieldTitle>
+                <FieldTitle>
+                  {order.isPaid ? t("orderComplete.delivery") : t("orderComplete.payment")}
+                </FieldTitle>
                 <FieldDescription>
                   {order.isPaid
-                    ? "Ключ или инструкция появится здесь после выдачи."
-                    : "Заверши оплату на экране заказа."}
+                    ? t("orderComplete.deliveryPending")
+                    : t("orderComplete.paymentPending")}
                 </FieldDescription>
               </Field>
             )}
 
             <FieldGroup className="mt-auto gap-2">
               <Field orientation="horizontal">
-                <FieldLabel>Товар</FieldLabel>
+                <FieldLabel>{t("orderComplete.product")}</FieldLabel>
                 <FieldDescription className="truncate text-right">
                   {order.productTitle || order.subject}
                 </FieldDescription>
               </Field>
               <Field orientation="horizontal">
-                <FieldLabel>Оплата</FieldLabel>
+                <FieldLabel>{t("orderComplete.payment")}</FieldLabel>
                 <FieldDescription className="text-right">
-                  {order.paymentMethodTitle || "Не выбрана"}
+                  {order.paymentMethodTitle || t("common.notSelected")}
                 </FieldDescription>
               </Field>
               <Field orientation="horizontal">
-                <FieldLabel>Сумма</FieldLabel>
+                <FieldLabel>{t("orderComplete.amount")}</FieldLabel>
                 <FieldDescription className="text-right">{amountLabel}</FieldDescription>
               </Field>
               <Field orientation="horizontal">
-                <FieldLabel>Создан</FieldLabel>
+                <FieldLabel>{t("orderComplete.createdAt")}</FieldLabel>
                 <FieldDescription className="text-right">{createdAtLabel}</FieldDescription>
               </Field>
             </FieldGroup>
@@ -152,10 +167,10 @@ export function OrderCompleteScreen({ orderId }: { orderId: string }) {
 
           <CardFooter className="mt-auto flex-col items-stretch gap-2">
             <Link href={`/orders/${order.id}`} className={buttonVariants({ variant: "secondary" })}>
-              К заказу
+              {t("orderComplete.toOrder")}
             </Link>
             <Link href="/catalog" className={buttonVariants()}>
-              В каталог
+              {t("orderComplete.toCatalog")}
             </Link>
           </CardFooter>
         </Card>
@@ -164,18 +179,18 @@ export function OrderCompleteScreen({ orderId }: { orderId: string }) {
   )
 }
 
-function renderTitle(order: Order) {
-  if (order.status === "CANCELLED") return "Заказ отменён"
-  if (order.deliveredKey) return "Ключ готов"
-  if (order.isPaid) return "Оплата получена"
-  return "Ожидает оплату"
+function titleKey(order: Order): TranslationKey {
+  if (order.status === "CANCELLED") return "orderComplete.titleCancelled"
+  if (order.deliveredKey) return "orderComplete.titleKeyReady"
+  if (order.isPaid) return "orderComplete.titlePaid"
+  return "orderComplete.titleAwaiting"
 }
 
-function renderDescription(order: Order) {
-  if (order.status === "CANCELLED") return "Действия по заказу больше недоступны."
-  if (order.deliveredKey) return "Скопируй ключ и сохрани его."
-  if (order.isPaid) return "Платёж подтверждён, выдача будет здесь."
-  return "Вернись к заказу и заверши оплату."
+function descriptionKey(order: Order): TranslationKey {
+  if (order.status === "CANCELLED") return "orderComplete.descriptionCancelled"
+  if (order.deliveredKey) return "orderComplete.descriptionKeyReady"
+  if (order.isPaid) return "orderComplete.descriptionPaid"
+  return "orderComplete.descriptionAwaiting"
 }
 
 function CompleteState({ title, description }: { title: string; description: string }) {

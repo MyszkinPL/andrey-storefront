@@ -38,11 +38,14 @@ import {
 } from "@/components/ui/item"
 import { Field, FieldError } from "@/components/ui/field"
 import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
+import { useI18n } from "@/components/i18n-provider"
 import { deleteAdminProduct, getMe, getProducts } from "@/lib/api"
+import { formatPrice } from "@/lib/format"
 
 type AdminProduct = Awaited<ReturnType<typeof getProducts>>["products"][number]
 
 export function AdminProductsScreen() {
+  const { t, tp, locale } = useI18n()
   const queryClient = useQueryClient()
   const [deleteProduct, setDeleteProduct] = useState<AdminProduct | null>(null)
   const { data: meData } = useQuery({ queryKey: ["me"], queryFn: getMe })
@@ -59,8 +62,8 @@ export function AdminProductsScreen() {
   if (meData && meData.user.role !== "ADMIN") {
     return (
       <AccessStateScreen
-        title="Доступ закрыт"
-        description="Каталог продавца доступен только админу."
+        title={t("admin.deniedTitle")}
+        description={t("adminProducts.deniedDescription")}
       />
     )
   }
@@ -68,12 +71,12 @@ export function AdminProductsScreen() {
   return (
     <Screen>
       <ScreenHeader
-        title="Товары"
-        subtitle={`${products.length} в каталоге`}
+        title={t("adminProducts.title")}
+        subtitle={t("adminProducts.subtitle", { count: products.length })}
         trailing={
           <Link href="/admin/products/new" className={buttonVariants({ size: "sm" })}>
             <PackagePlus data-icon="inline-start" />
-            Новый
+            {t("adminProducts.new")}
           </Link>
         }
       />
@@ -87,11 +90,11 @@ export function AdminProductsScreen() {
                   <PackagePlus />
                 </EmptyMedia>
                 <EmptyHeader>
-                  <EmptyTitle>Товаров пока нет</EmptyTitle>
-                  <EmptyDescription>Создай первую карточку магазина.</EmptyDescription>
+                  <EmptyTitle>{t("adminProducts.emptyTitle")}</EmptyTitle>
+                  <EmptyDescription>{t("adminProducts.emptyDescription")}</EmptyDescription>
                 </EmptyHeader>
                 <Link href="/admin/products/new" className={buttonVariants()}>
-                  Создать товар
+                  {t("adminProducts.create")}
                 </Link>
               </Empty>
             </CardContent>
@@ -106,30 +109,32 @@ export function AdminProductsScreen() {
                 <ItemContent className="min-w-0">
                   <ItemTitle>{product.title}</ItemTitle>
                   <ItemDescription>
-                    {product.category || "Без категории"} · {product.priceRub.toLocaleString("ru-RU")} ₽ ·{" "}
-                    {renderDelivery(product)}
+                    {product.category || t("catalog.noCategory")} · {formatPrice(product.priceRub, locale)} ·{" "}
+                    {product.deliveryType === "AUTO_KEY"
+                      ? tp("catalog.keys", product.availableKeyCount || 0)
+                      : t("catalog.manualDelivery")}
                   </ItemDescription>
                 </ItemContent>
                 <ItemActions>
-                  {!product.isActive ? <Badge variant="secondary">Скрыт</Badge> : null}
+                  {!product.isActive ? <Badge variant="secondary">{t("adminProducts.hidden")}</Badge> : null}
                   <Link
                     href={`/admin/products/${product.id}/edit`}
                     className={buttonVariants({ size: "icon-sm", variant: "secondary" })}
-                    aria-label="Править товар"
+                    aria-label={t("adminProducts.edit")}
                   >
                     <PencilLine />
                   </Link>
                   <Link
                     href={`/admin/products/new?copy=${product.id}`}
                     className={buttonVariants({ size: "icon-sm", variant: "ghost" })}
-                    aria-label="Скопировать товар"
+                    aria-label={t("adminProducts.duplicate")}
                   >
                     <CopyPlus />
                   </Link>
                   <Button
                     size="icon-sm"
                     variant="destructive"
-                    aria-label="Удалить товар"
+                    aria-label={t("adminProducts.remove")}
                     onClick={() => setDeleteProduct(product)}
                   >
                     <Trash2 />
@@ -147,25 +152,25 @@ export function AdminProductsScreen() {
           if (!open && !deleteMutation.isPending) setDeleteProduct(null)
         }}
       >
-        <AlertDialogContent size="sm">
+        <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogMedia>
               <Trash2 />
             </AlertDialogMedia>
-            <AlertDialogTitle>Удалить товар?</AlertDialogTitle>
+            <AlertDialogTitle>{t("adminProducts.deleteTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              Карточка исчезнет из каталога. История заказов сохранит название, цену и уже выданные ключи.
+              {t("adminProducts.deleteDescription")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           {deleteMutation.error ? (
             <Field>
               <FieldError>
-                {deleteMutation.error instanceof Error ? deleteMutation.error.message : "Товар не удалился"}
+                {deleteMutation.error instanceof Error ? deleteMutation.error.message : t("adminProducts.deleteFailed")}
               </FieldError>
             </Field>
           ) : null}
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleteMutation.isPending}>Отмена</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleteMutation.isPending}>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
               disabled={!deleteProduct || deleteMutation.isPending}
@@ -174,7 +179,7 @@ export function AdminProductsScreen() {
               }}
             >
               <Trash2 data-icon="inline-start" />
-              {deleteMutation.isPending ? "Удаляю..." : "Удалить"}
+              {deleteMutation.isPending ? t("adminProducts.deleting") : t("common.delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -200,10 +205,3 @@ function ProductThumbnail({
   return <ImagePlus />
 }
 
-function renderDelivery(product: AdminProduct) {
-  if (product.deliveryType === "AUTO_KEY") {
-    return `${product.availableKeyCount || 0} ключей`
-  }
-
-  return "ручная выдача"
-}

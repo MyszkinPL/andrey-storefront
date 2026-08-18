@@ -26,7 +26,10 @@ export function Screen({
     <main
       className={cn(
         "mx-auto box-border flex w-full max-w-5xl flex-col overflow-x-hidden px-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] sm:px-4",
-        !noTabBar && "min-h-[calc(100dvh-3rem)]",
+        // From `lg` the side rail replaces the tab bar, so the space it
+        // reserved at the bottom becomes ordinary page padding.
+        "lg:px-8 lg:pt-8 lg:pb-10",
+        !noTabBar && "min-h-[calc(100dvh-3rem)] lg:min-h-0",
         noTabBar && "min-h-0",
         !noTabBar && "pb-[calc(env(safe-area-inset-bottom)+5.75rem)]",
         noTabBar && "pb-[calc(env(safe-area-inset-bottom)+1rem)]",
@@ -51,10 +54,10 @@ export function ScreenHeader({
   inlineTrailingMobile?: boolean
 }) {
   return (
-    <header className="mb-2 flex items-center gap-3 px-1">
+    <header className="mb-2 flex items-center gap-3 px-1 lg:mb-4">
       {before ? <div className="shrink-0">{before}</div> : null}
       <div className="min-w-0 flex-1">
-        <CardTitle className="truncate">{title}</CardTitle>
+        <CardTitle className="truncate lg:text-2xl">{title}</CardTitle>
         {subtitle ? <CardDescription className="truncate">{subtitle}</CardDescription> : null}
       </div>
       {trailing ? <div className="shrink-0">{trailing}</div> : null}
@@ -69,7 +72,7 @@ export function ScreenBody({
   children: React.ReactNode
   className?: string
 }) {
-  return <div className={cn("flex flex-col gap-2", className)}>{children}</div>
+  return <div className={cn("flex flex-col gap-2 lg:gap-3", className)}>{children}</div>
 }
 
 export function ScreenEmpty({

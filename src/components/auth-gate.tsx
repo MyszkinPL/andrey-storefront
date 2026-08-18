@@ -4,11 +4,13 @@ import { useEffect, useState } from "react"
 import { LoaderCircle } from "lucide-react"
 
 import { AccessStateScreen } from "@/components/access-state-screen"
+import { useTranslate } from "@/components/i18n-provider"
 import { ApiError, authenticateWithTelegram, getMe } from "@/lib/api"
 import { useTelegram } from "@/hooks/use-telegram"
 import { isLocalMockApiEnabled } from "@/lib/mock-api"
 
 export function AuthGate({ children }: { children: React.ReactNode }) {
+  const t = useTranslate()
   const { ready, initData, isTelegram } = useTelegram()
   const [state, setState] = useState<"loading" | "ok" | "outside" | "error">("loading")
   const [error, setError] = useState("")
@@ -26,7 +28,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
       } catch (err) {
         if (err instanceof ApiError && err.status === 403) {
           if (!cancelled) {
-            setError(err.message || "Доступ ограничен")
+            setError(err.message || t("auth.restrictedTitle"))
             setState("error")
           }
           return err.status
@@ -64,7 +66,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
       authenticateAndLoad(initData)
         .catch((err: unknown) => {
           if (!cancelled) {
-            setError(err instanceof Error ? err.message : "Auth failed")
+            setError(err instanceof Error ? err.message : t("auth.failed"))
             setState("error")
           }
         })
@@ -73,7 +75,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true
     }
-  }, [initData, isTelegram, ready])
+  }, [initData, isTelegram, ready, t])
 
   if (state === "loading") {
     return (
@@ -86,15 +88,15 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   if (state === "outside") {
     return (
       <AccessStateScreen
-        title="Открой магазин из Telegram"
-        description="Авторизация идёт через Telegram initData. Для локальной разработки можно включить dev auth."
+        title={t("auth.outsideTitle")}
+        description={t("auth.outsideDescription")}
         icon={<LoaderCircle />}
       />
     )
   }
 
   if (state === "error") {
-    return <AccessStateScreen title="Доступ ограничен" description={error} />
+    return <AccessStateScreen title={t("auth.restrictedTitle")} description={error} />
   }
 
   return <>{children}</>

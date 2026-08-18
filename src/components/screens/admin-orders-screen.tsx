@@ -25,11 +25,17 @@ import {
 } from "@/components/ui/item"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
+import { useI18n } from "@/components/i18n-provider"
+import type { TranslationKey } from "@/lib/i18n"
 import { getMe, getOrders } from "@/lib/api"
+import { useRelativeTime } from "@/hooks/use-relative-time"
+import { orderBadgeVariant, orderStatusKey } from "@/lib/order-status"
 
 type FilterKey = "all" | "waiting" | "review" | "work" | "closed"
 
 export function AdminOrdersScreen() {
+  const { t } = useI18n()
+  const formatRelative = useRelativeTime()
   const { data: meData } = useQuery({ queryKey: ["me"], queryFn: getMe })
   const { data, isLoading, isError } = useQuery({
     queryKey: ["orders", "all"],
@@ -59,31 +65,40 @@ export function AdminOrdersScreen() {
   if (meData && meData.user.role !== "ADMIN") {
     return (
       <Screen>
-        <ScreenHeader title="Доступ закрыт" subtitle="Заказы продавца доступны только админу." />
+        <ScreenHeader title={t("admin.deniedTitle")} subtitle={t("admin.deniedOrders")} />
       </Screen>
     )
   }
 
   return (
     <Screen>
-      <ScreenHeader title="Заказы" subtitle="Очередь продавца" />
+      <ScreenHeader title={t("admin.ordersTitle")} subtitle={t("admin.ordersSubtitle")} />
 
       {isLoading ? (
-        <OrdersEmpty title="Загружаю заказы" description="Подтягиваю очередь продавца." />
+        <OrdersEmpty
+          title={t("admin.ordersLoadingTitle")}
+          description={t("admin.ordersLoadingDescription")}
+        />
       ) : isError ? (
-        <OrdersEmpty title="Очередь не загрузилась" description="Обнови экран или попробуй позже." />
+        <OrdersEmpty
+          title={t("admin.ordersErrorTitle")}
+          description={t("admin.ordersErrorDescription")}
+        />
       ) : orders.length === 0 ? (
-        <OrdersEmpty title="Заказов нет" description="Новые покупки появятся здесь." />
+        <OrdersEmpty
+          title={t("admin.ordersEmptyTitle")}
+          description={t("admin.ordersEmptyDescription")}
+        />
       ) : (
         <ScreenBody>
           <Tabs value={filter} onValueChange={(value) => setFilter(value as FilterKey)}>
             <TabsList className="grid w-full grid-cols-5">
               {[
-                { key: "all" as const, label: "Все" },
-                { key: "waiting" as const, label: "Оплата" },
-                { key: "review" as const, label: "Проверка" },
-                { key: "work" as const, label: "Выдача" },
-                { key: "closed" as const, label: "История" },
+                { key: "all" as const, label: t("orders.filterAll") },
+                { key: "waiting" as const, label: t("orders.filterPayment") },
+                { key: "review" as const, label: t("orders.filterReview") },
+                { key: "work" as const, label: t("orders.filterDelivery") },
+                { key: "closed" as const, label: t("orders.filterHistory") },
               ].map((item) => (
                 <TabsTrigger key={item.key} value={item.key} className="px-1 text-xs">
                   {item.label}
@@ -93,9 +108,12 @@ export function AdminOrdersScreen() {
           </Tabs>
 
           {visibleOrders.length === 0 ? (
-            <OrdersEmpty title="Пусто" description="Для этого фильтра сейчас ничего нет." />
+            <OrdersEmpty
+              title={t("orders.filterEmptyTitle")}
+              description={t("orders.filterEmptyDescription")}
+            />
           ) : (
-            <ItemGroup className="gap-2">
+            <ItemGroup className="gap-2 lg:grid lg:grid-cols-2">
               {visibleOrders.map((order) => (
                 <Item key={order.id} render={<Link href={`/orders/${order.id}`} />} variant="muted" size="sm">
                   <ItemMedia variant="icon">
@@ -108,11 +126,13 @@ export function AdminOrdersScreen() {
                       {order.productCategory ? ` · ${order.productCategory}` : ""}
                       {order.paymentMethodTitle ? ` · ${order.paymentMethodTitle}` : ""}
                       {" · "}
-                      {renderSummary(order)}
+                      {t(summaryKey(order))}
+                      {" · "}
+                      {formatRelative(order.updatedAt)}
                     </ItemDescription>
                   </ItemContent>
                   <ItemActions>
-                    <OrderBadge order={order} />
+                    <Badge variant={orderBadgeVariant(order)}>{t(orderStatusKey(order))}</Badge>
                   </ItemActions>
                 </Item>
               ))}
@@ -142,22 +162,14 @@ function OrdersEmpty({ title, description }: { title: string; description: strin
   )
 }
 
-function OrderBadge({
-  order,
-}: {
-  order: Awaited<ReturnType<typeof getOrders>>["orders"][number]
-}) {
-  if (order.status === "PAYMENT_REVIEW") return <Badge>Проверка</Badge>
-  if (order.status === "CANCELLED") return <Badge variant="destructive">Отменён</Badge>
-  if (!order.isPaid) return <Badge variant="secondary">Оплата</Badge>
-  return <Badge variant="outline">Оплачен</Badge>
-}
 
-function renderSummary(order: Awaited<ReturnType<typeof getOrders>>["orders"][number]) {
-  if (order.status === "PAYMENT_REVIEW") return "Покупатель отметил оплату."
-  if (order.status === "CANCELLED") return "Заказ отменён."
-  if (order.status === "CLOSED" && !order.isPaid) return "Закрыт без оплаты."
-  if (!order.isPaid) return "Ожидает оплату."
-  if (order.status === "CLOSED") return "Завершён."
-  return "Оплачен, нужна выдача."
+function summaryKey(
+  order: Awaited<ReturnType<typeof getOrders>>["orders"][number],
+): TranslationKey {
+  if (order.status === "PAYMENT_REVIEW") return "admin.hintReview"
+  if (order.status === "CANCELLED") return "admin.hintCancelled"
+  if (order.status === "CLOSED" && !order.isPaid) return "admin.hintClosedUnpaid"
+  if (!order.isPaid) return "admin.hintAwaiting"
+  if (order.status === "CLOSED") return "admin.hintDone"
+  return "admin.hintNeedsDelivery"
 }

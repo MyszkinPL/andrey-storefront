@@ -26,11 +26,16 @@ import {
 } from "@/components/ui/item"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
+import { useI18n } from "@/components/i18n-provider"
 import { getMe, getOrders } from "@/lib/api"
+import { useRelativeTime } from "@/hooks/use-relative-time"
+import { orderBadgeVariant, orderStatusKey } from "@/lib/order-status"
 
 type FilterKey = "all" | "waiting" | "review" | "active" | "closed"
 
 export function OrdersScreen() {
+  const { t } = useI18n()
+  const formatRelative = useRelativeTime()
   const { data: ordersData, isLoading, isError } = useQuery({
     queryKey: ["orders"],
     queryFn: () => getOrders(),
@@ -68,8 +73,11 @@ export function OrdersScreen() {
   return (
     <Screen>
       <ScreenHeader
-        title="Заказы"
-        subtitle={`${buckets.active.length} активных · ${buckets.waiting.length} ждут оплату`}
+        title={t("orders.title")}
+        subtitle={t("orders.subtitle", {
+          active: buckets.active.length,
+          waiting: buckets.waiting.length,
+        })}
         trailing={
           supportLink ? (
             <a
@@ -78,7 +86,7 @@ export function OrdersScreen() {
               rel="noreferrer"
               className={buttonVariants({ size: "sm", variant: "secondary" })}
             >
-              Поддержка
+              {t("orders.support")}
               <ExternalLink data-icon="inline-end" />
             </a>
           ) : null
@@ -86,21 +94,21 @@ export function OrdersScreen() {
       />
 
       {isLoading ? (
-        <OrdersEmpty title="Загружаю заказы" description="Подтягиваю историю покупок." />
+        <OrdersEmpty title={t("orders.loadingTitle")} description={t("orders.loadingDescription")} />
       ) : isError ? (
-        <OrdersEmpty title="Заказы не загрузились" description="Обнови экран или попробуй позже." />
+        <OrdersEmpty title={t("orders.errorTitle")} description={t("orders.errorDescription")} />
       ) : orders.length === 0 ? (
-        <OrdersEmpty title="Заказов пока нет" description="Открой товар и оформи покупку." />
+        <OrdersEmpty title={t("orders.emptyTitle")} description={t("orders.emptyDescription")} />
       ) : (
         <ScreenBody>
           <Tabs value={filter} onValueChange={(value) => setFilter(value as FilterKey)}>
             <TabsList className="grid w-full grid-cols-5">
               {[
-                { key: "all" as const, label: "Все" },
-                { key: "waiting" as const, label: "Оплата" },
-                { key: "review" as const, label: "Проверка" },
-                { key: "active" as const, label: "Выдача" },
-                { key: "closed" as const, label: "История" },
+                { key: "all" as const, label: t("orders.filterAll") },
+                { key: "waiting" as const, label: t("orders.filterPayment") },
+                { key: "review" as const, label: t("orders.filterReview") },
+                { key: "active" as const, label: t("orders.filterDelivery") },
+                { key: "closed" as const, label: t("orders.filterHistory") },
               ].map((item) => (
                 <TabsTrigger key={item.key} value={item.key} className="px-1 text-xs">
                   {item.label}
@@ -110,9 +118,9 @@ export function OrdersScreen() {
           </Tabs>
 
           {visibleOrders.length === 0 ? (
-            <OrdersEmpty title="Пусто" description="Для этого фильтра сейчас ничего нет." />
+            <OrdersEmpty title={t("orders.filterEmptyTitle")} description={t("orders.filterEmptyDescription")} />
           ) : (
-            <ItemGroup className="gap-2">
+            <ItemGroup className="gap-2 lg:grid lg:grid-cols-2">
               {visibleOrders.map((order) => (
                 <Item key={order.id} render={<Link href={`/orders/${order.id}`} />} variant="muted" size="sm">
                   <ItemMedia variant="icon">
@@ -125,11 +133,11 @@ export function OrdersScreen() {
                       {order.productCategory ? ` · ${order.productCategory}` : ""}
                       {order.paymentMethodTitle && !order.isPaid ? ` · ${order.paymentMethodTitle}` : ""}
                       {" · "}
-                      {formatRelativeTimeShort(order.updatedAt)}
+                      {formatRelative(order.updatedAt)}
                     </ItemDescription>
                   </ItemContent>
                   <ItemActions>
-                    <Badge variant={orderBadgeVariant(order)}>{renderPrimaryState(order)}</Badge>
+                    <Badge variant={orderBadgeVariant(order)}>{t(orderStatusKey(order))}</Badge>
                   </ItemActions>
                 </Item>
               ))}
@@ -159,31 +167,3 @@ function OrdersEmpty({ title, description }: { title: string; description: strin
   )
 }
 
-function orderBadgeVariant(order: Awaited<ReturnType<typeof getOrders>>["orders"][number]) {
-  if (order.status === "PAYMENT_REVIEW") return "default"
-  if (order.status === "CANCELLED") return "destructive"
-  if (!order.isPaid) return "secondary"
-  if (order.status === "CLOSED") return "outline"
-  return "default"
-}
-
-function renderPrimaryState(order: Awaited<ReturnType<typeof getOrders>>["orders"][number]) {
-  if (order.status === "PAYMENT_REVIEW") return "Проверка оплаты"
-  if (order.status === "CANCELLED") return "Отменён"
-  if (order.status === "CLOSED" && !order.isPaid) return "Не оплачен"
-  if (!order.isPaid) return "Ждёт оплату"
-  if (order.status === "CLOSED") return "Завершён"
-  return "Оплачен"
-}
-
-function formatRelativeTimeShort(value: string | Date) {
-  const diffMs = Math.max(0, Date.now() - new Date(value).getTime())
-  const minute = 60_000
-  const hour = 60 * minute
-  const day = 24 * hour
-
-  if (diffMs < minute) return "сейчас"
-  if (diffMs < hour) return `${Math.floor(diffMs / minute)} мин`
-  if (diffMs < day) return `${Math.floor(diffMs / hour)} ч`
-  return `${Math.floor(diffMs / day)} д`
-}

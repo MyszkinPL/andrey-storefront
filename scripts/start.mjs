@@ -24,10 +24,22 @@ await ensureBootstrapData()
 if (appUrl && botToken) {
   const webhookUrl = `${appUrl.replace(/\/$/, "")}/api/telegram/webhook`
   await telegram("setWebhook", { url: webhookUrl })
+  // Telegram picks the command list by the client's language, so register the
+  // English set as the default and Russian as a language-scoped override.
   await telegram("setMyCommands", {
+    commands: [
+      { command: "start", description: "Open the shop" },
+      { command: "orders", description: "My orders" },
+      { command: "admin", description: "Admin panel" },
+      { command: "help", description: "Help" },
+    ],
+  })
+  await telegram("setMyCommands", {
+    language_code: "ru",
     commands: [
       { command: "start", description: "Открыть магазин" },
       { command: "orders", description: "Мои заказы" },
+      { command: "admin", description: "Админка" },
       { command: "help", description: "Помощь" },
     ],
   })

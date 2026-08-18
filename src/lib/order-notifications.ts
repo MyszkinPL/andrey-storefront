@@ -1,13 +1,15 @@
 import { Role } from "@prisma/client"
 
 import { getBot } from "@/lib/bot"
+import { createTranslator, type TranslateFn } from "@/lib/i18n"
+import { resolveUserLocale } from "@/lib/i18n/config"
 import { prisma } from "@/lib/prisma"
+import { escapeHtml } from "@/lib/telegram-format"
 
-function escapeHtml(value: string) {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
+type Recipient = {
+  telegramId: bigint
+  language: string | null
+  languageCode: string | null
 }
 
 async function getOrderContext(orderId: string) {
@@ -22,52 +24,78 @@ async function getOrderContext(orderId: string) {
     }),
     prisma.user.findMany({
       where: { role: Role.ADMIN },
-      select: { telegramId: true },
+      select: { telegramId: true, language: true, languageCode: true },
     }),
   ])
 
   if (!order) return null
 
-  const title = order.product?.title || order.productTitleSnapshot || order.subject || `Заказ #${order.number}`
+  const title =
+    order.product?.title ||
+    order.productTitleSnapshot ||
+    order.subject ||
+    `#${order.number}`
   const buyerName = order.createdBy.username
     ? `@${order.createdBy.username}`
     : order.createdBy.firstName
 
   return {
     order,
-    admins: admins.map((item) => Number(item.telegramId)),
-    buyerTelegramId: Number(order.createdBy.telegramId),
+    admins: admins as Recipient[],
+    buyer: order.createdBy as Recipient,
     title,
     buyerName,
   }
 }
 
-async function sendMany(telegramIds: number[], text: string) {
-  if (telegramIds.length === 0) return
+/**
+ * Sends one message per recipient, each rendered in that person's own
+ * language, so an English-speaking admin and a Russian buyer both read the
+ * same event in their own words.
+ */
+async function sendLocalized(
+  recipients: Recipient[],
+  build: (t: TranslateFn) => string,
+) {
+  if (recipients.length === 0) return
   const bot = getBot()
+
   const results = await Promise.allSettled(
-    telegramIds.map((telegramId) =>
-      bot.api.sendMessage(telegramId, text, { parse_mode: "HTML" }),
-    ),
+    recipients.map((recipient) => {
+      const t = createTranslator(resolveUserLocale(recipient))
+      return bot.api.sendMessage(Number(recipient.telegramId), build(t), {
+        parse_mode: "HTML",
+      })
+    }),
   )
 
   results.forEach((result, index) => {
     if (result.status === "rejected") {
       console.error("Telegram notification failed", {
-        telegramId: telegramIds[index],
-        error: result.reason instanceof Error ? result.reason.message : String(result.reason),
+        telegramId: recipients[index].telegramId.toString(),
+        error:
+          result.reason instanceof Error
+            ? result.reason.message
+            : String(result.reason),
       })
     }
   })
+}
+
+function heading(title: string, number: number) {
+  return `<b>${escapeHtml(title)}</b> · #${number}`
 }
 
 export async function notifyManualPaymentRequested(orderId: string) {
   const context = await getOrderContext(orderId)
   if (!context) return
 
-  await sendMany(
-    context.admins,
-    `Покупатель отметил ручную оплату.\n<b>${escapeHtml(context.title)}</b> · #${context.order.number}\n${escapeHtml(context.buyerName)}`,
+  await sendLocalized(context.admins, (t) =>
+    [
+      t("notify.manualRequested"),
+      heading(context.title, context.order.number),
+      escapeHtml(context.buyerName),
+    ].join("\n"),
   )
 }
 
@@ -76,24 +104,42 @@ export async function notifyOrderPaid(orderId: string) {
   if (!context) return
 
   const isAutoKey = context.order.product?.deliveryType === "AUTO_KEY"
-  const deliveredKey = context.order.deliveredKey?.value || context.order.deliveredKeyValue || ""
-  const keyLine = deliveredKey
-    ? `\nКлюч: <code>${escapeHtml(deliveredKey)}</code>`
-    : ""
-  let buyerText = `Оплата подтверждена.\n<b>${escapeHtml(context.title)}</b> · #${context.order.number}\nЗаказ передан на выдачу.`
-  let adminText = `Оплата подтверждена.\n<b>${escapeHtml(context.title)}</b> · #${context.order.number}\nПокупатель: ${escapeHtml(context.buyerName)}`
-
-  if (deliveredKey) {
-    buyerText = `Оплата подтверждена.\n<b>${escapeHtml(context.title)}</b> · #${context.order.number}\nДоступ выдан.${keyLine}`
-    adminText = `Оплата подтверждена.\n<b>${escapeHtml(context.title)}</b> · #${context.order.number}\nПокупатель: ${escapeHtml(context.buyerName)}\nКлюч выдан автоматически.`
-  } else if (isAutoKey) {
-    buyerText = `Оплата подтверждена.\n<b>${escapeHtml(context.title)}</b> · #${context.order.number}\nСвободные ключи закончились. Заказ передан на ручную выдачу.`
-    adminText = `Оплата подтверждена.\n<b>${escapeHtml(context.title)}</b> · #${context.order.number}\nПокупатель: ${escapeHtml(context.buyerName)}\nСвободные ключи закончились. Нужна ручная выдача.`
-  }
+  const deliveredKey =
+    context.order.deliveredKey?.value || context.order.deliveredKeyValue || ""
 
   await Promise.allSettled([
-    sendMany([context.buyerTelegramId], buyerText),
-    sendMany(context.admins, adminText),
+    sendLocalized([context.buyer], (t) => {
+      const head = heading(context.title, context.order.number)
+
+      if (deliveredKey) {
+        const [first, second] = t("notify.paidBuyerDelivered").split("\n")
+        return [
+          first,
+          head,
+          second,
+          `${t("notify.keyLabel")} <code>${escapeHtml(deliveredKey)}</code>`,
+        ].join("\n")
+      }
+
+      const template = isAutoKey
+        ? t("notify.paidBuyerNoKeys")
+        : t("notify.paidBuyerPending")
+      const [first, second] = template.split("\n")
+      return [first, head, second].join("\n")
+    }),
+
+    sendLocalized(context.admins, (t) => {
+      const lines = [
+        t("notify.paidAdmin"),
+        heading(context.title, context.order.number),
+        t("notify.buyerLabel", { buyer: escapeHtml(context.buyerName) }),
+      ]
+
+      if (deliveredKey) lines.push(t("notify.paidAdminAuto"))
+      else if (isAutoKey) lines.push(t("notify.paidAdminNoKeys"))
+
+      return lines.join("\n")
+    }),
   ])
 }
 
@@ -101,21 +147,29 @@ export async function notifyManualPaymentRejected(orderId: string) {
   const context = await getOrderContext(orderId)
   if (!context) return
 
-  await sendMany(
-    [context.buyerTelegramId],
-    `Проверка оплаты не подтверждена.\n<b>${escapeHtml(context.title)}</b> · #${context.order.number}\nПроверь реквизиты и оплату, затем попробуй снова.`,
-  )
+  await sendLocalized([context.buyer], (t) => {
+    const [first, second] = t("notify.rejected").split("\n")
+    return [first, heading(context.title, context.order.number), second].join("\n")
+  })
 }
 
 export async function notifyOrderCancelled(orderId: string) {
   const context = await getOrderContext(orderId)
   if (!context) return
 
-  const buyerText = `Заказ отменён.\n<b>${escapeHtml(context.title)}</b> · #${context.order.number}`
-  const adminText = `Покупатель отменил заказ.\n<b>${escapeHtml(context.title)}</b> · #${context.order.number}\n${escapeHtml(context.buyerName)}`
-
   await Promise.allSettled([
-    sendMany([context.buyerTelegramId], buyerText),
-    sendMany(context.admins, adminText),
+    sendLocalized([context.buyer], (t) =>
+      [
+        t("notify.cancelledBuyer"),
+        heading(context.title, context.order.number),
+      ].join("\n"),
+    ),
+    sendLocalized(context.admins, (t) =>
+      [
+        t("notify.cancelledAdmin"),
+        heading(context.title, context.order.number),
+        escapeHtml(context.buyerName),
+      ].join("\n"),
+    ),
   ])
 }

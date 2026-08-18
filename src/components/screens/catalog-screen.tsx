@@ -27,15 +27,22 @@ import {
 } from "@/components/ui/item"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
+import { ShopLogo } from "@/components/shop-logo"
+import { useI18n } from "@/components/i18n-provider"
 import { getMe, getProducts } from "@/lib/api"
+import { formatPrice } from "@/lib/format"
+
+/** Sentinel for "no category filter", kept out of the translated labels. */
+const ALL_CATEGORIES = ""
 
 export function CatalogScreen() {
+  const { t, tp, locale } = useI18n()
   const { data: productsData, isLoading, isError } = useQuery({
     queryKey: ["products"],
     queryFn: getProducts,
   })
   const { data: meData } = useQuery({ queryKey: ["me"], queryFn: getMe })
-  const [category, setCategory] = useState("")
+  const [category, setCategory] = useState(ALL_CATEGORIES)
   const [search, setSearch] = useState("")
 
   const products = useMemo(() => productsData?.products ?? [], [productsData?.products])
@@ -44,14 +51,14 @@ export function CatalogScreen() {
     for (const item of products) {
       if (item.category) set.add(item.category)
     }
-    return ["Все", ...Array.from(set)]
+    return [ALL_CATEGORIES, ...Array.from(set)]
   }, [products])
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase()
     return products.filter((item) => {
       if (!item.isActive) return false
-      const categoryOk = !category || category === "Все" || item.category === category
+      const categoryOk = !category || item.category === category
       const searchOk =
         !query ||
         `${item.title} ${item.category || ""} ${item.description} ${item.specs
@@ -71,7 +78,7 @@ export function CatalogScreen() {
         before={<ShopLogo />}
         title={shopName}
         trailing={
-          <Avatar size="lg">
+          <Avatar className="size-10">
             {meData?.user.photoUrl ? (
               <AvatarImage src={meData.user.photoUrl} alt={meData.user.firstName} />
             ) : null}
@@ -82,40 +89,52 @@ export function CatalogScreen() {
 
       <ScreenBody>
         {isLoading ? (
-          <CatalogEmpty title="Загружаю каталог" description="Подтягиваю товары магазина." />
+          <CatalogEmpty
+            title={t("catalog.loadingTitle")}
+            description={t("catalog.loadingDescription")}
+          />
         ) : isError ? (
-          <CatalogEmpty title="Каталог не загрузился" description="Обнови экран или попробуй позже." />
+          <CatalogEmpty
+            title={t("catalog.errorTitle")}
+            description={t("catalog.errorDescription")}
+          />
         ) : (
           <>
-            <InputGroup>
+            {/* Search and categories stack on phones and share a row on desktop. */}
+            <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:gap-3">
+            <InputGroup className="lg:max-w-xs">
               <InputGroupAddon>
                 <Search />
               </InputGroupAddon>
               <InputGroupInput
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Поиск"
+                placeholder={t("catalog.searchPlaceholder")}
               />
             </InputGroup>
 
             <ToggleGroup
-              value={[category || "Все"]}
-              onValueChange={(value) => setCategory(value[0] === "Все" ? "" : value[0] || "")}
+              value={[category]}
+              onValueChange={(value) => setCategory(value[0] ?? ALL_CATEGORIES)}
               variant="outline"
               size="sm"
-              className="grid w-full grid-cols-3"
+              className="grid w-full grid-cols-3 lg:flex lg:w-auto lg:flex-wrap"
             >
               {categories.map((item) => (
-                <ToggleGroupItem key={item} value={item}>
-                  {item}
+                <ToggleGroupItem key={item || "all"} value={item}>
+                  {item || t("catalog.allCategories")}
                 </ToggleGroupItem>
               ))}
             </ToggleGroup>
+            </div>
 
             {filtered.length === 0 ? (
-              <CatalogEmpty title="Пусто" description="Попробуй другую категорию или запрос." />
+              <CatalogEmpty
+                title={t("catalog.emptyTitle")}
+                description={t("catalog.emptyDescription")}
+              />
             ) : (
-              <ItemGroup className="gap-2 lg:grid lg:grid-cols-2">
+              <ItemGroup className="gap-2 lg:grid lg:grid-cols-2 xl:grid-cols-3">
                 {filtered.map((product) => (
                   <Item
                     key={product.id}
@@ -132,14 +151,17 @@ export function CatalogScreen() {
                     <ItemContent className="min-w-0">
                       <ItemTitle>{product.title}</ItemTitle>
                       <ItemDescription>
-                        {product.category || "Без категории"} · {renderDelivery(product)}
+                        {product.category || t("catalog.noCategory")} ·{" "}
+                        {product.deliveryType === "AUTO_KEY"
+                          ? tp("catalog.keys", product.availableKeyCount || 0)
+                          : t("catalog.manualDelivery")}
                       </ItemDescription>
                       {product.description ? (
                         <ItemDescription className="line-clamp-1">{product.description}</ItemDescription>
                       ) : null}
                     </ItemContent>
                     <ItemActions>
-                      <Badge variant="secondary">{product.priceRub.toLocaleString("ru-RU")} ₽</Badge>
+                      <Badge variant="secondary">{formatPrice(product.priceRub, locale)}</Badge>
                     </ItemActions>
                   </Item>
                 ))}
@@ -152,12 +174,6 @@ export function CatalogScreen() {
   )
 }
 
-function ShopLogo() {
-  return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img src="/logo.svg" alt="snx.sell" className="size-8 shrink-0" />
-  )
-}
 
 function ProductThumbnail({
   imageDataUrl,
@@ -176,13 +192,6 @@ function ProductThumbnail({
   return <PackageSearch />
 }
 
-function renderDelivery(product: Awaited<ReturnType<typeof getProducts>>["products"][number]) {
-  if (product.deliveryType === "AUTO_KEY") {
-    return `${product.availableKeyCount || 0} ключей`
-  }
-
-  return "ручная выдача"
-}
 
 function CatalogEmpty({
   title,

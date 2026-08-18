@@ -3,6 +3,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { useState } from "react"
 
+import { I18nProvider } from "@/components/i18n-provider"
 import { TelegramProvider } from "@/components/telegram-provider"
 
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -21,7 +22,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={client}>
-      <TelegramProvider>{children}</TelegramProvider>
+      <TelegramProvider>
+        <I18nProvider>{children}</I18nProvider>
+      </TelegramProvider>
     </QueryClientProvider>
   )
 }

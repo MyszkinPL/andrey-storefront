@@ -5,8 +5,6 @@ import Link from "next/link"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { format } from "date-fns"
-import { ru } from "date-fns/locale"
 import {
   Check,
   CircleDashed,
@@ -16,6 +14,10 @@ import {
   Trash2,
 } from "lucide-react"
 
+import { ReceiptStatus, ReceiptUpload } from "@/components/receipt-upload"
+import { useI18n, useTranslate } from "@/components/i18n-provider"
+import type { TranslateFn, TranslationKey } from "@/lib/i18n"
+import { formatDateTime, formatPrice } from "@/lib/format"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   AlertDialog,
@@ -96,6 +98,7 @@ type PaymentOption = {
 
 export function OrderDetailScreen({ orderId }: { orderId: string }) {
   const router = useRouter()
+  const { t, locale } = useI18n()
   const queryClient = useQueryClient()
   const { mode } = useMode()
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
@@ -186,8 +189,10 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
             type: "CRYPTO_PAY" as const,
             title: paymentData.cryptoPay.title || "Crypto Bot",
             subtitle: paymentData.cryptoPay.acceptedAssets
-              ? `Автооплата · ${paymentData.cryptoPay.acceptedAssets}`
-              : "Автооплата через invoice",
+              ? t("product.cryptoAutoWithAssets", {
+                  assets: paymentData.cryptoPay.acceptedAssets,
+                })
+              : t("product.cryptoAuto"),
             iconDataUrl: paymentData.cryptoPay.iconDataUrl || null,
           },
         ]
@@ -195,11 +200,21 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
   ]
 
   if (isLoading) {
-    return <OrderState title="Загружаю заказ" description="Подтягиваю оплату и статус." />
+    return (
+      <OrderState
+        title={t("orderDetail.loadingTitle")}
+        description={t("orderDetail.loadingDescription")}
+      />
+    )
   }
 
   if (isError || !data?.order) {
-    return <OrderState title="Заказ не загрузился" description="Обнови экран или попробуй позже." />
+    return (
+      <OrderState
+        title={t("orderDetail.errorTitle")}
+        description={t("orderDetail.errorDescription")}
+      />
+    )
   }
 
   const order = data.order
@@ -210,7 +225,7 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
   const supportLink = meData?.settings.supportUsername
     ? `https://t.me/${meData.settings.supportUsername.replace(/^@/, "")}`
     : null
-  const createdAtLabel = format(new Date(order.createdAt), "dd MMMM · HH:mm", { locale: ru })
+  const createdAtLabel = formatDateTime(order.createdAt, locale)
   const currentPaymentKey =
     order.paymentMethodType === "MANUAL" && order.paymentMethodId
       ? `manual:${order.paymentMethodId}`
@@ -239,10 +254,16 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
     order.status !== "PAYMENT_REVIEW"
   const showCryptoPayment =
     order.paymentMethodType === "CRYPTO_PAY" && Boolean(order.cryptoInvoiceUrl) && !order.isPaid
+  // A receipt only helps while a manual transfer is still awaiting confirmation.
+  const canAttachReceipt =
+    isRealBuyerView &&
+    !order.isPaid &&
+    !isClosed &&
+    order.paymentMethodType !== "CRYPTO_PAY"
   const amountLabel = order.cryptoInvoiceAmount
     ? `${order.cryptoInvoiceAmount} ${order.cryptoInvoiceFiat || "RUB"}`
     : order.priceRub
-      ? `${order.priceRub.toLocaleString("ru-RU")} ₽`
+      ? formatPrice(order.priceRub, locale)
     : null
   const selectedPaymentKey = draftPaymentKey || currentPaymentKey
   const showOrderNotice =
@@ -288,11 +309,15 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
           />
         ) : null}
 
-        <Card size="sm" className="flex-1">
+        <Card className="flex-1">
           <CardHeader>
-            <CardTitle>{paymentStateLabel(order)}</CardTitle>
+            <CardTitle>{t(paymentStateKey(order))}</CardTitle>
             <CardDescription>
-              Заказ #{order.number} · {order.productTitle || order.subject} · {createdAtLabel}
+              {t("orderDetail.summaryLine", {
+                number: order.number,
+                title: order.productTitle || order.subject,
+                date: createdAtLabel,
+              })}
             </CardDescription>
             <CardAction>
               {amountLabel ? <Badge variant="secondary">{amountLabel}</Badge> : null}
@@ -302,8 +327,8 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
           <CardContent className="flex flex-1 flex-col gap-3">
             {showOrderNotice ? (
               <Field>
-                <FieldTitle>{renderOrderActionTitle(order, amountLabel)}</FieldTitle>
-                <FieldDescription>{renderOrderActionDescription(order)}</FieldDescription>
+                <FieldTitle>{orderNoticeTitle(order, amountLabel, t)}</FieldTitle>
+                <FieldDescription>{t(orderNoticeDescriptionKey(order))}</FieldDescription>
               </Field>
             ) : null}
 
@@ -316,15 +341,19 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
               />
             ) : (
               <PaymentMethodSummary
-                title={order.paymentMethodTitle || "Способ оплаты"}
-                description={order.paymentMethodDetails || order.paymentMethodType || "Не выбрана"}
+                title={order.paymentMethodTitle || t("orderDetail.paymentMethodFallback")}
+                description={
+                  order.paymentMethodDetails ||
+                  order.paymentMethodType ||
+                  t("common.notSelected")
+                }
                 iconDataUrl={order.paymentMethodIconDataUrl}
               />
             )}
 
             {showManualPayment ? (
               <CopyField
-                title="Реквизиты"
+                title={t("orderDetail.requisites")}
                 value={order.paymentMethodDetails || ""}
                 copied={copiedField === "payment"}
                 onCopy={() => copyValue(order.paymentMethodDetails || "", "payment")}
@@ -338,7 +367,7 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
                 rel="noreferrer"
                 className={cn(buttonVariants({ size: "lg" }), "w-full")}
               >
-                Открыть invoice
+                {t("orderDetail.openInvoice")}
                 <ExternalLink data-icon="inline-end" />
               </a>
             ) : null}
@@ -348,13 +377,25 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
                 disabled={markManualPaidMutation.isPending}
                 onClick={() => markManualPaidMutation.mutate()}
               >
-                Я оплатил
+                {t("orderDetail.markPaid")}
               </Button>
+            ) : null}
+
+            {canAttachReceipt ? (
+              <ReceiptUpload
+                onUploaded={() => void invalidate()}
+                orderId={order.id}
+                receipt={order.receipt}
+              />
+            ) : null}
+
+            {adminToolsVisible ? (
+              <ReceiptStatus receipt={order.receipt} />
             ) : null}
 
             {order.deliveredKey ? (
               <CopyField
-                title="Выданный ключ"
+                title={t("orderDetail.deliveredKey")}
                 value={order.deliveredKey}
                 copied={copiedField === "key"}
                 onCopy={() => copyValue(order.deliveredKey || "", "key")}
@@ -364,7 +405,7 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
             <OrderReceipt
               className="mt-auto"
               productTitle={order.productTitle || order.subject}
-              paymentTitle={order.paymentMethodTitle || "Не выбрана"}
+              paymentTitle={order.paymentMethodTitle || t("common.notSelected")}
               amountLabel={amountLabel}
               createdAtLabel={createdAtLabel}
             />
@@ -377,7 +418,7 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
                   href={`/orders/${order.id}/complete`}
                   className={buttonVariants()}
                 >
-                  Открыть выдачу
+                  {t("orderDetail.openDelivery")}
                 </Link>
               ) : null}
               {order.isPaid && supportLink && isRealBuyerView ? (
@@ -387,7 +428,7 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
                   rel="noreferrer"
                   className={buttonVariants({ variant: "secondary" })}
                 >
-                  Поддержка в Telegram
+                  {t("orderDetail.telegramSupport")}
                 </a>
               ) : null}
               {isRealBuyerView && !order.isPaid && !isClosed ? (
@@ -396,7 +437,7 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
                   disabled={cancelOrderMutation.isPending}
                   onClick={() => cancelOrderMutation.mutate()}
                 >
-                  Отменить заказ
+                  {t("orderDetail.cancelOrder")}
                 </Button>
               ) : null}
             </CardFooter>
@@ -439,19 +480,25 @@ function AdminOrderPanel({
   onRefresh: () => void
   onDelete: () => void
 }) {
+  const t = useTranslate()
+
   return (
-    <Card size="sm">
+    <Card>
       <CardHeader>
-        <CardTitle>Админ</CardTitle>
-        <CardDescription>Заказ #{order.number}</CardDescription>
+        <CardTitle>{t("orderDetail.admin")}</CardTitle>
+        <CardDescription>
+          {t("orderDetail.orderNumber", { number: order.number })}
+        </CardDescription>
         <CardAction>
-          {order.createdBy?.isBanned ? <Badge variant="destructive">Бан</Badge> : null}
+          {order.createdBy?.isBanned ? (
+            <Badge variant="destructive">{t("orderDetail.banned")}</Badge>
+          ) : null}
         </CardAction>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
         {order.createdBy ? (
           <Field orientation="horizontal">
-            <Avatar size="lg">
+            <Avatar className="size-10">
               {order.createdBy.photoUrl ? (
                 <AvatarImage src={order.createdBy.photoUrl} alt={order.createdBy.firstName} />
               ) : null}
@@ -460,7 +507,9 @@ function AdminOrderPanel({
             <FieldContent>
               <FieldTitle className="truncate">{order.createdBy.firstName}</FieldTitle>
               <FieldDescription className="truncate">
-                {order.createdBy.username ? `@${order.createdBy.username}` : "Без username"}
+                {order.createdBy.username
+                  ? `@${order.createdBy.username}`
+                  : t("auth.noUsername")}
               </FieldDescription>
             </FieldContent>
           </Field>
@@ -468,23 +517,23 @@ function AdminOrderPanel({
         <FieldGroup className="gap-2 sm:flex sm:flex-row sm:flex-wrap">
           {canConfirmManualPayment ? (
             <Button size="sm" disabled={confirmPending} onClick={onConfirm}>
-              Подтвердить оплату
+              {t("orderDetail.confirmPayment")}
             </Button>
           ) : null}
           {canRejectManualPayment ? (
             <Button size="sm" variant="secondary" disabled={rejectPending} onClick={onReject}>
-              Отклонить
+              {t("orderDetail.reject")}
             </Button>
           ) : null}
           {canRefreshCryptoPayment ? (
             <Button size="sm" variant="secondary" disabled={refreshPending} onClick={onRefresh}>
               <RefreshCcw data-icon="inline-start" />
-              Проверить
+              {t("orderDetail.check")}
             </Button>
           ) : null}
           <Button size="sm" variant="destructive" onClick={onDelete}>
             <Trash2 data-icon="inline-start" />
-            Удалить
+            {t("common.delete")}
           </Button>
         </FieldGroup>
       </CardContent>
@@ -503,6 +552,8 @@ function CopyField({
   copied: boolean
   onCopy: () => void
 }) {
+  const t = useTranslate()
+
   return (
     <Field>
       <FieldLabel>{title}</FieldLabel>
@@ -511,7 +562,7 @@ function CopyField({
         <InputGroupAddon align="inline-end">
           <InputGroupButton onClick={onCopy}>
             {copied ? <Check data-icon="inline-start" /> : <Copy data-icon="inline-start" />}
-            {copied ? "Готово" : "Копировать"}
+            {copied ? t("common.copied") : t("common.copy")}
           </InputGroupButton>
         </InputGroupAddon>
       </InputGroup>
@@ -519,29 +570,34 @@ function CopyField({
   )
 }
 
-function paymentStateLabel(order: Order) {
-  if (order.status === "CANCELLED") return "Отменён"
-  if (order.status === "PAYMENT_REVIEW") return "На проверке"
-  if (order.isPaid) return "Оплачено"
-  return "Ожидает оплату"
+function paymentStateKey(order: Order): TranslationKey {
+  if (order.status === "CANCELLED") return "orderDetail.stateCancelled"
+  if (order.status === "PAYMENT_REVIEW") return "orderDetail.stateReview"
+  if (order.isPaid) return "orderDetail.statePaid"
+  return "orderDetail.stateAwaiting"
 }
 
-function renderOrderActionTitle(order: Order, amountLabel: string | null) {
-  if (order.deliveredKey) return "Ключ готов"
-  if (order.status === "PAYMENT_REVIEW") return "Проверка оплаты"
-  if (order.status === "CANCELLED") return "Заказ отменён"
-  if (order.isPaid) return "Оплата получена"
+function orderNoticeTitle(
+  order: Order,
+  amountLabel: string | null,
+  t: TranslateFn,
+) {
+  if (order.deliveredKey) return t("orderDetail.noticeKeyReady")
+  if (order.status === "PAYMENT_REVIEW") return t("orderDetail.noticeReview")
+  if (order.status === "CANCELLED") return t("orderDetail.noticeCancelled")
+  if (order.isPaid) return t("orderDetail.noticePaid")
+  // The invoice amount is the most useful headline when one exists.
   if (order.paymentMethodType === "CRYPTO_PAY") return amountLabel || "Invoice"
-  return "Оплата по реквизитам"
+  return t("orderDetail.noticeRequisites")
 }
 
-function renderOrderActionDescription(order: Order) {
-  if (order.deliveredKey) return "Скопируй ключ и сохрани его в безопасном месте."
-  if (order.status === "PAYMENT_REVIEW") return "Покупатель отметил оплату. Ждём ручную проверку."
-  if (order.status === "CANCELLED") return "Действия по заказу больше недоступны."
-  if (order.isPaid) return "Платёж подтверждён, выдача будет здесь."
-  if (order.paymentMethodType === "CRYPTO_PAY") return "Открой invoice и заверши оплату в Crypto Bot."
-  return "Переведи сумму по реквизитам и нажми кнопку после оплаты."
+function orderNoticeDescriptionKey(order: Order): TranslationKey {
+  if (order.deliveredKey) return "orderDetail.hintKeyReady"
+  if (order.status === "PAYMENT_REVIEW") return "orderDetail.hintReview"
+  if (order.status === "CANCELLED") return "orderDetail.hintCancelled"
+  if (order.isPaid) return "orderDetail.hintPaid"
+  if (order.paymentMethodType === "CRYPTO_PAY") return "orderDetail.hintCrypto"
+  return "orderDetail.hintRequisites"
 }
 
 function PaymentMethodSelector({
@@ -555,12 +611,13 @@ function PaymentMethodSelector({
   loading: boolean
   onSelect: (key: string) => void
 }) {
+  const t = useTranslate()
   const [open, setOpen] = useState(false)
   const selectedOption = options.find((option) => option.key === selectedKey)
 
   return (
     <Field>
-      <FieldLabel>Способ оплаты</FieldLabel>
+      <FieldLabel>{t("product.paymentMethod")}</FieldLabel>
       <Select
         open={open}
         onOpenChange={(nextOpen) => setOpen(nextOpen)}
@@ -576,20 +633,20 @@ function PaymentMethodSelector({
       >
         <SelectTrigger className="h-11 w-full">
           {selectedOption ? (
-            <Avatar size="sm">
+            <Avatar className="size-6">
               {selectedOption.iconDataUrl ? (
                 <AvatarImage src={selectedOption.iconDataUrl} alt={selectedOption.title} />
               ) : null}
               <AvatarFallback>{getAvatarFallback(selectedOption.title)}</AvatarFallback>
             </Avatar>
           ) : null}
-          <SelectValue placeholder="Выбрать способ" />
+          <SelectValue placeholder={t("product.choosePayment")} />
         </SelectTrigger>
         <SelectContent className="max-h-72">
           <SelectGroup>
             {options.map((option) => (
               <SelectItem key={option.key} value={option.key} label={option.title}>
-                <Avatar size="sm">
+                <Avatar className="size-6">
                   {option.iconDataUrl ? <AvatarImage src={option.iconDataUrl} alt={option.title} /> : null}
                   <AvatarFallback>{getAvatarFallback(option.title)}</AvatarFallback>
                 </Avatar>
@@ -599,7 +656,9 @@ function PaymentMethodSelector({
           </SelectGroup>
         </SelectContent>
       </Select>
-      {loading ? <FieldDescription>Меняю способ оплаты...</FieldDescription> : null}
+      {loading ? (
+        <FieldDescription>{t("orderDetail.changingPayment")}</FieldDescription>
+      ) : null}
     </Field>
   )
 }
@@ -615,7 +674,7 @@ function PaymentMethodSummary({
 }) {
   return (
     <Field orientation="horizontal">
-      <Avatar size="lg">
+      <Avatar className="size-10">
         {iconDataUrl ? <AvatarImage src={iconDataUrl} alt={title} /> : null}
         <AvatarFallback>{getAvatarFallback(title)}</AvatarFallback>
       </Avatar>
@@ -640,22 +699,24 @@ function OrderReceipt({
   createdAtLabel: string
   className?: string
 }) {
+  const t = useTranslate()
+
   return (
     <FieldGroup className={cn("gap-2", className)}>
       <Field orientation="horizontal">
-        <FieldLabel>Товар</FieldLabel>
+        <FieldLabel>{t("orderComplete.product")}</FieldLabel>
         <FieldDescription className="truncate text-right">{productTitle}</FieldDescription>
       </Field>
       <Field orientation="horizontal">
-        <FieldLabel>Оплата</FieldLabel>
+        <FieldLabel>{t("orderComplete.payment")}</FieldLabel>
         <FieldDescription className="text-right">{paymentTitle}</FieldDescription>
       </Field>
       <Field orientation="horizontal">
-        <FieldLabel>Сумма</FieldLabel>
-        <FieldDescription className="text-right">{amountLabel || "—"}</FieldDescription>
+        <FieldLabel>{t("orderComplete.amount")}</FieldLabel>
+        <FieldDescription className="text-right">{amountLabel || t("orderDetail.amountFallback")}</FieldDescription>
       </Field>
       <Field orientation="horizontal">
-        <FieldLabel>Создан</FieldLabel>
+        <FieldLabel>{t("orderComplete.createdAt")}</FieldLabel>
         <FieldDescription className="text-right">{createdAtLabel}</FieldDescription>
       </Field>
     </FieldGroup>
@@ -673,17 +734,21 @@ function ConfirmDeleteDialog({
   onOpenChange: (open: boolean) => void
   onConfirm: () => void
 }) {
+  const t = useTranslate()
+
   return (
     <AlertDialog open={open} onOpenChange={(nextOpen) => !loading && onOpenChange(nextOpen)}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Удалить заказ</AlertDialogTitle>
-          <AlertDialogDescription>Заказ будет удалён из базы полностью. Это действие нельзя отменить.</AlertDialogDescription>
+          <AlertDialogTitle>{t("orderDetail.deleteTitle")}</AlertDialogTitle>
+          <AlertDialogDescription>
+            {t("orderDetail.deleteDescription")}
+          </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Отмена</AlertDialogCancel>
+          <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
           <AlertDialogAction variant="destructive" disabled={loading} onClick={onConfirm}>
-            Удалить
+            {t("common.delete")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
