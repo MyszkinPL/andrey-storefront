@@ -37,3 +37,16 @@ export function parseKeys(input: string): string[] {
     .map((line) => line.trim())
     .filter(Boolean)
 }
+
+/**
+ * Buy callbacks carry both ids: `sq:<productId>:<methodId|c>`. Split from the
+ * right, because only the trailing segment is the payment token.
+ */
+export function parseBuyToken(id: string) {
+  const separator = id.lastIndexOf(":")
+  if (separator === -1) return { productId: id, methodToken: "" }
+  return {
+    productId: id.slice(0, separator),
+    methodToken: id.slice(separator + 1),
+  }
+}

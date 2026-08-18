@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest"
 
-import { buildCallback, parseCallback, parseKeys, parsePrice } from "@/lib/bot-callback"
+import {
+  buildCallback,
+  parseBuyToken,
+  parseCallback,
+  parseKeys,
+  parsePrice,
+} from "@/lib/bot-callback"
 
 describe("parseCallback", () => {
   it("splits an action and an id", () => {
@@ -58,5 +64,26 @@ describe("parseKeys", () => {
 
   it("returns nothing for whitespace only", () => {
     expect(parseKeys("\n  \n")).toEqual([])
+  })
+})
+
+describe("parseBuyToken", () => {
+  it("splits a product id from a manual payment method id", () => {
+    expect(parseBuyToken("clxproduct000000000000001:clxmethod0000000000000002")).toEqual({
+      productId: "clxproduct000000000000001",
+      methodToken: "clxmethod0000000000000002",
+    })
+  })
+
+  it("recognises the crypto token", () => {
+    expect(parseBuyToken("clxproduct000000000000001:c")).toEqual({
+      productId: "clxproduct000000000000001",
+      methodToken: "c",
+    })
+  })
+
+  it("stays inside Telegram's 64-byte limit for two cuids", () => {
+    const data = `sq:${"c".repeat(25)}:${"m".repeat(25)}`
+    expect(Buffer.byteLength(data)).toBeLessThanOrEqual(64)
   })
 })

@@ -24,8 +24,23 @@ import {
   toggleProduct,
   toggleUserRole,
 } from "@/lib/bot-admin"
-import { parseCallback, parseKeys, parsePrice } from "@/lib/bot-callback"
+import { parseBuyToken, parseCallback, parseKeys, parsePrice } from "@/lib/bot-callback"
+import {
+  cancelOwnOrder,
+  markOrderPaid,
+  placeOrder,
+  renderCatalog,
+  renderMyOrder,
+  renderMyOrders,
+  renderPaymentOptions,
+  renderProfile,
+  renderShopProduct,
+  setUserLanguage,
+  shopMenu,
+} from "@/lib/bot-shop"
 import { resolveActor } from "@/lib/bot-locale"
+import { isLocale } from "@/lib/i18n/config"
+import { OrderCreateError } from "@/lib/order-create"
 import { getServerEnv } from "@/lib/env"
 import { formatPrice } from "@/lib/format"
 import { prisma } from "@/lib/prisma"
@@ -60,8 +75,15 @@ export function getBot() {
   // ------------------------------------------------------------- commands
 
   bot.command("start", async (ctx) => {
-    const { t } = await resolveActor(ctx)
-    await ctx.reply(t("bot.start"), {
+    const { t, isAdmin } = await resolveActor(ctx)
+    const settings = await prisma.shopSettings.findUnique({ where: { id: 1 } })
+    const menu = shopMenu(t, settings?.shopName || "Shop", isAdmin)
+
+    await ctx.reply(menu.text, {
+      parse_mode: "HTML",
+      reply_markup: menu.keyboard,
+    })
+    await ctx.reply(t("bot.fallback"), {
       reply_markup: new InlineKeyboard().webApp(t("bot.openShop"), env.APP_URL),
     })
   })
@@ -104,12 +126,98 @@ export function getBot() {
   bot.on("callback_query:data", async (ctx) => {
     const { t, locale, isAdmin, user } = await resolveActor(ctx)
 
-    if (!isAdmin || !user) {
+    if (!user) {
       await ctx.answerCallbackQuery({ text: t("bot.notAdmin"), show_alert: true })
       return
     }
 
     const { action, id } = parseCallback(ctx.callbackQuery.data)
+
+    // Buyer actions are open to everyone; only the admin panel is gated.
+    if (action.startsWith("s")) {
+      switch (action) {
+        case "sm": {
+          const settings = await prisma.shopSettings.findUnique({ where: { id: 1 } })
+          await ctx.answerCallbackQuery()
+          await replaceMessage(ctx, shopMenu(t, settings?.shopName || "Shop", isAdmin))
+          return
+        }
+
+        case "sc":
+          await ctx.answerCallbackQuery()
+          await replaceMessage(
+            ctx,
+            id ? await renderShopProduct(id, t, locale) : await renderCatalog(t, locale),
+          )
+          return
+
+        case "sb":
+          await ctx.answerCallbackQuery()
+          await replaceMessage(ctx, await renderPaymentOptions(id, t))
+          return
+
+        case "sq": {
+          const { methodToken, productId } = parseBuyToken(id)
+
+          try {
+            const order = await placeOrder(user, productId, methodToken, t)
+            await ctx.answerCallbackQuery({ text: t("shop.orderCreated") })
+            await replaceMessage(ctx, await renderMyOrder(order.id, user, t, locale))
+          } catch (error) {
+            const message =
+              error instanceof OrderCreateError ? error.message : t("errors.generic")
+            await ctx.answerCallbackQuery({ show_alert: true, text: message })
+          }
+          return
+        }
+
+        case "so":
+          await ctx.answerCallbackQuery()
+          await replaceMessage(
+            ctx,
+            id ? await renderMyOrder(id, user, t, locale) : await renderMyOrders(user.id, t),
+          )
+          return
+
+        case "sd":
+          await markOrderPaid(id, user.id)
+          await ctx.answerCallbackQuery({ text: t("shop.paidNoted") })
+          await replaceMessage(ctx, await renderMyOrder(id, user, t, locale))
+          return
+
+        case "sk":
+          await cancelOwnOrder(id, user.id)
+          await ctx.answerCallbackQuery({ text: t("shop.cancelled") })
+          await replaceMessage(ctx, await renderMyOrder(id, user, t, locale))
+          return
+
+        case "su":
+          await ctx.answerCallbackQuery()
+          await replaceMessage(ctx, renderProfile(user, t, locale))
+          return
+
+        case "sl": {
+          if (!isLocale(id)) {
+            await ctx.answerCallbackQuery()
+            return
+          }
+          await setUserLanguage(user.id, id)
+          const next = await resolveActor(ctx)
+          await ctx.answerCallbackQuery({ text: next.t("language.changed") })
+          await replaceMessage(ctx, renderProfile(next.user ?? user, next.t, next.locale))
+          return
+        }
+
+        default:
+          await ctx.answerCallbackQuery()
+          return
+      }
+    }
+
+    if (!isAdmin) {
+      await ctx.answerCallbackQuery({ text: t("bot.notAdmin"), show_alert: true })
+      return
+    }
 
     // Actions that mutate then re-render the card they were pressed on.
     const rerenderOrder = async (notice?: string) => {
