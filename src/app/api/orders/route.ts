@@ -4,6 +4,7 @@ import { z } from "zod"
 
 import { requireInteractiveUser, requireUser } from "@/lib/auth"
 import { createOrder, OrderCreateError } from "@/lib/order-create"
+import type { OrderListResponse } from "@/lib/contracts"
 import { prisma } from "@/lib/prisma"
 
 const schema = z.object({
@@ -52,8 +53,8 @@ export async function GET(request: Request) {
       number: order.number,
       subject: order.subject,
       status: order.status,
-      createdAt: order.createdAt,
-      updatedAt: order.updatedAt,
+      createdAt: order.createdAt.toISOString(),
+      updatedAt: order.updatedAt.toISOString(),
       isPaid: order.isPaid,
       productTitle: order.product?.title || order.productTitleSnapshot || null,
       productCategory: order.product?.category || order.productCategorySnapshot || null,
@@ -61,7 +62,7 @@ export async function GET(request: Request) {
       paymentMethodType: order.paymentMethodType || null,
       manualPaymentRequestedAt: order.manualPaymentRequestedAt?.toISOString() || null,
     })),
-  })
+  } satisfies OrderListResponse)
 }
 
 export async function POST(request: Request) {

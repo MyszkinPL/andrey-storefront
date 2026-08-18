@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { z } from "zod"
 
 import { requireAdmin } from "@/lib/auth"
+import type { ProductListResponse } from "@/lib/contracts"
 import { mediaUrl } from "@/lib/media"
 import { prisma } from "@/lib/prisma"
 
@@ -98,7 +99,7 @@ export async function GET() {
       availableKeyCount: product._count.keys,
       specs: product.specs,
     })),
-  })
+  } satisfies ProductListResponse)
 }
 
 export async function POST(request: Request) {

@@ -12,6 +12,7 @@ import {
 } from "@/lib/order-notifications"
 import { translate } from "@/lib/i18n"
 import { resolveUserLocale } from "@/lib/i18n/config"
+import type { OrderResponse } from "@/lib/contracts"
 import { prisma } from "@/lib/prisma"
 import { confirmOrderPaymentFlow } from "@/lib/order-payment"
 
@@ -152,7 +153,7 @@ export async function GET(
       number: order.number,
       subject: order.subject,
       status: order.status,
-      createdAt: order.createdAt,
+      createdAt: order.createdAt.toISOString(),
       isPaid: order.isPaid,
       productTitle: order.product?.title || order.productTitleSnapshot || null,
       productCategory: order.product?.category || order.productCategorySnapshot || null,
@@ -201,7 +202,7 @@ export async function GET(
       cryptoInvoiceAmount: order.cryptoInvoiceAmount || null,
       cryptoInvoiceExpiresAt: order.cryptoInvoiceExpiresAt?.toISOString() || null,
     },
-  })
+  } satisfies OrderResponse)
 }
 
 export async function PATCH(

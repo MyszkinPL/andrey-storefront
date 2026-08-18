@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { z } from "zod"
 
 import { getCurrentUser, requireAdmin } from "@/lib/auth"
+import type { ProductResponse } from "@/lib/contracts"
 import { mediaUrl } from "@/lib/media"
 import { prisma } from "@/lib/prisma"
 
@@ -102,7 +103,7 @@ export async function GET(
         value: spec.value,
       })),
     },
-  })
+  } satisfies ProductResponse)
 }
 
 export async function PATCH(

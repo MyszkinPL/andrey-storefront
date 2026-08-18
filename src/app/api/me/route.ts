@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 
 import { bannedMessage, getCurrentUser, hasTelegramUsername, usernameRequiredMessage } from "@/lib/auth"
 import { getServerEnv } from "@/lib/env"
+import type { MeResponse } from "@/lib/contracts"
 import { prisma } from "@/lib/prisma"
 
 export async function GET() {
@@ -47,5 +48,5 @@ export async function GET() {
             // Prices are entered in the shop's fiat, so buyers need it too.
             currency: settings.cryptoPayFiat || "RUB",
           },
-  })
+  } satisfies MeResponse)
 }

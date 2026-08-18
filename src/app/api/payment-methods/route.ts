@@ -3,6 +3,7 @@ import { NextResponse } from "next/server"
 import { getCurrentUser } from "@/lib/auth"
 import { translate } from "@/lib/i18n"
 import { DEFAULT_LOCALE, resolveUserLocale } from "@/lib/i18n/config"
+import type { PaymentMethodsResponse } from "@/lib/contracts"
 import { mediaUrl } from "@/lib/media"
 import { prisma } from "@/lib/prisma"
 
@@ -42,7 +43,7 @@ export async function GET() {
         "product.cryptoAuto",
       ),
       acceptedAssets: settings?.cryptoPayDefaultAssets || null,
-      iconDataUrl: "/crypto-bot-logo.svg",
+      iconUrl: "/crypto-bot-logo.svg",
     },
-  })
+  } satisfies PaymentMethodsResponse)
 }

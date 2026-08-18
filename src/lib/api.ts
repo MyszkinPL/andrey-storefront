@@ -2,6 +2,19 @@
 
 import type { PaymentMethodType, OrderStatus } from "@prisma/client"
 
+import type {
+  CreatedOrderResponse,
+  MeResponse,
+  OkResponse,
+  OrderListResponse,
+  OrderResponse,
+  PaymentMethodsResponse,
+  ProductListResponse,
+  ProductResponse,
+  ProductSpec,
+  ProductKeyItem,
+  ReceiptUploadResponse,
+} from "@/lib/contracts"
 import { isLocalMockApiEnabled, mockApi } from "@/lib/mock-api"
 
 export class ApiError extends Error {
@@ -13,16 +26,8 @@ export class ApiError extends Error {
   }
 }
 
-export type ProductSpecInput = {
-  label: string
-  value: string
-}
-
-export type AdminProductKey = {
-  id: string
-  value: string
-  createdAt: string
-}
+export type ProductSpecInput = ProductSpec
+export type AdminProductKey = ProductKeyItem
 
 export type PaymentMethodInput = {
   id?: string
@@ -78,42 +83,18 @@ async function api<T>(input: RequestInfo, init?: RequestInit): Promise<T> {
 }
 
 export function authenticateWithTelegram(initData: string, isDev = false) {
-  return api<{ ok: true }>("/api/auth/telegram", {
+  return api<OkResponse>("/api/auth/telegram", {
     method: "POST",
     body: JSON.stringify({ initData, dev: isDev }),
   })
 }
 
 export function getMe() {
-  return api<{
-    user: {
-      id: string
-      telegramId: string
-      firstName: string
-      lastName: string | null
-      username: string | null
-      photoUrl: string | null
-      role: "USER" | "ADMIN"
-      isBanned?: boolean
-      banReason?: string | null
-      language: string | null
-    }
-    settings: {
-      shopName: string
-      supportUsername: string | null
-      currency: string
-      cryptoPayEnabled?: boolean
-      cryptoPayToken?: string | null
-      cryptoPayUseTestnet?: boolean
-      cryptoPayFiat?: string
-      cryptoPayDefaultAssets?: string | null
-      appUrl?: string
-    }
-  }>("/api/me")
+  return api<MeResponse>("/api/me")
 }
 
 export function updateLanguage(language: string) {
-  return api<{ ok: true }>("/api/me/language", {
+  return api<OkResponse>("/api/me/language", {
     method: "PATCH",
     body: JSON.stringify({ language }),
   })
@@ -123,47 +104,18 @@ export function uploadOrderReceipt(orderId: string, file: File) {
   const body = new FormData()
   body.append("file", file)
 
-  return api<{ receipt: { fileName: string; fileSize: number; uploadedAt: string } }>(
+  return api<ReceiptUploadResponse>(
     `/api/orders/${orderId}/receipt`,
     { method: "POST", body },
   )
 }
 
 export function getProducts() {
-  return api<{
-    products: Array<{
-      id: string
-      slug: string
-      title: string
-      category: string | null
-      description: string
-      imageUrl: string | null
-      priceRub: number
-      deliveryType: "MANUAL" | "AUTO_KEY"
-      isActive: boolean
-      availableKeyCount?: number
-      specs: ProductSpecInput[]
-    }>
-  }>("/api/products")
+  return api<ProductListResponse>("/api/products")
 }
 
 export function getProduct(id: string) {
-  return api<{
-    product: {
-      id: string
-      slug: string
-      title: string
-      category: string | null
-      description: string
-      imageUrl: string | null
-      priceRub: number
-      deliveryType: "MANUAL" | "AUTO_KEY"
-      isActive: boolean
-      availableKeyCount?: number
-      editableKeys?: AdminProductKey[]
-      specs: ProductSpecInput[]
-    }
-  }>(`/api/products/${id}`)
+  return api<ProductResponse>(`/api/products/${id}`)
 }
 
 export function createOrder(payload: {
@@ -172,7 +124,7 @@ export function createOrder(payload: {
   paymentMethodId?: string
   paymentMethodType?: PaymentMethodType
 }) {
-  return api<{ orderId: string }>("/api/orders", {
+  return api<CreatedOrderResponse>("/api/orders", {
     method: "POST",
     body: JSON.stringify(payload),
   })
@@ -183,92 +135,29 @@ export function getOrders(params?: { scope?: "all"; limit?: number }) {
   if (params?.scope) query.set("scope", params.scope)
   if (params?.limit) query.set("limit", String(params.limit))
 
-  return api<{
-    hasMore: boolean
-    orders: Array<{
-      id: string
-      number: number
-      subject: string
-      status: OrderStatus
-      createdAt: string
-      updatedAt: string
-      isPaid: boolean
-      productTitle: string | null
-      productCategory: string | null
-      paymentMethodTitle: string | null
-      paymentMethodType: PaymentMethodType | null
-      manualPaymentRequestedAt: string | null
-    }>
-  }>(`/api/orders${query.size ? `?${query.toString()}` : ""}`)
+  return api<OrderListResponse>(`/api/orders${query.size ? `?${query.toString()}` : ""}`)
 }
 
 export function getOrder(id: string) {
-  return api<{
-    order: {
-      id: string
-      number: number
-      subject: string
-      status: OrderStatus
-      createdAt: string
-      isPaid: boolean
-      productTitle: string | null
-      productCategory: string | null
-      priceRub: number | null
-      deliveredKey: string | null
-      manualPaymentRequestedAt: string | null
-      receipt: {
-        fileName: string
-        fileSize: number
-        uploadedAt: string
-      } | null
-      isAdmin: boolean
-      isOwner: boolean
-      createdBy: {
-        id: string
-        firstName: string
-        lastName: string | null
-        username: string | null
-        photoUrl: string | null
-        isBanned: boolean
-        banReason: string | null
-      } | null
-      assignedTo: {
-        id: string
-        firstName: string
-        lastName: string | null
-        username: string | null
-      } | null
-      paymentMethodTitle: string | null
-      paymentMethodId: string | null
-      paymentMethodType: PaymentMethodType | null
-      paymentMethodDetails: string | null
-      paymentMethodIconDataUrl: string | null
-      cryptoInvoiceFiat: string | null
-      cryptoInvoiceUrl: string | null
-      cryptoInvoiceStatus: string | null
-      cryptoInvoiceAsset: string | null
-      cryptoInvoiceAmount: string | null
-      cryptoInvoiceExpiresAt: string | null
-    }
-  }>(`/api/orders/${id}`)
+  return api<OrderResponse>(`/api/orders/${id}`)
 }
 
 export function confirmOrderPayment(id: string) {
-  return api<{ ok: true }>(`/api/orders/${id}`, {
+  return api<OkResponse>(`/api/orders/${id}`, {
     method: "PATCH",
     body: JSON.stringify({ confirmPayment: true }),
   })
 }
 
 export function refreshCryptoInvoice(id: string) {
-  return api<{ ok: true }>(`/api/orders/${id}`, {
+  return api<OkResponse>(`/api/orders/${id}`, {
     method: "PATCH",
     body: JSON.stringify({ refreshCryptoInvoice: true }),
   })
 }
 
 export function markManualOrderPaid(id: string) {
-  return api<{ ok: true }>(`/api/orders/${id}`, {
+  return api<OkResponse>(`/api/orders/${id}`, {
     method: "PATCH",
     body: JSON.stringify({ markManualPaid: true }),
   })
@@ -280,28 +169,28 @@ export function changeOrderPaymentMethod(
     | { paymentMethodId: string; paymentMethodType?: undefined }
     | { paymentMethodType: Extract<PaymentMethodType, "CRYPTO_PAY">; paymentMethodId?: undefined },
 ) {
-  return api<{ ok: true }>(`/api/orders/${id}`, {
+  return api<OkResponse>(`/api/orders/${id}`, {
     method: "PATCH",
     body: JSON.stringify(payload),
   })
 }
 
 export function rejectManualOrderPayment(id: string) {
-  return api<{ ok: true }>(`/api/orders/${id}`, {
+  return api<OkResponse>(`/api/orders/${id}`, {
     method: "PATCH",
     body: JSON.stringify({ rejectManualPayment: true }),
   })
 }
 
 export function cancelOwnOrder(id: string) {
-  return api<{ ok: true }>(`/api/orders/${id}`, {
+  return api<OkResponse>(`/api/orders/${id}`, {
     method: "PATCH",
     body: JSON.stringify({ cancelByUser: true }),
   })
 }
 
 export function deleteAdminOrder(id: string) {
-  return api<{ ok: true }>(`/api/orders/${id}`, {
+  return api<OkResponse>(`/api/orders/${id}`, {
     method: "DELETE",
   })
 }
@@ -310,7 +199,7 @@ export function updateAdminUserModeration(
   id: string,
   payload: { isBanned?: boolean; banReason?: string; role?: "USER" | "ADMIN" },
 ) {
-  return api<{ ok: true }>(`/api/admin/users/${id}`, {
+  return api<OkResponse>(`/api/admin/users/${id}`, {
     method: "PATCH",
     body: JSON.stringify(payload),
   })
@@ -398,24 +287,7 @@ export function getAdminUser(id: string) {
 }
 
 export function getPaymentMethods() {
-  return api<{
-    paymentMethods: Array<{
-      id: string
-      title: string
-      type: PaymentMethodType
-      details: string
-      iconUrl: string | null
-      cryptoAcceptedAssets: string | null
-      isActive: boolean
-    }>
-    cryptoPay: {
-      enabled: boolean
-      title: string
-      details: string
-      acceptedAssets: string | null
-      iconUrl: string | null
-    }
-  }>("/api/payment-methods")
+  return api<PaymentMethodsResponse>("/api/payment-methods")
 }
 
 export function saveAdminProduct(payload: {
@@ -430,7 +302,7 @@ export function saveAdminProduct(payload: {
   keyPoolText?: string
   specs: ProductSpecInput[]
 }) {
-  return api<{ ok: true }>("/api/products", {
+  return api<OkResponse>("/api/products", {
     method: "POST",
     body: JSON.stringify(payload),
   })
@@ -452,20 +324,20 @@ export function updateAdminProduct(
     specs: ProductSpecInput[]
   },
 ) {
-  return api<{ ok: true }>(`/api/products/${id}`, {
+  return api<OkResponse>(`/api/products/${id}`, {
     method: "PATCH",
     body: JSON.stringify(payload),
   })
 }
 
 export function deleteAdminProduct(id: string) {
-  return api<{ ok: true }>(`/api/products/${id}`, {
+  return api<OkResponse>(`/api/products/${id}`, {
     method: "DELETE",
   })
 }
 
 export function saveSettings(payload: ShopSettingsPayload) {
-  return api<{ ok: true }>("/api/admin/settings", {
+  return api<OkResponse>("/api/admin/settings", {
     method: "POST",
     body: JSON.stringify(payload),
   })

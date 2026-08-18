@@ -2,6 +2,13 @@
 
 import type { PaymentMethodType } from "@prisma/client"
 
+import type {
+  MeResponse,
+  OrderListResponse,
+  PaymentMethodsResponse,
+  ProductListResponse,
+} from "@/lib/contracts"
+
 const now = new Date().toISOString()
 const MOCK_STORAGE_KEY = "snx.sell.mock-state:v1"
 let mockStateHydrated = false
@@ -237,10 +244,12 @@ export async function mockApi<T>(input: RequestInfo, init?: RequestInit): Promis
         appUrl: window.location.origin,
         currency: mockSettings.cryptoPayFiat || "RUB",
       },
-    } as T
+    } satisfies MeResponse as T
   }
 
-  if (path === "/api/products" && method === "GET") return { products } as T
+  if (path === "/api/products" && method === "GET") {
+    return { products } satisfies ProductListResponse as T
+  }
   if (path === "/api/products" && method === "POST") {
     const product = makeProductFromPayload(`mock-product-${Date.now()}`, body)
     products = [product, ...products]
@@ -280,13 +289,13 @@ export async function mockApi<T>(input: RequestInfo, init?: RequestInit): Promis
         acceptedAssets: mockSettings.cryptoPayDefaultAssets,
         iconUrl: cryptoIcon,
       },
-    } as T
+    } satisfies PaymentMethodsResponse as T
   }
 
   if (path === "/api/orders" && method === "GET") {
     const scope = search.get("scope")
     const visible = scope === "all" ? orders : orders.filter((order) => order.isOwner)
-    return { hasMore: false, orders: visible } as T
+    return { hasMore: false, orders: visible } satisfies OrderListResponse as T
   }
 
   if (path === "/api/orders" && method === "POST") {
