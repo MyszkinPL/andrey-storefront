@@ -64,8 +64,10 @@ export function ToggleGroupItem({
   VariantProps<typeof toggleVariants>): React.ReactElement {
   const context = React.useContext(ToggleGroupContext);
 
-  const resolvedVariant = context.variant || variant;
-  const resolvedSize = context.size || size;
+  // An explicit prop wins over the group: the context always carries a
+  // default, so reading it first made the item's own variant unreachable.
+  const resolvedVariant = variant ?? context.variant;
+  const resolvedSize = size ?? context.size;
 
   return (
     <ToggleComponent

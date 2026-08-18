@@ -32,8 +32,11 @@ import { useI18n } from "@/components/i18n-provider"
 import { getMe, getProducts } from "@/lib/api"
 import { formatPrice } from "@/lib/format"
 
-/** Sentinel for "no category filter", kept out of the translated labels. */
-const ALL_CATEGORIES = ""
+/**
+ * Sentinel for "no category filter". A real value rather than an empty string,
+ * because a toggle group cannot mark an empty value as selected.
+ */
+const ALL_CATEGORIES = "__all__"
 
 export function CatalogScreen() {
   const { t, tp, locale } = useI18n()
@@ -58,7 +61,7 @@ export function CatalogScreen() {
     const query = search.trim().toLowerCase()
     return products.filter((item) => {
       if (!item.isActive) return false
-      const categoryOk = !category || item.category === category
+      const categoryOk = category === ALL_CATEGORIES || item.category === category
       const searchOk =
         !query ||
         `${item.title} ${item.category || ""} ${item.description} ${item.specs
@@ -113,19 +116,33 @@ export function CatalogScreen() {
               />
             </InputGroup>
 
-            <ToggleGroup
-              value={[category]}
-              onValueChange={(value) => setCategory(value[0] ?? ALL_CATEGORIES)}
-              variant="outline"
-              size="sm"
-              className="grid w-full grid-cols-3 lg:flex lg:w-auto lg:flex-wrap"
-            >
-              {categories.map((item) => (
-                <ToggleGroupItem key={item || "all"} value={item}>
-                  {item || t("catalog.allCategories")}
-                </ToggleGroupItem>
-              ))}
-            </ToggleGroup>
+            {/* One scrolling row instead of a wrapping grid: the number of
+                categories is unknown, and both a fixed grid and a wrapped
+                segmented group leave ragged, half-empty rows. */}
+            <div className="-mx-3 overflow-x-auto px-3 [-ms-overflow-style:none] [scrollbar-width:none] sm:-mx-4 sm:px-4 lg:mx-0 lg:px-0 [&::-webkit-scrollbar]:hidden">
+              <ToggleGroup
+                className="w-max flex-nowrap gap-1.5"
+                onValueChange={(value) =>
+                  // Deselecting the active chip clears the filter rather than
+                  // leaving the catalog matching nothing.
+                  setCategory(value[0] ?? ALL_CATEGORIES)
+                }
+                size="sm"
+                value={[category]}
+                variant="default"
+              >
+                {categories.map((item) => (
+                  <ToggleGroupItem
+                    className="shrink-0 rounded-full px-3"
+                    key={item}
+                    value={item}
+                    variant="outline"
+                  >
+                    {item === ALL_CATEGORIES ? t("catalog.allCategories") : item}
+                  </ToggleGroupItem>
+                ))}
+              </ToggleGroup>
+            </div>
             </div>
 
             {filtered.length === 0 ? (
