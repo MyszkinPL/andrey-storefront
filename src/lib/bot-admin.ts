@@ -31,6 +31,9 @@ export function mainMenuKeyboard(t: TranslateFn) {
     .text(t("bot.menuProducts"), "p")
     .row()
     .text(t("bot.menuUsers"), "u")
+    .row()
+    // Back to the shop menu, so the admin panel is not a dead end.
+    .text(t("bot.back"), "sm")
 }
 
 // ------------------------------------------------------------------ orders

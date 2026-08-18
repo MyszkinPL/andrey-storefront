@@ -78,10 +78,17 @@ export async function renderShopProduct(
   t: TranslateFn,
   locale: Locale,
 ): Promise<View> {
-  const product = await prisma.product.findUnique({
-    where: { id: productId },
-    include: { _count: { select: { keys: { where: { issuedAt: null } } } } },
-  })
+  const [product, methods, settings] = await Promise.all([
+    prisma.product.findUnique({
+      where: { id: productId },
+      include: { _count: { select: { keys: { where: { issuedAt: null } } } } },
+    }),
+    prisma.paymentMethod.findMany({
+      where: { isActive: true, type: PaymentMethodType.MANUAL },
+      orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+    }),
+    prisma.shopSettings.findUnique({ where: { id: 1 } }),
+  ])
 
   if (!product) {
     return { text: t("bot.notFound"), keyboard: new InlineKeyboard().text(t("bot.back"), "sc") }
@@ -104,56 +111,27 @@ export async function renderShopProduct(
 
   if (isAuto && product._count.keys === 0) lines.push(t("shop.outOfStock"))
 
+  // Payment methods sit right on the card: a separate "buy" step only asked
+  // the same question one tap later.
+  const keyboard = new InlineKeyboard()
+  for (const method of methods) {
+    keyboard
+      .text(`💳 ${method.title.slice(0, 28)}`, `sq:${product.id}:${method.id}`)
+      .row()
+  }
+  if (settings?.cryptoPayEnabled && settings.cryptoPayToken) {
+    keyboard.text("💳 Crypto Bot", `sq:${product.id}:c`).row()
+  }
+  keyboard.text(t("bot.back"), "sc")
+
   return {
     photo,
     text: clamp(lines.join("\n"), photo ? CAPTION_LIMIT : 4096),
-    keyboard: new InlineKeyboard()
-      .text(t("shop.buy"), `sb:${product.id}`)
-      .row()
-      .text(t("bot.back"), "sc"),
+    keyboard,
   }
 }
 
 // ---------------------------------------------------------------- payment
-
-export async function renderPaymentOptions(
-  productId: string,
-  t: TranslateFn,
-  locale: Locale,
-): Promise<View> {
-  const [product, methods, settings] = await Promise.all([
-    prisma.product.findUnique({
-      where: { id: productId },
-      select: { title: true, priceRub: true },
-    }),
-    prisma.paymentMethod.findMany({
-      where: { isActive: true, type: PaymentMethodType.MANUAL },
-      orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
-    }),
-    prisma.shopSettings.findUnique({ where: { id: 1 } }),
-  ])
-
-  if (!product) {
-    return { text: t("bot.notFound"), keyboard: new InlineKeyboard().text(t("bot.back"), "sc") }
-  }
-
-  const keyboard = new InlineKeyboard()
-  for (const method of methods) {
-    keyboard.text(method.title.slice(0, 30), `sq:${productId}:${method.id}`).row()
-  }
-  if (settings?.cryptoPayEnabled && settings.cryptoPayToken) {
-    keyboard.text("Crypto Bot", `sq:${productId}:c`).row()
-  }
-  keyboard.text(t("bot.back"), `sc:${productId}`)
-
-  return {
-    text: t("shop.choosePayment", {
-      price: formatPrice(product.priceRub, locale),
-      title: escapeHtml(product.title),
-    }),
-    keyboard,
-  }
-}
 
 /** Places the order through the same path the mini app uses. */
 export async function placeOrder(

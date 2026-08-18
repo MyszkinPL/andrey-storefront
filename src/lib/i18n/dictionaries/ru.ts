@@ -525,8 +525,6 @@ export const ru = {
     catalogEmpty: "Товаров пока нет.",
     productCard:
       "<b>{title}</b>\n<i>{category}</i>\n\n<blockquote>{description}</blockquote>\n\n💰 <b>{price}</b>\n📦 {delivery}",
-    buy: "🛒 Купить",
-    choosePayment: "<b>{title}</b>\n💰 {price}\n\nЧем платишь?",
     outOfStock: "⚠️ Ключи закончились — выдача будет ручной.",
     ordersTitle: "<b>🧾 Мои заказы</b>",
     ordersEmpty: "Заказов пока нет.",

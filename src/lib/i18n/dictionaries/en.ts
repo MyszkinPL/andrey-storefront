@@ -532,8 +532,6 @@ export const en: Widen<typeof ru> = {
     catalogEmpty: "No products yet.",
     productCard:
       "<b>{title}</b>\n<i>{category}</i>\n\n<blockquote>{description}</blockquote>\n\n💰 <b>{price}</b>\n📦 {delivery}",
-    buy: "🛒 Buy",
-    choosePayment: "<b>{title}</b>\n💰 {price}\n\nHow would you like to pay?",
     outOfStock: "⚠️ No keys left — delivery will be manual.",
     ordersTitle: "<b>🧾 My orders</b>",
     ordersEmpty: "No orders yet.",

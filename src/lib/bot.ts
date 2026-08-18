@@ -31,7 +31,6 @@ import {
   renderCatalog,
   renderMyOrder,
   renderMyOrders,
-  renderPaymentOptions,
   renderProfile,
   renderShopProduct,
   setUserLanguage,
@@ -151,10 +150,6 @@ export function getBot() {
           )
           return
 
-        case "sb":
-          await ctx.answerCallbackQuery()
-          await replaceMessage(ctx, await renderPaymentOptions(id, t, locale))
-          return
 
         case "sq": {
           const { methodToken, productId } = parseBuyToken(id)
