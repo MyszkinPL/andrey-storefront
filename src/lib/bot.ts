@@ -364,10 +364,12 @@ export function getBot() {
     const text = ctx.message.text
     if (text.startsWith("/")) return
 
-    const { t, locale, isAdmin } = await resolveActor(ctx)
-    const action = isAdmin ? takePending(ctx.from.id) : null
+    const { t, locale, isAdmin, user } = await resolveActor(ctx)
+    // Pending actions only exist for admins, and every one of them writes as
+    // that admin, so both are required before consuming it.
+    const action = isAdmin && user ? takePending(ctx.from.id) : null
 
-    if (!action) {
+    if (!action || !user) {
       await ctx.reply(t("bot.fallback"), {
         reply_markup: new InlineKeyboard().webApp(t("bot.openShop"), env.APP_URL),
       })
@@ -376,7 +378,7 @@ export function getBot() {
 
     switch (action.kind) {
       case "deliverKey": {
-        const order = await deliverKey(action.orderId, text.trim())
+        const order = await deliverKey(action.orderId, text.trim(), user.id)
         await ctx.reply(t("bot.keyDelivered", { number: order.number }))
         await replaceMessage(ctx, await renderOrder(action.orderId, t, locale))
         return

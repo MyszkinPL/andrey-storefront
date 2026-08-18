@@ -49,9 +49,13 @@ function cleanSpecs(
     .filter((spec) => spec.label && spec.value)
 }
 
+/** The catalogue is a browse list, not an archive: cap it. */
+const PRODUCT_LIMIT = 200
+
 export async function GET() {
   const products = await prisma.product.findMany({
     orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
+    take: PRODUCT_LIMIT,
     include: {
       specs: {
         orderBy: { sortOrder: "asc" },

@@ -149,17 +149,26 @@ export async function cancelOrder(orderId: string) {
   await notifyOrderCancelled(orderId).catch(() => {})
 }
 
-export async function deliverKey(orderId: string, value: string) {
-  const order = await prisma.order.update({
-    where: { id: orderId },
-    data: {
-      deliveredKeyValue: value,
-      isPaid: true,
-      paymentConfirmedAt: new Date(),
-      status: OrderStatus.CLOSED,
-      closedAt: new Date(),
-    },
+export async function deliverKey(
+  orderId: string,
+  value: string,
+  adminUserId: string,
+) {
+  // Runs the same confirmation flow as the mini app, then records the manual
+  // key — in one transaction, so two admins cannot half-deliver an order.
+  const order = await prisma.$transaction(async (tx) => {
+    await confirmOrderPaymentFlow(tx, orderId, adminUserId)
+
+    return tx.order.update({
+      where: { id: orderId },
+      data: {
+        deliveredKeyValue: value,
+        closedAt: new Date(),
+        status: OrderStatus.CLOSED,
+      },
+    })
   })
+
   await notifyOrderPaid(orderId).catch(() => {})
   return order
 }

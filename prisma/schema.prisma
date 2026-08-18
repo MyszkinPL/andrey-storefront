@@ -47,6 +47,10 @@ model User {
   updatedAt    DateTime  @updatedAt
   orders       Order[]   @relation("OrderAuthor")
   assigned     Order[]   @relation("OrderAssignee")
+
+  @@index([role])
+  @@index([isBanned])
+  @@index([createdAt])
 }
 
 model Product {
@@ -65,6 +69,8 @@ model Product {
   orders       Order[]
   keys         ProductKey[]
   specs        ProductSpec[]
+
+  @@index([isActive, sortOrder])
 }
 
 model ProductSpec {
@@ -76,6 +82,8 @@ model ProductSpec {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId, sortOrder])
 }
 
 model ProductKey {
@@ -87,6 +95,8 @@ model ProductKey {
   issuedToOrderId String?   @unique
   product         Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
   issuedToOrder   Order?    @relation(fields: [issuedToOrderId], references: [id])
+
+  @@index([productId, issuedAt])
 }
 
 model Order {
@@ -124,6 +134,10 @@ model Order {
   paymentMethod            PaymentMethod?     @relation(fields: [paymentMethodId], references: [id], onDelete: SetNull)
   deliveredKey             ProductKey?
   receipt                  OrderReceipt?
+
+  @@index([createdById, updatedAt])
+  @@index([createdById, status])
+  @@index([status, updatedAt])
 }
 
 /// Buyer-uploaded payment receipt. The PDF itself lives in Telegram: we send
@@ -152,6 +166,8 @@ model PaymentMethod {
   createdAt            DateTime          @default(now())
   updatedAt            DateTime          @updatedAt
   orders               Order[]
+
+  @@index([isActive, sortOrder])
 }
 
 model ShopSettings {

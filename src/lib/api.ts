@@ -177,11 +177,13 @@ export function createOrder(payload: {
   })
 }
 
-export function getOrders(params?: { scope?: "all" }) {
+export function getOrders(params?: { scope?: "all"; limit?: number }) {
   const query = new URLSearchParams()
   if (params?.scope) query.set("scope", params.scope)
+  if (params?.limit) query.set("limit", String(params.limit))
 
   return api<{
+    hasMore: boolean
     orders: Array<{
       id: string
       number: number

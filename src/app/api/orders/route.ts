@@ -13,24 +13,40 @@ const schema = z.object({
   paymentMethodType: z.nativeEnum(PaymentMethodType).optional(),
 })
 
+/** Caps an unbounded list so one busy shop cannot return its whole history. */
+const DEFAULT_LIMIT = 50
+const MAX_LIMIT = 200
+
+function readLimit(searchParams: URLSearchParams) {
+  const raw = Number(searchParams.get("limit"))
+  if (!Number.isFinite(raw) || raw <= 0) return DEFAULT_LIMIT
+  return Math.min(Math.trunc(raw), MAX_LIMIT)
+}
+
 export async function GET(request: Request) {
   const user = await requireUser()
   const { searchParams } = new URL(request.url)
   const scope = searchParams.get("scope")
+  const limit = readLimit(searchParams)
   const where =
     user.role === "ADMIN" && scope === "all"
       ? {}
       : { createdById: user.id }
 
-  const orders = await prisma.order.findMany({
+  // One extra row tells the client whether more exist without a count query.
+  const rows = await prisma.order.findMany({
     where,
     include: {
       product: true,
     },
     orderBy: { updatedAt: "desc" },
+    take: limit + 1,
   })
 
+  const orders = rows.slice(0, limit)
+
   return NextResponse.json({
+    hasMore: rows.length > limit,
     orders: orders.map((order) => ({
       id: order.id,
       number: order.number,

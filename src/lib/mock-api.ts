@@ -285,7 +285,8 @@ export async function mockApi<T>(input: RequestInfo, init?: RequestInit): Promis
 
   if (path === "/api/orders" && method === "GET") {
     const scope = search.get("scope")
-    return { orders: scope === "all" ? orders : orders.filter((order) => order.isOwner) } as T
+    const visible = scope === "all" ? orders : orders.filter((order) => order.isOwner)
+    return { hasMore: false, orders: visible } as T
   }
 
   if (path === "/api/orders" && method === "POST") {
