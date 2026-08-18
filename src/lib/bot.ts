@@ -41,6 +41,7 @@ import { replaceMessage } from "@/lib/bot-view"
 import { isLocale } from "@/lib/i18n/config"
 import { OrderCreateError } from "@/lib/order-create"
 import { getServerEnv } from "@/lib/env"
+import { getShopCurrency } from "@/lib/shop-settings"
 import { formatPrice } from "@/lib/format"
 import { prisma } from "@/lib/prisma"
 
@@ -389,7 +390,11 @@ export function getBot() {
           return
         }
         await setProductPrice(action.productId, price)
-        await ctx.reply(t("bot.priceUpdated", { price: formatPrice(price, locale) }))
+        await ctx.reply(
+          t("bot.priceUpdated", {
+            price: formatPrice(price, locale, await getShopCurrency()),
+          }),
+        )
         await replaceMessage(ctx, await renderProduct(action.productId, t, locale))
         return
       }

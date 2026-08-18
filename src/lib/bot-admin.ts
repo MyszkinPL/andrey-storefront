@@ -4,6 +4,7 @@ import { InlineKeyboard } from "grammy"
 import { resolveActor } from "@/lib/bot-locale"
 import { clearPending, setPending, takePending } from "@/lib/bot-pending"
 import { formatPrice } from "@/lib/format"
+import { getShopCurrency } from "@/lib/shop-settings"
 import type { Locale } from "@/lib/i18n/config"
 import type { TranslateFn } from "@/lib/i18n"
 import {
@@ -75,10 +76,13 @@ export async function renderOrders(t: TranslateFn) {
 }
 
 export async function renderOrder(orderId: string, t: TranslateFn, locale: Locale) {
-  const order = await prisma.order.findUnique({
-    where: { id: orderId },
-    include: { product: true, createdBy: true, receipt: true },
-  })
+  const [order, currency] = await Promise.all([
+    prisma.order.findUnique({
+      where: { id: orderId },
+      include: { product: true, createdBy: true, receipt: true },
+    }),
+    getShopCurrency(),
+  ])
 
   if (!order) {
     return { text: t("bot.notFound"), keyboard: new InlineKeyboard().text(t("bot.back"), "o") }
@@ -97,7 +101,7 @@ export async function renderOrder(orderId: string, t: TranslateFn, locale: Local
       number: order.number,
       buyer: escapeHtml(buyer),
       status: orderStatusLabel(order, t),
-      amount: amount === null ? "—" : formatPrice(amount, locale),
+      amount: amount === null ? "—" : formatPrice(amount, locale, currency),
       method: escapeHtml(order.paymentMethodTitle || "—"),
     }),
     order.receipt ? t("bot.receiptAttached") : t("bot.receiptMissing"),
@@ -187,10 +191,13 @@ export async function renderProducts(t: TranslateFn) {
 }
 
 export async function renderProduct(productId: string, t: TranslateFn, locale: Locale) {
-  const product = await prisma.product.findUnique({
-    where: { id: productId },
-    include: { _count: { select: { keys: { where: { issuedAt: null } } } } },
-  })
+  const [product, currency] = await Promise.all([
+    prisma.product.findUnique({
+      where: { id: productId },
+      include: { _count: { select: { keys: { where: { issuedAt: null } } } } },
+    }),
+    getShopCurrency(),
+  ])
 
   if (!product) {
     return { text: t("bot.notFound"), keyboard: new InlineKeyboard().text(t("bot.back"), "p") }
@@ -199,7 +206,7 @@ export async function renderProduct(productId: string, t: TranslateFn, locale: L
   const text = t("bot.productCard", {
     title: escapeHtml(product.title),
     category: escapeHtml(product.category || "—"),
-    price: formatPrice(product.priceRub, locale),
+    price: formatPrice(product.priceRub, locale, currency),
     delivery:
       product.deliveryType === "AUTO_KEY"
         ? t("bot.deliveryAuto")

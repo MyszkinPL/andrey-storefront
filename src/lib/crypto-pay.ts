@@ -195,6 +195,55 @@ export async function getCryptoPayCurrencies(options?: {
   return items
 }
 
+const ratesCache = new Map<string, { expiresAt: number; rates: Map<string, number> }>()
+
+/**
+ * Estimates how much of a crypto asset a fiat price is worth, for payment
+ * button labels. Rates are cached for a minute; any failure returns null so
+ * the button falls back to a plain label instead of blocking the card.
+ */
+export async function estimateCryptoAmount(input: {
+  amountFiat: number
+  asset: string
+  fiat?: string | null
+  token: string
+  useTestnet: boolean
+}): Promise<number | null> {
+  const fiat = (input.fiat || "RUB").toUpperCase()
+  const cacheKey = `${input.useTestnet}:${fiat}`
+
+  let cached = ratesCache.get(cacheKey)
+  if (!cached || cached.expiresAt <= Date.now()) {
+    try {
+      const result = await cryptoPayFetch<
+        Array<{
+          is_valid?: boolean
+          source?: string
+          target?: string
+          rate?: string
+        }>
+      >("getExchangeRates", { method: "GET" }, input.token, input.useTestnet)
+
+      const rates = new Map<string, number>()
+      for (const entry of result) {
+        if (!entry.is_valid || entry.target?.toUpperCase() !== fiat) continue
+        const rate = Number(entry.rate)
+        if (entry.source && Number.isFinite(rate) && rate > 0) {
+          rates.set(entry.source.toUpperCase(), rate)
+        }
+      }
+
+      cached = { expiresAt: Date.now() + 60_000, rates }
+      ratesCache.set(cacheKey, cached)
+    } catch {
+      return null
+    }
+  }
+
+  const rate = cached.rates.get(input.asset.toUpperCase())
+  return rate ? input.amountFiat / rate : null
+}
+
 export function mapCryptoInvoicePayload(invoice: CryptoPayInvoicePayload) {
   return {
     invoiceId: String(invoice.invoice_id),

@@ -36,11 +36,24 @@ import {
   InputGroupInput,
 } from "@/components/ui/input-group"
 import { ListGroup, ListRow } from "@/components/list-row"
+import {
+  Select,
+  SelectItem,
+  SelectPopup,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
 import { useTranslate } from "@/components/i18n-provider"
 import { getCryptoPayCurrencies, getMe, getPaymentMethods, saveSettings } from "@/lib/api"
+
+/** Fiat currencies Crypto Pay supports, shown until the live list loads. */
+const FALLBACK_FIATS = [
+  "AED", "AMD", "AZN", "BRL", "BYN", "EUR", "GBP", "GEL", "IDR", "ILS",
+  "INR", "KZT", "PLN", "RUB", "THB", "TRY", "UAH", "USD", "UZS",
+]
 
 export function AdminSettingsScreen() {
   const t = useTranslate()
@@ -135,6 +148,14 @@ export function AdminSettingsScreen() {
     ? `${meData.settings.appUrl}/api/crypto-pay/webhook`
     : ""
   const assetOptions = cryptoCurrencyData?.assets ?? []
+  // Currencies Crypto Pay accepts as fiat; the API list wins once loaded so
+  // the choice always matches what invoices can actually be issued in.
+  const fiatOptions = useMemo(() => {
+    const fetched = (cryptoCurrencyData?.fiats ?? []).map((item) => item.code)
+    const merged = new Set(fetched.length > 0 ? fetched : FALLBACK_FIATS)
+    if (cryptoPayFiat) merged.add(cryptoPayFiat.toUpperCase())
+    return Array.from(merged).sort()
+  }, [cryptoCurrencyData?.fiats, cryptoPayFiat])
 
   if (meData && meData.user.role !== "ADMIN") {
     return (
@@ -201,8 +222,24 @@ export function AdminSettingsScreen() {
                 <Switch id="crypto-testnet" checked={cryptoPayUseTestnet} onCheckedChange={setCryptoPayUseTestnet} />
               </Field>
               <Field>
-                <FieldLabel htmlFor="crypto-fiat">Fiat</FieldLabel>
-                <Input id="crypto-fiat" value={cryptoPayFiat} onChange={(event) => setCryptoPayFiat(event.target.value.toUpperCase())} placeholder="RUB" />
+                <FieldLabel htmlFor="crypto-fiat">
+                  {t("adminSettings.currencyLabel")}
+                </FieldLabel>
+                <Select
+                  value={cryptoPayFiat}
+                  onValueChange={(value) => setCryptoPayFiat(String(value))}
+                >
+                  <SelectTrigger className="w-full" id="crypto-fiat">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectPopup className="max-h-72">
+                    {fiatOptions.map((code) => (
+                      <SelectItem key={code} value={code}>
+                        {code}
+                      </SelectItem>
+                    ))}
+                  </SelectPopup>
+                </Select>
               </Field>
               <Field>
                 <FieldLabel>{t("adminSettings.coins")}</FieldLabel>

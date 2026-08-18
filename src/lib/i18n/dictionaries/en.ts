@@ -410,6 +410,7 @@ export const en: Widen<typeof ru> = {
     cryptoHint: "Automatic payment via invoice and webhook.",
     cryptoToggle: "Enable Crypto Bot",
     cryptoTokenPlaceholder: "Token from Crypto Bot",
+    currencyLabel: "Shop currency",
     coins: "Coins",
     pressRefresh: "Press refresh",
     tokenFirst: "API token first",
@@ -531,7 +532,8 @@ export const en: Widen<typeof ru> = {
     catalogTitle: "<b>🛍️ Catalog</b>\n\nPick a product:",
     catalogEmpty: "No products yet.",
     productCard:
-      "<b>{title}</b>\n<i>{category}</i>\n\n<blockquote>{description}</blockquote>\n\n💰 <b>{price}</b>\n📦 {delivery}",
+      "<b>{title}</b>\n<i>{category}</i>\n\n<blockquote>{description}</blockquote>",
+    productMeta: "💰 <b>{price}</b>\n📦 {delivery}",
     outOfStock: "⚠️ No keys left — delivery will be manual.",
     ordersTitle: "<b>🧾 My orders</b>",
     ordersEmpty: "No orders yet.",

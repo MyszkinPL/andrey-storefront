@@ -30,7 +30,7 @@ import { formatPrice } from "@/lib/format"
 const ALL_CATEGORIES = "__all__"
 
 export function CatalogScreen() {
-  const { t, tp, locale } = useI18n()
+  const { t, tp, locale, currency } = useI18n()
   const { data: productsData, isLoading, isError } = useQuery({
     queryKey: ["products"],
     queryFn: getProducts,
@@ -153,7 +153,7 @@ export function CatalogScreen() {
                             {product.title}
                           </FrameTitle>
                           <span className="shrink-0 font-semibold text-sm tabular-nums">
-                            {formatPrice(product.priceRub, locale)}
+                            {formatPrice(product.priceRub, locale, currency)}
                           </span>
                         </div>
 

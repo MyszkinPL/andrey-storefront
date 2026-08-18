@@ -235,6 +235,7 @@ export async function mockApi<T>(input: RequestInfo, init?: RequestInit): Promis
       settings: {
         ...mockSettings,
         appUrl: window.location.origin,
+        currency: mockSettings.cryptoPayFiat || "RUB",
       },
     } as T
   }

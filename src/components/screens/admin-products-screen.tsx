@@ -37,7 +37,7 @@ import { formatPrice } from "@/lib/format"
 type AdminProduct = Awaited<ReturnType<typeof getProducts>>["products"][number]
 
 export function AdminProductsScreen() {
-  const { t, tp, locale } = useI18n()
+  const { t, tp, locale, currency } = useI18n()
   const queryClient = useQueryClient()
   const [deleteProduct, setDeleteProduct] = useState<AdminProduct | null>(null)
   const { data: meData } = useQuery({ queryKey: ["me"], queryFn: getMe })
@@ -98,6 +98,7 @@ export function AdminProductsScreen() {
                 description={`${product.category || t("catalog.noCategory")} · ${formatPrice(
                   product.priceRub,
                   locale,
+                  currency,
                 )} · ${
                   product.deliveryType === "AUTO_KEY"
                     ? tp("catalog.keys", product.availableKeyCount || 0)

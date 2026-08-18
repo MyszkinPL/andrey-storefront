@@ -100,6 +100,7 @@ export function getMe() {
     settings: {
       shopName: string
       supportUsername: string | null
+      currency: string
       cryptoPayEnabled?: boolean
       cryptoPayToken?: string | null
       cryptoPayUseTestnet?: boolean

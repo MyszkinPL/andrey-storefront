@@ -47,7 +47,7 @@ import { createOrder, getPaymentMethods, getProduct } from "@/lib/api"
 import { formatPrice } from "@/lib/format"
 
 export function ProductScreen({ productId }: { productId: string }) {
-  const { t, tp, locale } = useI18n()
+  const { t, tp, locale, currency } = useI18n()
   const router = useRouter()
   const queryClient = useQueryClient()
   const haptic = useHaptic()
@@ -159,7 +159,7 @@ export function ProductScreen({ productId }: { productId: string }) {
             <CardTitle>{product.title}</CardTitle>
             <CardDescription>{category}</CardDescription>
             <CardAction>
-              <Badge variant="secondary">{formatPrice(product.priceRub, locale)}</Badge>
+              <Badge variant="secondary">{formatPrice(product.priceRub, locale, currency)}</Badge>
             </CardAction>
           </CardHeader>
           <CardContent className="flex flex-1 flex-col gap-4">

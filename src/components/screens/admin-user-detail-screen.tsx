@@ -48,7 +48,7 @@ import type { TranslationKey } from "@/lib/i18n"
 import { getAdminUser, getMe, updateAdminUserModeration } from "@/lib/api"
 
 export function AdminUserDetailScreen({ userId }: { userId: string }) {
-  const { t, tp, locale } = useI18n()
+  const { t, tp, locale, currency } = useI18n()
   const router = useRouter()
   const queryClient = useQueryClient()
   const [confirmBanOpen, setConfirmBanOpen] = useState(false)
@@ -221,7 +221,7 @@ export function AdminUserDetailScreen({ userId }: { userId: string }) {
                     description={`#${order.number}${
                       order.productCategory ? ` · ${order.productCategory}` : ""
                     }${
-                      order.priceRub ? ` · ${formatPrice(order.priceRub, locale)}` : ""
+                      order.priceRub ? ` · ${formatPrice(order.priceRub, locale, currency)}` : ""
                     } · ${t(orderStatusKey2(order.status, order.isPaid))}`}
                     href={`/orders/${order.id}`}
                     key={order.id}

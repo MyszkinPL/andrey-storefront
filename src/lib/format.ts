@@ -54,6 +54,18 @@ export function relativeTimeParts(value: string | Date) {
   return { unit: "days" as const, count: Math.floor(diffMs / day) }
 }
 
+/**
+ * Compact crypto amount for button labels: "51.2" for USDT-sized values,
+ * "0.00062" for BTC-sized ones. Three significant digits is enough for an
+ * estimate — the invoice itself quotes the exact amount.
+ */
+export function formatCryptoAmount(value: number) {
+  return new Intl.NumberFormat("en-US", {
+    maximumSignificantDigits: 3,
+    useGrouping: false,
+  }).format(value)
+}
+
 export function formatDateTime(value: string | Date, locale: Locale) {
   return new Intl.DateTimeFormat(intlLocale(locale), {
     dateStyle: "medium",

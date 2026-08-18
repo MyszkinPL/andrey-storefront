@@ -46,7 +46,7 @@ import { getOrder } from "@/lib/api"
 type Order = Awaited<ReturnType<typeof getOrder>>["order"]
 
 export function OrderCompleteScreen({ orderId }: { orderId: string }) {
-  const { t, locale } = useI18n()
+  const { t, locale, currency } = useI18n()
   const router = useRouter()
   const [copied, setCopied] = useState(false)
   const { data, isLoading, isError } = useQuery({
@@ -85,7 +85,7 @@ export function OrderCompleteScreen({ orderId }: { orderId: string }) {
   const createdAtLabel = formatDateTime(order.createdAt, locale)
   const amountLabel =
     formatInvoiceAmount(order.cryptoInvoiceAmount, order.cryptoInvoiceFiat, locale) ??
-    (order.priceRub ? formatPrice(order.priceRub, locale) : "—")
+    (order.priceRub ? formatPrice(order.priceRub, locale, currency) : "—")
 
   return (
     <Screen noTabBar>

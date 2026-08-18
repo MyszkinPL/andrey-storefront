@@ -98,7 +98,7 @@ type PaymentOption = {
 
 export function OrderDetailScreen({ orderId }: { orderId: string }) {
   const router = useRouter()
-  const { t, locale } = useI18n()
+  const { t, locale, currency } = useI18n()
   const queryClient = useQueryClient()
   const { mode } = useMode()
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
@@ -262,7 +262,7 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
     order.paymentMethodType !== "CRYPTO_PAY"
   const amountLabel =
     formatInvoiceAmount(order.cryptoInvoiceAmount, order.cryptoInvoiceFiat, locale) ??
-    (order.priceRub ? formatPrice(order.priceRub, locale) : null)
+    (order.priceRub ? formatPrice(order.priceRub, locale, currency) : null)
   const selectedPaymentKey = draftPaymentKey || currentPaymentKey
   const showOrderNotice =
     Boolean(order.deliveredKey) ||

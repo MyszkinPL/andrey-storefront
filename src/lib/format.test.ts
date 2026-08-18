@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest"
 
-import { formatInvoiceAmount, formatPrice, relativeTimeParts } from "@/lib/format"
+import {
+  formatCryptoAmount,
+  formatInvoiceAmount,
+  formatPrice,
+  relativeTimeParts,
+} from "@/lib/format"
 
 describe("formatPrice", () => {
   it("formats roubles per locale", () => {
@@ -49,5 +54,19 @@ describe("relativeTimeParts", () => {
       unit: "now",
       count: 0,
     })
+  })
+})
+
+describe("formatCryptoAmount", () => {
+  it("keeps USDT-sized estimates short", () => {
+    expect(formatCryptoAmount(51.183)).toBe("51.2")
+  })
+
+  it("keeps BTC-sized estimates readable", () => {
+    expect(formatCryptoAmount(0.00061523)).toBe("0.000615")
+  })
+
+  it("does not add grouping separators", () => {
+    expect(formatCryptoAmount(33267)).not.toContain(",")
   })
 })

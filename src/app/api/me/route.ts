@@ -39,10 +39,13 @@ export async function GET() {
         ? {
             ...settings,
             appUrl: env.APP_URL,
+            currency: settings.cryptoPayFiat || "RUB",
           }
         : {
             shopName: settings.shopName,
             supportUsername: settings.supportUsername,
+            // Prices are entered in the shop's fiat, so buyers need it too.
+            currency: settings.cryptoPayFiat || "RUB",
           },
   })
 }

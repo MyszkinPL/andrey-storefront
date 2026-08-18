@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useSyncExternalStore } from "react"
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, useSyncExternalStore } from "react"
 
 import { getMe, updateLanguage } from "@/lib/api"
 import { useTelegram } from "@/hooks/use-telegram"
@@ -14,6 +14,8 @@ import { DEFAULT_LOCALE, isLocale, resolveLocale, type Locale } from "@/lib/i18n
 
 type I18nContextValue = {
   locale: Locale
+  /** The shop's fiat currency; every price label follows it. */
+  currency: string
   t: TranslateFn
   /** Plural-aware translate, e.g. `tp("catalog.keys", 7)`. */
   tp: TranslatePluralFn
@@ -60,6 +62,7 @@ function storeLocale(locale: Locale) {
 
 export function I18nProvider({ children }: { children: React.ReactNode }) {
   const { user } = useTelegram()
+  const [currency, setCurrency] = useState("RUB")
   const storedLocale = useSyncExternalStore(
     subscribe,
     getStoredLocale,
@@ -71,10 +74,11 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   // manual switch.
   useEffect(() => {
     getMe()
-      .then(({ user: me }) => {
+      .then(({ user: me, settings }) => {
         if (isLocale(me.language) && me.language !== getStoredLocale()) {
           storeLocale(me.language)
         }
+        if (settings.currency) setCurrency(settings.currency.toUpperCase())
       })
       .catch(() => {})
   }, [])
@@ -99,12 +103,13 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo<I18nContextValue>(
     () => ({
+      currency,
       locale,
       setLocale,
       t: createTranslator(locale),
       tp: createPluralTranslator(locale),
     }),
-    [locale, setLocale],
+    [currency, locale, setLocale],
   )
 
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>

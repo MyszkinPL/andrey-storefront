@@ -1,11 +1,13 @@
 import { OrderStatus, PaymentMethodType, Role } from "@prisma/client"
 import { InlineKeyboard } from "grammy"
 
-import { formatPrice } from "@/lib/format"
+import { formatCryptoAmount, formatPrice } from "@/lib/format"
 import type { TranslateFn } from "@/lib/i18n"
 import type { Locale } from "@/lib/i18n/config"
 import { LOCALE_LABELS, LOCALES } from "@/lib/i18n/config"
+import { estimateCryptoAmount } from "@/lib/crypto-pay"
 import { createOrder, OrderCreateError } from "@/lib/order-create"
+import { getShopCurrency } from "@/lib/shop-settings"
 import { notifyManualPaymentRequested, notifyOrderCancelled } from "@/lib/order-notifications"
 import { orderStatusKey } from "@/lib/order-status"
 import { prisma } from "@/lib/prisma"
@@ -48,6 +50,7 @@ export function shopMenu(
 // ---------------------------------------------------------------- catalog
 
 export async function renderCatalog(t: TranslateFn, locale: Locale): Promise<View> {
+  const currency = await getShopCurrency()
   const products = await prisma.product.findMany({
     where: { isActive: true },
     orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
@@ -58,7 +61,7 @@ export async function renderCatalog(t: TranslateFn, locale: Locale): Promise<Vie
   for (const product of products) {
     keyboard
       .text(
-        `${product.title.slice(0, 28)} · ${formatPrice(product.priceRub, locale)}`,
+        `${product.title.slice(0, 26)} · ${formatPrice(product.priceRub, locale, currency)}`,
         `sc:${product.id}`,
       )
       .row()
@@ -81,7 +84,10 @@ export async function renderShopProduct(
   const [product, methods, settings] = await Promise.all([
     prisma.product.findUnique({
       where: { id: productId },
-      include: { _count: { select: { keys: { where: { issuedAt: null } } } } },
+      include: {
+        _count: { select: { keys: { where: { issuedAt: null } } } },
+        specs: { orderBy: { sortOrder: "asc" } },
+      },
     }),
     prisma.paymentMethod.findMany({
       where: { isActive: true, type: PaymentMethodType.MANUAL },
@@ -96,6 +102,7 @@ export async function renderShopProduct(
 
   const isAuto = product.deliveryType === "AUTO_KEY"
   const photo = dataUrlToBuffer(product.imageDataUrl)
+  const currency = (settings?.cryptoPayFiat || "RUB").toUpperCase()
 
   const lines = [
     t("shop.productCard", {
@@ -103,24 +110,58 @@ export async function renderShopProduct(
       category: escapeHtml(product.category || "—"),
       // A caption is capped at 1024 characters, so the description gets the
       // room left over once the rest of the card is accounted for.
-      description: escapeHtml(clamp(product.description, photo ? 500 : 1500)),
-      price: formatPrice(product.priceRub, locale),
-      delivery: isAuto ? t("bot.deliveryAuto") : t("bot.deliveryManual"),
+      description: escapeHtml(clamp(product.description, photo ? 400 : 1200)),
     }),
   ]
 
+  if (product.specs.length > 0) {
+    lines.push(
+      "",
+      ...product.specs
+        .slice(0, 8)
+        .map((spec) => `▪️ ${escapeHtml(spec.label)} — ${escapeHtml(spec.value)}`),
+    )
+  }
+
+  lines.push(
+    "",
+    t("shop.productMeta", {
+      price: formatPrice(product.priceRub, locale, currency),
+      delivery: isAuto ? t("bot.deliveryAuto") : t("bot.deliveryManual"),
+    }),
+  )
+
   if (isAuto && product._count.keys === 0) lines.push(t("shop.outOfStock"))
 
-  // Payment methods sit right on the card: a separate "buy" step only asked
-  // the same question one tap later.
+  // Payment methods sit right on the card, each priced in what the buyer
+  // would actually pay with it.
+  const fiatLabel = formatPrice(product.priceRub, locale, currency)
   const keyboard = new InlineKeyboard()
   for (const method of methods) {
     keyboard
-      .text(`💳 ${method.title.slice(0, 28)}`, `sq:${product.id}:${method.id}`)
+      .text(
+        `💳 ${method.title.slice(0, 20)} · ${fiatLabel}`,
+        `sq:${product.id}:${method.id}`,
+      )
       .row()
   }
   if (settings?.cryptoPayEnabled && settings.cryptoPayToken) {
-    keyboard.text("💳 Crypto Bot", `sq:${product.id}:c`).row()
+    const asset =
+      (settings.cryptoPayDefaultAssets || "USDT")
+        .split(",")[0]
+        ?.trim()
+        .toUpperCase() || "USDT"
+    const estimate = await estimateCryptoAmount({
+      amountFiat: product.priceRub,
+      asset,
+      fiat: currency,
+      token: settings.cryptoPayToken,
+      useTestnet: settings.cryptoPayUseTestnet,
+    })
+    const label = estimate
+      ? `💳 Crypto Bot · ≈ ${formatCryptoAmount(estimate)} ${asset}`
+      : "💳 Crypto Bot"
+    keyboard.text(label, `sq:${product.id}:c`).row()
   }
   keyboard.text(t("bot.back"), "sc")
 
@@ -203,10 +244,13 @@ export async function renderMyOrder(
   t: TranslateFn,
   locale: Locale,
 ): Promise<View> {
-  const order = await prisma.order.findUnique({
-    where: { id: orderId },
-    include: { product: true, deliveredKey: true },
-  })
+  const [order, currency] = await Promise.all([
+    prisma.order.findUnique({
+      where: { id: orderId },
+      include: { product: true, deliveredKey: true },
+    }),
+    getShopCurrency(),
+  ])
 
   if (!order || order.createdById !== user.id) {
     return { text: t("bot.notFound"), keyboard: new InlineKeyboard().text(t("bot.back"), "so") }
@@ -222,7 +266,7 @@ export async function renderMyOrder(
       number: order.number,
       statusIcon: orderStatusIcon(order),
       status: t(orderStatusKey(order)),
-      amount: amount === null ? "—" : formatPrice(amount, locale),
+      amount: amount === null ? "—" : formatPrice(amount, locale, currency),
       method: escapeHtml(order.paymentMethodTitle || "—"),
     }),
   ]

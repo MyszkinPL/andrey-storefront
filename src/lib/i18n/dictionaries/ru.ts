@@ -403,6 +403,7 @@ export const ru = {
     cryptoHint: "Автооплата через invoice и webhook.",
     cryptoToggle: "Включить Crypto Bot",
     cryptoTokenPlaceholder: "Token из Crypto Bot",
+    currencyLabel: "Валюта магазина",
     coins: "Монеты",
     pressRefresh: "Нажми обновить",
     tokenFirst: "Сначала API token",
@@ -524,7 +525,8 @@ export const ru = {
     catalogTitle: "<b>🛍️ Каталог</b>\n\nВыбери товар:",
     catalogEmpty: "Товаров пока нет.",
     productCard:
-      "<b>{title}</b>\n<i>{category}</i>\n\n<blockquote>{description}</blockquote>\n\n💰 <b>{price}</b>\n📦 {delivery}",
+      "<b>{title}</b>\n<i>{category}</i>\n\n<blockquote>{description}</blockquote>",
+    productMeta: "💰 <b>{price}</b>\n📦 {delivery}",
     outOfStock: "⚠️ Ключи закончились — выдача будет ручной.",
     ordersTitle: "<b>🧾 Мои заказы</b>",
     ordersEmpty: "Заказов пока нет.",
