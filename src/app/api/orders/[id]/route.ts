@@ -10,6 +10,8 @@ import {
   notifyOrderCancelled,
   notifyOrderPaid,
 } from "@/lib/order-notifications"
+import { translate } from "@/lib/i18n"
+import { resolveUserLocale } from "@/lib/i18n/config"
 import { prisma } from "@/lib/prisma"
 import { confirmOrderPaymentFlow } from "@/lib/order-payment"
 
@@ -135,6 +137,7 @@ export async function GET(
       createdBy: true,
       assignedTo: true,
       deliveredKey: true,
+      receipt: true,
     },
   })
 
@@ -156,6 +159,13 @@ export async function GET(
       priceRub: order.product?.priceRub ?? order.priceRubSnapshot ?? null,
       deliveredKey: order.deliveredKey?.value || order.deliveredKeyValue || null,
       manualPaymentRequestedAt: order.manualPaymentRequestedAt?.toISOString() || null,
+      receipt: order.receipt
+        ? {
+            fileName: order.receipt.fileName,
+            fileSize: order.receipt.fileSize,
+            uploadedAt: order.receipt.uploadedAt.toISOString(),
+          }
+        : null,
       isAdmin: user.role === "ADMIN",
       isOwner: order.createdById === user.id,
       createdBy:
@@ -200,6 +210,7 @@ export async function PATCH(
 ) {
   try {
     const user = await requireInteractiveUser()
+    const locale = resolveUserLocale(user)
     const { id } = await params
     const payload = schema.parse(await request.json())
 
@@ -246,15 +257,15 @@ export async function PATCH(
       }
 
       if (manualOrder.status === "CLOSED") {
-        return NextResponse.json({ error: "Заказ закрыт" }, { status: 400 })
+        return NextResponse.json({ error: translate(locale, "errors.orderClosed") }, { status: 400 })
       }
 
       if (manualOrder.status === OrderStatus.CANCELLED) {
-        return NextResponse.json({ error: "Заказ отменён" }, { status: 400 })
+        return NextResponse.json({ error: translate(locale, "errors.orderCancelled") }, { status: 400 })
       }
 
       if (manualOrder.paymentMethodType !== PaymentMethodType.MANUAL) {
-        return NextResponse.json({ error: "Этот заказ не требует ручной проверки" }, { status: 400 })
+        return NextResponse.json({ error: translate(locale, "errors.noManualReview") }, { status: 400 })
       }
 
       if (manualOrder.isPaid || manualOrder.manualPaymentRequestedAt) {
@@ -302,22 +313,22 @@ export async function PATCH(
       }
 
       if (ownOrder.isPaid) {
-        return NextResponse.json({ error: "После оплаты способ менять нельзя" }, { status: 400 })
+        return NextResponse.json({ error: translate(locale, "errors.methodLockedPaid") }, { status: 400 })
       }
 
       if (ownOrder.status === OrderStatus.CLOSED || ownOrder.status === OrderStatus.CANCELLED) {
-        return NextResponse.json({ error: "Заказ уже закрыт" }, { status: 400 })
+        return NextResponse.json({ error: translate(locale, "errors.orderAlreadyClosed") }, { status: 400 })
       }
 
       if (ownOrder.manualPaymentRequestedAt) {
         return NextResponse.json(
-          { error: "Способ оплаты нельзя менять после отметки об оплате" },
+          { error: translate(locale, "errors.methodLockedReview") },
           { status: 400 },
         )
       }
 
       if (!ownOrder.product) {
-        return NextResponse.json({ error: "У заказа нет товара" }, { status: 400 })
+        return NextResponse.json({ error: translate(locale, "errors.orderHasNoProduct") }, { status: 400 })
       }
 
       if (payload.paymentMethodId) {
@@ -330,7 +341,7 @@ export async function PATCH(
         })
 
         if (!manualMethod) {
-          return NextResponse.json({ error: "Способ оплаты не найден" }, { status: 404 })
+          return NextResponse.json({ error: translate(locale, "errors.methodNotFound") }, { status: 404 })
         }
 
         await prisma.order.update({
@@ -358,7 +369,7 @@ export async function PATCH(
         const settings = await prisma.shopSettings.findUnique({ where: { id: 1 } })
 
         if (!settings?.cryptoPayEnabled || !settings.cryptoPayToken) {
-          return NextResponse.json({ error: "Crypto Bot сейчас недоступен" }, { status: 400 })
+          return NextResponse.json({ error: translate(locale, "errors.cryptoUnavailable") }, { status: 400 })
         }
 
         await prisma.order.update({
@@ -367,7 +378,7 @@ export async function PATCH(
             paymentMethodId: null,
             paymentMethodType: PaymentMethodType.CRYPTO_PAY,
             paymentMethodTitle: "Crypto Bot",
-            paymentMethodDetails: "Автоматическая оплата через invoice",
+            paymentMethodDetails: translate(locale, "product.cryptoAuto"),
             paymentMethodIconDataUrl: "/crypto-bot-logo.svg",
             manualPaymentRequestedAt: null,
             cryptoInvoiceId: null,
@@ -384,7 +395,7 @@ export async function PATCH(
         return NextResponse.json({ ok: true })
       }
 
-      return NextResponse.json({ error: "Неверный способ оплаты" }, { status: 400 })
+      return NextResponse.json({ error: translate(locale, "errors.invalidMethod") }, { status: 400 })
     }
 
     if (payload.cancelByUser) {
@@ -406,7 +417,7 @@ export async function PATCH(
       }
 
       if (ownOrder.isPaid) {
-        return NextResponse.json({ error: "Оплаченный заказ нельзя отменить самостоятельно" }, { status: 400 })
+        return NextResponse.json({ error: translate(locale, "errors.cantCancelPaid") }, { status: 400 })
       }
 
       if (ownOrder.status === OrderStatus.CLOSED || ownOrder.status === OrderStatus.CANCELLED) {
@@ -438,14 +449,14 @@ export async function PATCH(
           order.paymentMethodType === PaymentMethodType.MANUAL &&
           order.status !== OrderStatus.PAYMENT_REVIEW
         ) {
-          throw new Error("Ручную оплату можно подтвердить только после отметки покупателя")
+          throw new Error(translate(locale, "errors.manualNeedsBuyerMark"))
         }
 
         if (
           order.status === OrderStatus.CLOSED ||
           order.status === OrderStatus.CANCELLED
         ) {
-          throw new Error("Закрытый заказ нельзя подтверждать")
+          throw new Error(translate(locale, "errors.cantConfirmClosed"))
         }
 
         await confirmOrderPaymentFlow(tx, id, user.id)
@@ -453,11 +464,11 @@ export async function PATCH(
 
       if (payload.rejectManualPayment) {
         if (order.paymentMethodType !== PaymentMethodType.MANUAL) {
-          throw new Error("Этот заказ не требует ручной проверки")
+          throw new Error(translate(locale, "errors.noManualReview"))
         }
 
         if (order.status !== OrderStatus.PAYMENT_REVIEW) {
-          throw new Error("Заказ сейчас не находится на проверке оплаты")
+          throw new Error(translate(locale, "errors.notUnderReview"))
         }
 
         await tx.order.update({

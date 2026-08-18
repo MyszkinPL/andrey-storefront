@@ -19,9 +19,11 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty"
 import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
+import { useTranslate } from "@/components/i18n-provider"
 import { getAdminUsers, getMe, getOrders, getPaymentMethods, getProducts } from "@/lib/api"
 
 export function AdminOverviewScreen() {
+  const t = useTranslate()
   const { data: meData } = useQuery({ queryKey: ["me"], queryFn: getMe })
   const { data: productsData, isLoading: isLoadingProducts, isError: isErrorProducts } = useQuery({
     queryKey: ["products"],
@@ -43,26 +45,26 @@ export function AdminOverviewScreen() {
   if (meData && meData.user.role !== "ADMIN") {
     return (
       <Screen>
-        <ScreenHeader title="Доступ закрыт" subtitle="Эта зона только для админа." />
+        <ScreenHeader title={t("admin.deniedTitle")} subtitle={t("admin.deniedOverview")} />
       </Screen>
     )
   }
 
   const stats = [
     {
-      label: "Активные товары",
+      label: t("admin.statActiveProducts"),
       value: productsData?.products.filter((item) => item.isActive).length || 0,
       icon: Package2,
     },
     {
-      label: "Активные заказы",
+      label: t("admin.statActiveOrders"),
       value:
         ordersData?.orders.filter((item) => !["CLOSED", "CANCELLED"].includes(item.status)).length ||
         0,
       icon: Receipt,
     },
     {
-      label: "Ключи",
+      label: t("admin.statKeys"),
       value:
         productsData?.products.reduce(
           (sum, item) => sum + (item.deliveryType === "AUTO_KEY" ? item.availableKeyCount || 0 : 0),
@@ -71,12 +73,12 @@ export function AdminOverviewScreen() {
       icon: ShieldCheck,
     },
     {
-      label: "Реквизиты",
+      label: t("admin.statPaymentMethods"),
       value: paymentData?.paymentMethods.length || 0,
       icon: CreditCard,
     },
     {
-      label: "Баны",
+      label: t("admin.statBans"),
       value: usersData?.summary.banned || 0,
       icon: Users,
     },
@@ -84,19 +86,25 @@ export function AdminOverviewScreen() {
 
   return (
     <Screen>
-      <ScreenHeader title="Админка" subtitle="Управление магазином" />
+      <ScreenHeader title={t("admin.overviewTitle")} subtitle={t("admin.overviewSubtitle")} />
 
       <ScreenBody>
         {isLoadingProducts || isLoadingOrders || isLoadingPayments || isLoadingUsers ? (
-          <OverviewEmpty title="Загружаю сводку" description="Собираю данные магазина." />
+          <OverviewEmpty
+            title={t("admin.overviewLoadingTitle")}
+            description={t("admin.overviewLoadingDescription")}
+          />
         ) : isErrorProducts || isErrorOrders || isErrorPayments || isErrorUsers ? (
-          <OverviewEmpty title="Сводка не загрузилась" description="Обнови экран или попробуй позже." />
+          <OverviewEmpty
+            title={t("admin.overviewErrorTitle")}
+            description={t("admin.overviewErrorDescription")}
+          />
         ) : (
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
             {stats.map((item) => {
               const Icon = item.icon
               return (
-                <Card key={item.label} size="sm">
+                <Card key={item.label}>
                   <CardHeader>
                     <CardTitle className="text-2xl">{item.value}</CardTitle>
                     <CardDescription>{item.label}</CardDescription>

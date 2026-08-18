@@ -155,6 +155,7 @@ const mockUser = {
   role: "ADMIN" as const,
   isBanned: false,
   banReason: null,
+  language: null as string | null,
 }
 
 let mockSettings = {
@@ -215,9 +216,18 @@ export async function mockApi<T>(input: RequestInfo, init?: RequestInit): Promis
   const method = (init?.method || "GET").toUpperCase()
   const path = new URL(url, window.location.origin).pathname
   const search = new URL(url, window.location.origin).searchParams
-  const body = init?.body ? JSON.parse(String(init.body)) : null
+  // FormData bodies (receipt uploads) are not JSON and must not be parsed.
+  const isFormDataBody =
+    typeof FormData !== "undefined" && init?.body instanceof FormData
+  const body = init?.body && !isFormDataBody ? JSON.parse(String(init.body)) : null
 
   if (path === "/api/auth/telegram") return { ok: true } as T
+
+  if (path === "/api/me/language" && method === "PATCH") {
+    mockUser.language = typeof body?.language === "string" ? body.language : null
+    persistMockState()
+    return { ok: true } as T
+  }
 
   if (path === "/api/me") {
     return {
@@ -299,6 +309,27 @@ export async function mockApi<T>(input: RequestInfo, init?: RequestInit): Promis
     orders = [order, ...orders]
     persistMockState()
     return { orderId: order.id } as T
+  }
+
+  if (path.startsWith("/api/orders/") && path.endsWith("/receipt")) {
+    const id = path.split("/").at(-2) || ""
+    const order = orders.find((item) => item.id === id)
+    if (!order) throw new Error(`Mock order not found: ${id}`)
+
+    const file =
+      isFormDataBody && init?.body instanceof FormData
+        ? init.body.get("file")
+        : null
+    const uploaded = {
+      fileName: file instanceof File ? file.name : "receipt.pdf",
+      fileSize: file instanceof File ? file.size : 0,
+      uploadedAt: new Date().toISOString(),
+    }
+
+    order.receipt = uploaded
+    order.manualPaymentRequestedAt = uploaded.uploadedAt
+    persistMockState()
+    return { receipt: uploaded } as T
   }
 
   if (path.startsWith("/api/orders/")) {
@@ -614,6 +645,11 @@ function makeOrder({
     priceRub: product.priceRub,
     deliveredKey: status === "CLOSED" ? "SNX-LITE-TEST-001" : null,
     manualPaymentRequestedAt,
+    receipt: null as {
+      fileName: string
+      fileSize: number
+      uploadedAt: string
+    } | null,
     isAdmin: true,
     isOwner: true,
     createdBy: {

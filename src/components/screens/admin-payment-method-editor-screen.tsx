@@ -27,6 +27,7 @@ import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
 import { useBackButton } from "@/hooks/use-telegram"
+import { useTranslate } from "@/components/i18n-provider"
 import { getMe, getPaymentMethods, saveSettings } from "@/lib/api"
 import { optimizeSquareImage } from "@/lib/image"
 
@@ -60,6 +61,7 @@ export function AdminPaymentMethodEditorScreen({
   methodId?: string
   template?: string
 }) {
+  const t = useTranslate()
   const router = useRouter()
   const queryClient = useQueryClient()
   const [draft, setDraft] = useState<PaymentMethodForm | null>(null)
@@ -103,7 +105,7 @@ export function AdminPaymentMethodEditorScreen({
 
   const mutation = useMutation({
     mutationFn: (action: "save" | "delete") => {
-      if (!meData || !paymentData || !draft) throw new Error("Настройки ещё не загрузились")
+      if (!meData || !paymentData || !draft) throw new Error(t("adminPaymentEditor.notLoaded"))
 
       const normalized = {
         ...draft,
@@ -154,32 +156,42 @@ export function AdminPaymentMethodEditorScreen({
   if (meData && meData.user.role !== "ADMIN") {
     return (
       <AccessStateScreen
-        title="Доступ закрыт"
-        description="Редактор оплаты доступен только админу."
+        title={t("admin.deniedTitle")}
+        description={t("adminPaymentEditor.deniedDescription")}
       />
     )
   }
 
   if (isError || (methodId && initializedKey && !paymentMethods.some((method) => method.id === methodId))) {
-    return <PaymentEditorState title="Способ оплаты не найден" description="Вернись к настройкам и выбери другой." />
+    return (
+      <PaymentEditorState
+        title={t("adminPaymentEditor.notFoundTitle")}
+        description={t("adminPaymentEditor.notFoundDescription")}
+      />
+    )
   }
 
   if (isLoading || !draft) {
-    return <PaymentEditorState title="Загружаю способ оплаты" description="Подтягиваю текущие настройки." />
+    return (
+      <PaymentEditorState
+        title={t("adminPaymentEditor.loadingTitle")}
+        description={t("adminPaymentEditor.loadingDescription")}
+      />
+    )
   }
 
   return (
     <Screen noTabBar>
       <ScreenHeader
-        title={methodId ? "Способ оплаты" : "Новый способ"}
-        subtitle="Иконка, название и реквизиты"
+        title={methodId ? t("adminPaymentEditor.title") : t("adminPaymentEditor.newTitle")}
+        subtitle={t("adminPaymentEditor.subtitle")}
         trailing={
           <Button
             size="sm"
             disabled={!draft.title.trim() || uploadingIcon || mutation.isPending}
             onClick={() => mutation.mutate("save")}
           >
-            {mutation.isPending ? "Сохраняю..." : "Сохранить"}
+            {mutation.isPending ? t("common.saving") : t("common.save")}
           </Button>
         }
       />
@@ -189,8 +201,12 @@ export function AdminPaymentMethodEditorScreen({
           <Card>
             <CardHeader>
               <MethodPreview iconDataUrl={draft.iconDataUrl} title={draft.title || "PM"} />
-              <CardTitle>Иконка</CardTitle>
-              <CardDescription>{uploadingIcon ? "Обработка изображения..." : "Квадратная иконка платежки"}</CardDescription>
+              <CardTitle>{t("adminPaymentEditor.icon")}</CardTitle>
+              <CardDescription>
+                {uploadingIcon
+                  ? t("adminPaymentEditor.processingImage")
+                  : t("adminPaymentEditor.iconHint")}
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <Input
@@ -203,7 +219,7 @@ export function AdminPaymentMethodEditorScreen({
           </Card>
 
           <Field>
-            <FieldLabel htmlFor="payment-method-title">Название</FieldLabel>
+            <FieldLabel htmlFor="payment-method-title">{t("adminPaymentEditor.name")}</FieldLabel>
             <Input
               id="payment-method-title"
               value={draft.title}
@@ -213,17 +229,17 @@ export function AdminPaymentMethodEditorScreen({
           </Field>
 
           <Field>
-            <FieldLabel htmlFor="payment-method-details">Данные для оплаты</FieldLabel>
+            <FieldLabel htmlFor="payment-method-details">{t("adminPaymentEditor.details")}</FieldLabel>
             <Textarea
               id="payment-method-details"
               value={draft.details}
               onChange={(event) => setDraft((prev) => (prev ? { ...prev, details: event.target.value } : prev))}
-              placeholder="Номер, получатель или инструкция"
+              placeholder={t("adminPaymentEditor.detailsPlaceholder")}
             />
           </Field>
 
           <Field orientation="horizontal">
-            <FieldLabel htmlFor="payment-method-active">Показывать покупателю</FieldLabel>
+            <FieldLabel htmlFor="payment-method-active">{t("adminPaymentEditor.showToBuyer")}</FieldLabel>
             <Switch
               id="payment-method-active"
               checked={draft.isActive}
@@ -238,7 +254,7 @@ export function AdminPaymentMethodEditorScreen({
               onClick={() => mutation.mutate("delete")}
             >
               <Trash2 data-icon="inline-start" />
-              Удалить способ
+              {t("adminPaymentEditor.removeMethod")}
             </Button>
           ) : null}
         </FieldGroup>
@@ -255,7 +271,7 @@ function MethodPreview({
   title: string
 }) {
   return (
-    <Avatar size="lg">
+    <Avatar className="size-10">
       {iconDataUrl ? <AvatarImage src={iconDataUrl} alt={title} /> : null}
       <AvatarFallback>{title ? title.slice(0, 2).toUpperCase() : "PM"}</AvatarFallback>
     </Avatar>

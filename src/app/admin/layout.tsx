@@ -2,6 +2,8 @@ import type { ReactNode } from "react"
 
 import { AccessStateScreen } from "@/components/access-state-screen"
 import { getCurrentUser } from "@/lib/auth"
+import { translate } from "@/lib/i18n"
+import { DEFAULT_LOCALE, resolveUserLocale } from "@/lib/i18n/config"
 
 export default async function AdminLayout({
   children,
@@ -11,10 +13,12 @@ export default async function AdminLayout({
   const user = await getCurrentUser()
 
   if (user && user.role !== "ADMIN") {
+    const locale = user ? resolveUserLocale(user) : DEFAULT_LOCALE
+
     return (
       <AccessStateScreen
-        title="Админка закрыта"
-        description="Этот раздел доступен только администраторам магазина."
+        title={translate(locale, "errors.adminClosedTitle")}
+        description={translate(locale, "errors.adminClosedDescription")}
       />
     )
   }

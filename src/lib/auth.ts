@@ -1,11 +1,32 @@
 import { Role } from "@prisma/client"
 
+import { translate } from "@/lib/i18n"
+import { DEFAULT_LOCALE, resolveUserLocale } from "@/lib/i18n/config"
 import { prisma } from "@/lib/prisma"
 import { getSession } from "@/lib/session"
 import type { WebAppUser } from "@/lib/telegram"
 
-export const USERNAME_REQUIRED_MESSAGE =
-  "Добавь username в Telegram, затем открой магазин заново. Без @username мы не сможем выдать заказ."
+/** Rendered in the reader's own language, so the gate explains itself. */
+export function usernameRequiredMessage(user?: {
+  language?: string | null
+  languageCode?: string | null
+}) {
+  return translate(
+    user ? resolveUserLocale(user) : DEFAULT_LOCALE,
+    "auth.usernameRequired",
+  )
+}
+
+export function bannedMessage(user: {
+  banReason: string | null
+  language?: string | null
+  languageCode?: string | null
+}) {
+  const locale = resolveUserLocale(user)
+  return user.banReason
+    ? translate(locale, "auth.bannedWithReason", { reason: user.banReason })
+    : translate(locale, "auth.banned")
+}
 
 function parseAdminIds() {
   return new Set(
@@ -20,8 +41,12 @@ export function hasTelegramUsername(user: { username: string | null }) {
   return Boolean(user.username?.trim())
 }
 
-function requireTelegramUsername(user: { username: string | null }) {
-  if (!hasTelegramUsername(user)) throw new Error(USERNAME_REQUIRED_MESSAGE)
+function requireTelegramUsername(user: {
+  username: string | null
+  language?: string | null
+  languageCode?: string | null
+}) {
+  if (!hasTelegramUsername(user)) throw new Error(usernameRequiredMessage(user))
 }
 
 export async function upsertTelegramUser(user: WebAppUser) {
@@ -45,6 +70,7 @@ export async function upsertTelegramUser(user: WebAppUser) {
       firstName: user.first_name,
       lastName: user.last_name ?? null,
       photoUrl: user.photo_url ?? null,
+      languageCode: user.language_code ?? null,
       ...(shouldPromoteToAdmin ? { role: Role.ADMIN } : {}),
     },
     create: {
@@ -53,6 +79,7 @@ export async function upsertTelegramUser(user: WebAppUser) {
       firstName: user.first_name,
       lastName: user.last_name ?? null,
       photoUrl: user.photo_url ?? null,
+      languageCode: user.language_code ?? null,
       role: shouldPromoteToAdmin ? Role.ADMIN : Role.USER,
     },
   })
@@ -68,7 +95,7 @@ export async function requireUser() {
   const user = await getCurrentUser()
   if (!user) throw new Error("Unauthorized")
   if (user.isBanned) {
-    throw new Error(user.banReason ? `Аккаунт заблокирован: ${user.banReason}` : "Аккаунт заблокирован")
+    throw new Error(bannedMessage(user))
   }
   return user
 }

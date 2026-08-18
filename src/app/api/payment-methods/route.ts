@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server"
 
 import { getCurrentUser } from "@/lib/auth"
+import { translate } from "@/lib/i18n"
+import { DEFAULT_LOCALE, resolveUserLocale } from "@/lib/i18n/config"
 import { prisma } from "@/lib/prisma"
 
 export async function GET() {
@@ -21,7 +23,10 @@ export async function GET() {
     cryptoPay: {
       enabled: Boolean(settings?.cryptoPayEnabled && settings?.cryptoPayToken),
       title: "Crypto Bot",
-      details: "Автоматическая оплата через invoice",
+      details: translate(
+        user ? resolveUserLocale(user) : DEFAULT_LOCALE,
+        "product.cryptoAuto",
+      ),
       acceptedAssets: settings?.cryptoPayDefaultAssets || null,
       iconDataUrl: "/crypto-bot-logo.svg",
     },

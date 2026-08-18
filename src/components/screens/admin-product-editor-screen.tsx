@@ -43,6 +43,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
 import { useBackButton } from "@/hooks/use-telegram"
+import { useTranslate } from "@/components/i18n-provider"
 import { deleteAdminProduct, getMe, getProduct, getProducts, saveAdminProduct, updateAdminProduct } from "@/lib/api"
 import { optimizeSquareImage } from "@/lib/image"
 
@@ -86,6 +87,7 @@ export function AdminProductEditorScreen({
   productId?: string
   copyProductId?: string
 }) {
+  const t = useTranslate()
   const router = useRouter()
   const queryClient = useQueryClient()
   const [form, setForm] = useState<ProductForm>(emptyForm)
@@ -193,25 +195,41 @@ export function AdminProductEditorScreen({
   if (meData && meData.user.role !== "ADMIN") {
     return (
       <AccessStateScreen
-        title="Доступ закрыт"
-        description="Редактор товаров доступен только админу."
+        title={t("admin.deniedTitle")}
+        description={t("adminProductEditor.deniedDescription")}
       />
     )
   }
 
   if (sourceProductId && productQuery.isLoading) {
-    return <ProductEditorState title="Загружаю товар" description="Подтягиваю карточку и ключи." />
+    return (
+      <ProductEditorState
+        title={t("adminProductEditor.loadingTitle")}
+        description={t("adminProductEditor.loadingDescription")}
+      />
+    )
   }
 
   if (sourceProductId && productQuery.isError) {
-    return <ProductEditorState title="Товар не загрузился" description="Вернись к списку и попробуй ещё раз." />
+    return (
+      <ProductEditorState
+        title={t("adminProductEditor.errorTitle")}
+        description={t("adminProductEditor.errorDescription")}
+      />
+    )
   }
 
   return (
     <Screen noTabBar>
       <ScreenHeader
-        title={productId ? "Редактирование" : copyProductId ? "Дубликат товара" : "Новый товар"}
-        subtitle="Карточка, выдача и ключи"
+        title={
+          productId
+            ? t("adminProductEditor.editTitle")
+            : copyProductId
+              ? t("adminProductEditor.duplicateTitle")
+              : t("adminProductEditor.newTitle")
+        }
+        subtitle={t("adminProductEditor.subtitle")}
         trailing={
           <div className="flex items-center gap-2">
             {productId ? (
@@ -222,11 +240,11 @@ export function AdminProductEditorScreen({
                 onClick={() => setDeleteOpen(true)}
               >
                 <Trash2 data-icon="inline-start" />
-                Удалить
+                {t("common.delete")}
               </Button>
             ) : null}
             <Button size="sm" disabled={!canSave || mutation.isPending} onClick={() => mutation.mutate()}>
-              {mutation.isPending ? "Сохраняю..." : "Сохранить"}
+              {mutation.isPending ? t("common.saving") : t("common.save")}
             </Button>
           </div>
         }
@@ -237,24 +255,26 @@ export function AdminProductEditorScreen({
           {mutation.error ? (
             <Field>
               <FieldError>
-                {mutation.error instanceof Error ? mutation.error.message : "Товар не сохранился"}
+                {mutation.error instanceof Error ? mutation.error.message : t("adminProductEditor.saveFailed")}
               </FieldError>
             </Field>
           ) : null}
           {deleteMutation.error ? (
             <Field>
               <FieldError>
-                {deleteMutation.error instanceof Error ? deleteMutation.error.message : "Товар не удалился"}
+                {deleteMutation.error instanceof Error ? deleteMutation.error.message : t("adminProducts.deleteFailed")}
               </FieldError>
             </Field>
           ) : null}
 
           <Card>
             <CardHeader>
-              <ProductCoverPreview imageDataUrl={form.imageDataUrl} title={form.title || "Товар"} />
-              <CardTitle>Обложка</CardTitle>
+              <ProductCoverPreview imageDataUrl={form.imageDataUrl} title={form.title || t("adminProductEditor.productFallback")} />
+              <CardTitle>{t("adminProductEditor.cover")}</CardTitle>
               <CardDescription>
-                {uploading ? "Обработка изображения..." : "Квадратная картинка товара"}
+                {uploading
+                  ? t("adminProductEditor.processingImage")
+                  : t("adminProductEditor.coverHint")}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -268,7 +288,7 @@ export function AdminProductEditorScreen({
           </Card>
 
           <Field>
-            <FieldLabel htmlFor="product-title">Название</FieldLabel>
+            <FieldLabel htmlFor="product-title">{t("adminProductEditor.name")}</FieldLabel>
             <Input
               id="product-title"
               value={form.title}
@@ -278,12 +298,12 @@ export function AdminProductEditorScreen({
           </Field>
 
           <Field>
-            <FieldLabel htmlFor="product-category">Категория</FieldLabel>
+            <FieldLabel htmlFor="product-category">{t("adminProductEditor.category")}</FieldLabel>
             <Input
               id="product-category"
               value={form.category}
               onChange={(event) => setForm((prev) => ({ ...prev, category: event.target.value }))}
-              placeholder="Новая или существующая"
+              placeholder={t("adminProductEditor.categoryPlaceholder")}
             />
             {categoryOptions.length > 0 ? (
               <ToggleGroup
@@ -303,7 +323,7 @@ export function AdminProductEditorScreen({
           </Field>
 
           <Field>
-            <FieldLabel htmlFor="product-price">Цена, RUB</FieldLabel>
+            <FieldLabel htmlFor="product-price">{t("adminProductEditor.price")}</FieldLabel>
             <Input
               id="product-price"
               value={form.priceRub}
@@ -314,17 +334,17 @@ export function AdminProductEditorScreen({
           </Field>
 
           <Field>
-            <FieldLabel htmlFor="product-description">Описание</FieldLabel>
+            <FieldLabel htmlFor="product-description">{t("adminProductEditor.description")}</FieldLabel>
             <Textarea
               id="product-description"
               value={form.description}
               onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
-              placeholder="Краткое описание товара"
+              placeholder={t("adminProductEditor.descriptionPlaceholder")}
             />
           </Field>
 
           <Field orientation="horizontal">
-            <FieldLabel htmlFor="product-active">Показывать в магазине</FieldLabel>
+            <FieldLabel htmlFor="product-active">{t("adminProductEditor.showInShop")}</FieldLabel>
             <Switch
               id="product-active"
               checked={form.isActive}
@@ -337,14 +357,14 @@ export function AdminProductEditorScreen({
             onValueChange={(value) => setForm((prev) => ({ ...prev, deliveryType: value as ProductForm["deliveryType"] }))}
           >
             <TabsList className="w-full">
-              <TabsTrigger value="MANUAL">Ручная выдача</TabsTrigger>
-              <TabsTrigger value="AUTO_KEY">Автоключи</TabsTrigger>
+              <TabsTrigger value="MANUAL">{t("adminProductEditor.manualDelivery")}</TabsTrigger>
+              <TabsTrigger value="AUTO_KEY">{t("adminProductEditor.autoKeys")}</TabsTrigger>
             </TabsList>
           </Tabs>
 
           <Card>
             <CardHeader>
-              <CardTitle>Характеристики</CardTitle>
+              <CardTitle>{t("adminProductEditor.specs")}</CardTitle>
               <CardAction>
                 <Button
                   size="sm"
@@ -357,7 +377,7 @@ export function AdminProductEditorScreen({
                   }
                 >
                   <Plus data-icon="inline-start" />
-                  Добавить
+                  {t("adminProductEditor.add")}
                 </Button>
               </CardAction>
             </CardHeader>
@@ -377,15 +397,19 @@ export function AdminProductEditorScreen({
           {form.deliveryType === "AUTO_KEY" ? (
             <Card>
               <CardHeader>
-                <CardTitle>Пул ключей</CardTitle>
-                <CardDescription>Новые ключи добавляются по одному на строку.</CardDescription>
+                <CardTitle>{t("adminProductEditor.keyPool")}</CardTitle>
+                <CardDescription>{t("adminProductEditor.keyPoolHint")}</CardDescription>
               </CardHeader>
               <CardContent className="flex flex-col gap-3">
                 {productId ? (
                   <>
                     <FieldDescription>
-                      {visibleKeys.length} ключей в наличии
-                      {form.removeKeyIds.length > 0 ? ` · к удалению ${form.removeKeyIds.length}` : ""}
+                      {t("adminProductEditor.keysInStock", { count: visibleKeys.length })}
+                      {form.removeKeyIds.length > 0
+                        ? t("adminProductEditor.pendingRemoval", {
+                            count: form.removeKeyIds.length,
+                          })
+                        : ""}
                     </FieldDescription>
                     {visibleKeys.map((key) => (
                       <Field key={key.id} orientation="horizontal">
@@ -401,19 +425,19 @@ export function AdminProductEditorScreen({
                             }))
                           }
                         >
-                          Убрать
+                          {t("adminProductEditor.removeKey")}
                         </Button>
                       </Field>
                     ))}
                   </>
                 ) : null}
                 <Field>
-                  <FieldLabel htmlFor="product-key-pool">Добавить новые</FieldLabel>
+                  <FieldLabel htmlFor="product-key-pool">{t("adminProductEditor.addNewKeys")}</FieldLabel>
                   <Textarea
                     id="product-key-pool"
                     value={form.keyPoolText}
                     onChange={(event) => setForm((prev) => ({ ...prev, keyPoolText: event.target.value }))}
-                    placeholder="Один ключ на строку"
+                    placeholder={t("adminProductEditor.keyPlaceholder")}
                   />
                 </Field>
               </CardContent>
@@ -428,25 +452,25 @@ export function AdminProductEditorScreen({
           if (!open && !deleteMutation.isPending) setDeleteOpen(false)
         }}
       >
-        <AlertDialogContent size="sm">
+        <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogMedia>
               <Trash2 />
             </AlertDialogMedia>
-            <AlertDialogTitle>Удалить товар?</AlertDialogTitle>
+            <AlertDialogTitle>{t("adminProducts.deleteTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              Карточка исчезнет из каталога. История заказов сохранит название, цену и уже выданные ключи.
+              {t("adminProducts.deleteDescription")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleteMutation.isPending}>Отмена</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleteMutation.isPending}>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
               disabled={!productId || deleteMutation.isPending}
               onClick={() => deleteMutation.mutate()}
             >
               <Trash2 data-icon="inline-start" />
-              {deleteMutation.isPending ? "Удаляю..." : "Удалить"}
+              {deleteMutation.isPending ? t("adminProducts.deleting") : t("common.delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -466,10 +490,12 @@ function SpecEditor({
   canRemove: boolean
   onChange: Dispatch<SetStateAction<ProductForm>>
 }) {
+  const t = useTranslate()
+
   return (
     <FieldGroup>
       <Field orientation="horizontal">
-        <FieldTitle>Характеристика {index + 1}</FieldTitle>
+        <FieldTitle>{t("adminProductEditor.specLabel", { index: index + 1 })}</FieldTitle>
         <Button
           size="sm"
           variant="ghost"
@@ -483,7 +509,7 @@ function SpecEditor({
           }
         >
           <Trash2 data-icon="inline-start" />
-          Убрать
+          {t("adminProductEditor.removeKey")}
         </Button>
       </Field>
       <Field>

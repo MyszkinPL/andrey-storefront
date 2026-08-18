@@ -55,11 +55,15 @@ async function api<T>(input: RequestInfo, init?: RequestInit): Promise<T> {
     return mockApi<T>(input, init)
   }
 
+  // FormData must set its own Content-Type so the multipart boundary is right.
+  const isFormData =
+    typeof FormData !== "undefined" && init?.body instanceof FormData
+
   const response = await fetch(input, {
     ...init,
     credentials: "include",
     headers: {
-      "Content-Type": "application/json",
+      ...(isFormData ? {} : { "Content-Type": "application/json" }),
       ...(init?.headers || {}),
     },
   })
@@ -91,6 +95,7 @@ export function getMe() {
       role: "USER" | "ADMIN"
       isBanned?: boolean
       banReason?: string | null
+      language: string | null
     }
     settings: {
       shopName: string
@@ -103,6 +108,23 @@ export function getMe() {
       appUrl?: string
     }
   }>("/api/me")
+}
+
+export function updateLanguage(language: string) {
+  return api<{ ok: true }>("/api/me/language", {
+    method: "PATCH",
+    body: JSON.stringify({ language }),
+  })
+}
+
+export function uploadOrderReceipt(orderId: string, file: File) {
+  const body = new FormData()
+  body.append("file", file)
+
+  return api<{ receipt: { fileName: string; fileSize: number; uploadedAt: string } }>(
+    `/api/orders/${orderId}/receipt`,
+    { method: "POST", body },
+  )
 }
 
 export function getProducts() {
@@ -190,6 +212,11 @@ export function getOrder(id: string) {
       priceRub: number | null
       deliveredKey: string | null
       manualPaymentRequestedAt: string | null
+      receipt: {
+        fileName: string
+        fileSize: number
+        uploadedAt: string
+      } | null
       isAdmin: boolean
       isOwner: boolean
       createdBy: {

@@ -3,6 +3,8 @@ import { NextResponse } from "next/server"
 import { z } from "zod"
 
 import { requireAdmin } from "@/lib/auth"
+import { translate } from "@/lib/i18n"
+import { resolveUserLocale } from "@/lib/i18n/config"
 import { prisma } from "@/lib/prisma"
 
 const schema = z.object({
@@ -11,7 +13,7 @@ const schema = z.object({
   role: z.nativeEnum(Role).optional(),
 }).refine(
   (payload) => payload.isBanned !== undefined || payload.role !== undefined,
-  "Нет изменений",
+  "No changes",
 )
 
 export async function PATCH(
@@ -20,6 +22,7 @@ export async function PATCH(
 ) {
   try {
     const actor = await requireAdmin()
+    const locale = resolveUserLocale(actor)
     const { id } = await params
     const payload = schema.parse(await request.json())
 
@@ -32,24 +35,24 @@ export async function PATCH(
     })
 
     if (!target) {
-      return NextResponse.json({ error: "Пользователь не найден" }, { status: 404 })
+      return NextResponse.json({ error: translate(locale, "errors.userNotFound") }, { status: 404 })
     }
 
     const nextRole = payload.role || target.role
 
     if (payload.isBanned && nextRole === Role.ADMIN) {
-      return NextResponse.json({ error: "Нельзя банить админа" }, { status: 400 })
+      return NextResponse.json({ error: translate(locale, "errors.cantBanAdmin") }, { status: 400 })
     }
 
     if (payload.role === Role.USER && target.id === actor.id) {
-      return NextResponse.json({ error: "Нельзя забрать админку у себя" }, { status: 400 })
+      return NextResponse.json({ error: translate(locale, "errors.cantRevokeSelf") }, { status: 400 })
     }
 
     if (payload.role === Role.USER && target.role === Role.ADMIN) {
       const adminCount = await prisma.user.count({ where: { role: Role.ADMIN } })
 
       if (adminCount <= 1) {
-        return NextResponse.json({ error: "Нельзя забрать последнюю админку" }, { status: 400 })
+        return NextResponse.json({ error: translate(locale, "errors.cantRevokeLastAdmin") }, { status: 400 })
       }
     }
 
@@ -129,7 +132,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    await requireAdmin()
+    const actor = await requireAdmin()
+    const locale = resolveUserLocale(actor)
     const { id } = await params
 
     const user = await prisma.user.findUnique({
@@ -167,7 +171,7 @@ export async function GET(
     })
 
     if (!user) {
-      return NextResponse.json({ error: "Пользователь не найден" }, { status: 404 })
+      return NextResponse.json({ error: translate(locale, "errors.userNotFound") }, { status: 404 })
     }
 
     return NextResponse.json({

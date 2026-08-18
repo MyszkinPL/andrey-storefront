@@ -47,9 +47,11 @@ import {
 import { Switch } from "@/components/ui/switch"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
+import { useTranslate } from "@/components/i18n-provider"
 import { getCryptoPayCurrencies, getMe, getPaymentMethods, saveSettings } from "@/lib/api"
 
 export function AdminSettingsScreen() {
+  const t = useTranslate()
   const queryClient = useQueryClient()
   const { data: meData } = useQuery({ queryKey: ["me"], queryFn: getMe })
   const { data: paymentData } = useQuery({
@@ -145,8 +147,8 @@ export function AdminSettingsScreen() {
   if (meData && meData.user.role !== "ADMIN") {
     return (
       <AccessStateScreen
-        title="Доступ закрыт"
-        description="Настройки магазина доступны только админу."
+        title={t("admin.deniedTitle")}
+        description={t("adminSettings.deniedDescription")}
       />
     )
   }
@@ -154,11 +156,11 @@ export function AdminSettingsScreen() {
   return (
     <Screen>
       <ScreenHeader
-        title="Настройки"
-        subtitle="Магазин и платежи"
+        title={t("adminSettings.title")}
+        subtitle={t("adminSettings.subtitle")}
         trailing={
           <Button size="sm" disabled={mutation.isPending} onClick={() => mutation.mutate()}>
-            {mutation.isPending ? "Сохраняю..." : "Сохранить"}
+            {mutation.isPending ? t("common.saving") : t("common.save")}
           </Button>
         }
       />
@@ -166,17 +168,17 @@ export function AdminSettingsScreen() {
       <ScreenBody className="mx-auto w-full max-w-3xl">
         <Card>
           <CardHeader>
-            <CardTitle>Магазин</CardTitle>
-            <CardDescription>Базовая информация и Telegram-поддержка.</CardDescription>
+            <CardTitle>{t("adminSettings.shopSection")}</CardTitle>
+            <CardDescription>{t("adminSettings.shopSectionHint")}</CardDescription>
           </CardHeader>
           <CardContent>
             <FieldGroup>
               <Field>
-                <FieldLabel htmlFor="shop-name">Название</FieldLabel>
+                <FieldLabel htmlFor="shop-name">{t("adminSettings.name")}</FieldLabel>
                 <Input id="shop-name" value={shopName} onChange={(event) => setShopName(event.target.value)} placeholder="snx.sell" />
               </Field>
               <Field>
-                <FieldLabel htmlFor="shop-support">Поддержка</FieldLabel>
+                <FieldLabel htmlFor="shop-support">{t("adminSettings.support")}</FieldLabel>
                 <Input id="shop-support" value={supportUsername} onChange={(event) => setSupportUsername(event.target.value)} placeholder="@username" />
               </Field>
             </FieldGroup>
@@ -187,12 +189,12 @@ export function AdminSettingsScreen() {
           <CardHeader>
             <MethodPreview iconDataUrl="/crypto-bot-logo.svg" title="Crypto Bot" />
             <CardTitle>Crypto Bot</CardTitle>
-            <CardDescription>Автооплата через invoice и webhook.</CardDescription>
+            <CardDescription>{t("adminSettings.cryptoHint")}</CardDescription>
             <CardAction>
               <Switch
                 checked={cryptoPayEnabled}
                 onCheckedChange={setCryptoPayEnabled}
-                aria-label="Включить Crypto Bot"
+                aria-label={t("adminSettings.cryptoToggle")}
               />
             </CardAction>
           </CardHeader>
@@ -200,7 +202,7 @@ export function AdminSettingsScreen() {
             <FieldGroup>
               <Field>
                 <FieldLabel htmlFor="crypto-token">API token</FieldLabel>
-                <Input id="crypto-token" value={cryptoPayToken} onChange={(event) => setCryptoPayToken(event.target.value)} placeholder="Token из Crypto Bot" />
+                <Input id="crypto-token" value={cryptoPayToken} onChange={(event) => setCryptoPayToken(event.target.value)} placeholder={t("adminSettings.cryptoTokenPlaceholder")} />
               </Field>
               <Field orientation="horizontal">
                 <FieldLabel htmlFor="crypto-testnet">Testnet</FieldLabel>
@@ -211,7 +213,7 @@ export function AdminSettingsScreen() {
                 <Input id="crypto-fiat" value={cryptoPayFiat} onChange={(event) => setCryptoPayFiat(event.target.value.toUpperCase())} placeholder="RUB" />
               </Field>
               <Field>
-                <FieldLabel>Монеты</FieldLabel>
+                <FieldLabel>{t("adminSettings.coins")}</FieldLabel>
                 {assetOptions.length > 0 ? (
                   <ToggleGroup
                     value={selectedCryptoAssets}
@@ -228,18 +230,18 @@ export function AdminSettingsScreen() {
                   </ToggleGroup>
                 ) : (
                   <Badge variant="secondary">
-                    {cryptoPayTokenValue ? "Нажми обновить" : "Сначала API token"}
+                    {cryptoPayTokenValue ? t("adminSettings.pressRefresh") : t("adminSettings.tokenFirst")}
                   </Badge>
                 )}
               </Field>
               <Field>
                 <FieldLabel htmlFor="crypto-webhook">Webhook</FieldLabel>
                 <InputGroup>
-                  <InputGroupInput id="crypto-webhook" readOnly value={cryptoWebhookUrl || "Появится после открытия на домене деплоя"} />
+                  <InputGroupInput id="crypto-webhook" readOnly value={cryptoWebhookUrl || t("adminSettings.webhookPlaceholder")} />
                   {cryptoWebhookUrl ? (
                     <InputGroupAddon align="inline-end">
                       <InputGroupButton onClick={() => void navigator.clipboard.writeText(cryptoWebhookUrl)}>
-                        Копировать
+                        {t("common.copy")}
                       </InputGroupButton>
                     </InputGroupAddon>
                   ) : null}
@@ -251,7 +253,7 @@ export function AdminSettingsScreen() {
                 onClick={() => void refetchCurrencies()}
               >
                 <RefreshCcw data-icon="inline-start" />
-                {isFetchingCurrencies ? "Обновляю..." : "Обновить валюты"}
+                {isFetchingCurrencies ? t("adminSettings.refreshingCurrencies") : t("adminSettings.refreshCurrencies")}
               </Button>
             </FieldGroup>
           </CardContent>
@@ -259,18 +261,18 @@ export function AdminSettingsScreen() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Ручная оплата</CardTitle>
+            <CardTitle>{t("adminSettings.manualSection")}</CardTitle>
             <CardDescription>{paymentMethods.length} всего · {activeCount} активных</CardDescription>
             <CardAction className="flex gap-2">
               <Link
                 href="/admin/settings/payments/new?template=bank"
                 className={buttonVariants({ size: "sm", variant: "secondary" })}
               >
-                Шаблон
+                {t("adminSettings.template")}
               </Link>
               <Link href="/admin/settings/payments/new" className={buttonVariants({ size: "sm" })}>
                 <Plus data-icon="inline-start" />
-                Добавить
+                {t("adminSettings.add")}
               </Link>
             </CardAction>
           </CardHeader>
@@ -283,14 +285,14 @@ export function AdminSettingsScreen() {
                   </ItemMedia>
                   <ItemContent className="min-w-0">
                     <ItemTitle>{method.title}</ItemTitle>
-                    <ItemDescription>{method.details || "Без реквизитов"}</ItemDescription>
+                    <ItemDescription>{method.details || t("adminSettings.noDetails")}</ItemDescription>
                   </ItemContent>
                   <ItemActions>
-                    {!method.isActive ? <Badge variant="secondary">Скрыт</Badge> : null}
+                    {!method.isActive ? <Badge variant="secondary">{t("adminSettings.hidden")}</Badge> : null}
                     <Link
                       href={`/admin/settings/payments/${method.id}`}
                       className={buttonVariants({ size: "icon-sm", variant: "secondary" })}
-                      aria-label="Править способ оплаты"
+                      aria-label={t("adminSettings.editMethod")}
                     >
                       <PencilLine />
                     </Link>
@@ -301,8 +303,8 @@ export function AdminSettingsScreen() {
             {paymentMethods.length === 0 ? (
               <Empty>
                 <EmptyHeader>
-                  <EmptyTitle>Способов оплаты нет</EmptyTitle>
-                  <EmptyDescription>Добавь СБП, карту или другой ручной способ.</EmptyDescription>
+                  <EmptyTitle>{t("adminSettings.noMethodsTitle")}</EmptyTitle>
+                  <EmptyDescription>{t("adminSettings.noMethodsDescription")}</EmptyDescription>
                 </EmptyHeader>
               </Empty>
             ) : null}
@@ -321,7 +323,7 @@ function MethodPreview({
   title: string
 }) {
   return (
-    <Avatar size="lg">
+    <Avatar className="size-10">
       {iconDataUrl ? <AvatarImage src={iconDataUrl} alt={title} /> : null}
       <AvatarFallback>
         {title ? title.slice(0, 2).toUpperCase() : <ImagePlus />}

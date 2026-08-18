@@ -50,9 +50,12 @@ import {
 } from "@/components/ui/item"
 import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
 import { useBackButton } from "@/hooks/use-telegram"
+import { useI18n } from "@/components/i18n-provider"
+import type { TranslationKey } from "@/lib/i18n"
 import { getAdminUser, getMe, updateAdminUserModeration } from "@/lib/api"
 
 export function AdminUserDetailScreen({ userId }: { userId: string }) {
+  const { t, tp } = useI18n()
   const router = useRouter()
   const queryClient = useQueryClient()
   const [confirmBanOpen, setConfirmBanOpen] = useState(false)
@@ -83,18 +86,28 @@ export function AdminUserDetailScreen({ userId }: { userId: string }) {
   if (meData && meData.user.role !== "ADMIN") {
     return (
       <AccessStateScreen
-        title="Доступ закрыт"
-        description="Карточка пользователя доступна только админу."
+        title={t("admin.deniedTitle")}
+        description={t("adminUserDetail.deniedDescription")}
       />
     )
   }
 
   if (isLoading) {
-    return <UserState title="Загружаю пользователя" description="Подтягиваю профиль и заказы." />
+    return (
+      <UserState
+        title={t("adminUserDetail.loadingTitle")}
+        description={t("adminUserDetail.loadingDescription")}
+      />
+    )
   }
 
   if (isError || !data?.user) {
-    return <UserState title="Пользователь не загрузился" description="Обнови экран или вернись к списку." />
+    return (
+      <UserState
+        title={t("adminUserDetail.errorTitle")}
+        description={t("adminUserDetail.errorDescription")}
+      />
+    )
   }
 
   const user = data.user
@@ -110,9 +123,9 @@ export function AdminUserDetailScreen({ userId }: { userId: string }) {
         subtitle={user.username ? `@${user.username}` : `tg:${user.telegramId}`}
         trailing={
           user.isBanned ? (
-            <Badge variant="destructive">Бан</Badge>
+            <Badge variant="destructive">{t("adminUsers.banned")}</Badge>
           ) : user.role === "ADMIN" ? (
-            <Badge variant="secondary">Админ</Badge>
+            <Badge variant="secondary">{t("adminUsers.admin")}</Badge>
           ) : null
         }
       />
@@ -120,13 +133,13 @@ export function AdminUserDetailScreen({ userId }: { userId: string }) {
       <ScreenBody className="mx-auto w-full max-w-2xl">
         <Card>
           <CardHeader>
-            <Avatar size="lg">
+            <Avatar className="size-10">
               {user.photoUrl ? <AvatarImage src={user.photoUrl} alt={displayName} /> : null}
               <AvatarFallback>{user.firstName.slice(0, 1)}</AvatarFallback>
             </Avatar>
-            <CardTitle>Профиль</CardTitle>
+            <CardTitle>{t("adminUserDetail.profile")}</CardTitle>
             <CardDescription>
-              {user.role === "ADMIN" ? "Администратор" : "Покупатель"} · {formatActiveOrders(user.activeOrderCount)}
+              {user.role === "ADMIN" ? "Администратор" : "Покупатель"} · {tp("adminUsers.countActive", user.activeOrderCount)}
             </CardDescription>
             <CardAction className="flex flex-wrap justify-end gap-2">
               {user.role === "ADMIN" ? (
@@ -137,7 +150,7 @@ export function AdminUserDetailScreen({ userId }: { userId: string }) {
                   onClick={() => setConfirmRole("USER")}
                 >
                   <ShieldX data-icon="inline-start" />
-                  Забрать админку
+                  {t("adminUserDetail.revokeAdmin")}
                 </Button>
               ) : (
                 <Button
@@ -147,7 +160,7 @@ export function AdminUserDetailScreen({ userId }: { userId: string }) {
                   onClick={() => setConfirmRole("ADMIN")}
                 >
                   <ShieldCheck data-icon="inline-start" />
-                  Выдать админку
+                  {t("adminUserDetail.grantAdmin")}
                 </Button>
               )}
               {canBan ? (
@@ -164,7 +177,7 @@ export function AdminUserDetailScreen({ userId }: { userId: string }) {
                   }}
                 >
                   {!user.isBanned ? <Ban data-icon="inline-start" /> : null}
-                  {user.isBanned ? "Снять бан" : "Забанить"}
+                  {user.isBanned ? t("adminUserDetail.unban") : t("adminUserDetail.ban")}
                 </Button>
               ) : null}
             </CardAction>
@@ -178,17 +191,17 @@ export function AdminUserDetailScreen({ userId }: { userId: string }) {
               <Field orientation="horizontal">
                 <FieldLabel>Username</FieldLabel>
                 <FieldDescription className="text-right">
-                  {user.username ? `@${user.username}` : "Нет"}
+                  {user.username ? `@${user.username}` : t("adminUserDetail.none")}
                 </FieldDescription>
               </Field>
               <Field orientation="horizontal">
-                <FieldLabel>Роль</FieldLabel>
+                <FieldLabel>{t("adminUserDetail.role")}</FieldLabel>
                 <FieldDescription className="text-right">
-                  {user.role === "ADMIN" ? "Админ" : "Покупатель"}
+                  {user.role === "ADMIN" ? t("adminUsers.admin") : t("profile.buyer")}
                 </FieldDescription>
               </Field>
               <Field orientation="horizontal">
-                <FieldLabel>Активные заказы</FieldLabel>
+                <FieldLabel>{t("adminUserDetail.activeOrders")}</FieldLabel>
                 <FieldDescription className="text-right">{user.activeOrderCount}</FieldDescription>
               </Field>
               {moderationMutation.error ? (
@@ -202,8 +215,10 @@ export function AdminUserDetailScreen({ userId }: { userId: string }) {
 
         <Card>
           <CardHeader>
-            <CardTitle>История заказов</CardTitle>
-            <CardDescription>{user.orders.length} последних заказов</CardDescription>
+            <CardTitle>{t("adminUserDetail.orderHistory")}</CardTitle>
+            <CardDescription>
+              {t("adminUserDetail.orderHistoryCount", { count: user.orders.length })}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             {user.orders.length > 0 ? (
@@ -214,13 +229,16 @@ export function AdminUserDetailScreen({ userId }: { userId: string }) {
                       <History />
                     </ItemMedia>
                     <ItemContent className="min-w-0">
-                      <ItemTitle>{order.productTitle || `Заказ #${order.number}`}</ItemTitle>
+                      <ItemTitle>
+                        {order.productTitle ||
+                          t("adminUserDetail.orderFallback", { number: order.number })}
+                      </ItemTitle>
                       <ItemDescription>
                         #{order.number}
                         {order.productCategory ? ` · ${order.productCategory}` : ""}
                         {order.priceRub ? ` · ${order.priceRub.toLocaleString("ru-RU")} ₽` : ""}
                         {" · "}
-                        {renderOrderStatus(order.status, order.isPaid)}
+                        {t(orderStatusKey2(order.status, order.isPaid))}
                       </ItemDescription>
                     </ItemContent>
                   </Item>
@@ -229,8 +247,8 @@ export function AdminUserDetailScreen({ userId }: { userId: string }) {
             ) : (
               <Empty>
                 <EmptyHeader>
-                  <EmptyTitle>Заказов пока нет</EmptyTitle>
-                  <EmptyDescription>История появится после первой покупки.</EmptyDescription>
+                  <EmptyTitle>{t("adminUserDetail.noOrdersTitle")}</EmptyTitle>
+                  <EmptyDescription>{t("adminUserDetail.noOrdersDescription")}</EmptyDescription>
                 </EmptyHeader>
               </Empty>
             )}
@@ -245,13 +263,13 @@ export function AdminUserDetailScreen({ userId }: { userId: string }) {
         >
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Забанить пользователя?</AlertDialogTitle>
+              <AlertDialogTitle>{t("adminUserDetail.banTitle")}</AlertDialogTitle>
               <AlertDialogDescription>
-                Активные неоплаченные заказы будут отменены. Доступ к магазину будет закрыт.
+                {t("adminUserDetail.banDescription")}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Отмена</AlertDialogCancel>
+              <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
               <AlertDialogAction
                 variant="destructive"
                 disabled={moderationMutation.isPending}
@@ -260,7 +278,7 @@ export function AdminUserDetailScreen({ userId }: { userId: string }) {
                   moderationMutation.mutate({ isBanned: true })
                 }}
               >
-                Забанить
+                {t("adminUserDetail.ban")}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -275,16 +293,18 @@ export function AdminUserDetailScreen({ userId }: { userId: string }) {
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>
-                {confirmRole === "ADMIN" ? "Выдать админку?" : "Забрать админку?"}
+                {confirmRole === "ADMIN"
+                  ? t("adminUserDetail.grantTitle")
+                  : t("adminUserDetail.revokeTitle")}
               </AlertDialogTitle>
               <AlertDialogDescription>
                 {confirmRole === "ADMIN"
-                  ? "Пользователь получит доступ к админским экранам и управлению магазином."
-                  : "Пользователь потеряет доступ к админским экранам и останется покупателем."}
+                  ? t("adminUserDetail.grantDescription")
+                  : t("adminUserDetail.revokeDescription")}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Отмена</AlertDialogCancel>
+              <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
               <AlertDialogAction
                 variant={confirmRole === "USER" ? "destructive" : "default"}
                 disabled={moderationMutation.isPending}
@@ -294,7 +314,9 @@ export function AdminUserDetailScreen({ userId }: { userId: string }) {
                   moderationMutation.mutate({ role: nextRole })
                 }}
               >
-                {confirmRole === "ADMIN" ? "Выдать" : "Забрать"}
+                {confirmRole === "ADMIN"
+                  ? t("adminUserDetail.grantAction")
+                  : t("adminUserDetail.revokeAction")}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -321,15 +343,13 @@ function UserState({ title, description }: { title: string; description: string 
   )
 }
 
-function renderOrderStatus(status: string, isPaid: boolean) {
-  if (status === "CANCELLED") return "Отменён"
-  if (status === "CLOSED") return isPaid ? "Завершён" : "Закрыт"
-  if (status === "PAYMENT_REVIEW") return "Проверка"
-  if (!isPaid) return "Оплата"
-  return "Оплачен"
+function orderStatusKey2(status: string, isPaid: boolean): TranslationKey {
+  if (status === "CANCELLED") return "adminUserDetail.statusCancelled"
+  if (status === "CLOSED") {
+    return isPaid ? "adminUserDetail.statusDone" : "adminUserDetail.statusClosed"
+  }
+  if (status === "PAYMENT_REVIEW") return "adminUserDetail.statusReview"
+  if (!isPaid) return "adminUserDetail.statusPayment"
+  return "adminUserDetail.statusPaid"
 }
 
-function formatActiveOrders(count: number) {
-  if (count === 1) return "1 активный"
-  return `${count} активных`
-}

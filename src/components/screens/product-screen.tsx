@@ -43,9 +43,12 @@ import {
 } from "@/components/ui/select"
 import { Screen, ScreenBody } from "@/components/screen"
 import { useBackButton, useHaptic, useMainButton } from "@/hooks/use-telegram"
+import { useI18n, useTranslate } from "@/components/i18n-provider"
 import { createOrder, getPaymentMethods, getProduct } from "@/lib/api"
+import { formatPrice } from "@/lib/format"
 
 export function ProductScreen({ productId }: { productId: string }) {
+  const { t, tp, locale } = useI18n()
   const router = useRouter()
   const queryClient = useQueryClient()
   const haptic = useHaptic()
@@ -82,14 +85,16 @@ export function ProductScreen({ productId }: { productId: string }) {
               id: undefined,
               title: paymentData.cryptoPay.title || "Crypto Bot",
               subtitle: paymentData.cryptoPay.acceptedAssets
-                ? `Автооплата · ${paymentData.cryptoPay.acceptedAssets}`
-                : "Автооплата через invoice",
+                ? t("product.cryptoAutoWithAssets", {
+                    assets: paymentData.cryptoPay.acceptedAssets,
+                  })
+                : t("product.cryptoAuto"),
               iconDataUrl: paymentData.cryptoPay.iconDataUrl || null,
             },
           ]
         : []),
     ],
-    [methods, paymentData],
+    [methods, paymentData, t],
   )
   const selectedPayment = paymentOptions.find(
     (option) => option.key === (selectedPaymentKey || paymentOptions[0]?.key),
@@ -100,7 +105,9 @@ export function ProductScreen({ productId }: { productId: string }) {
       createOrder({
         productId,
         paymentMethodId: selectedPayment?.type === "MANUAL" ? selectedPayment.id : undefined,
-        subject: `Покупка: ${data?.product.title || "товар"}`,
+        subject: t("product.orderSubject", {
+          title: data?.product.title || t("product.fallbackTitle"),
+        }),
         paymentMethodType: selectedPayment?.type,
       }),
     onSuccess: async ({ orderId }) => {
@@ -112,7 +119,7 @@ export function ProductScreen({ productId }: { productId: string }) {
 
   useBackButton(() => router.back())
   useMainButton({
-    text: orderMutation.isPending ? "Создаём..." : "Оформить заказ",
+    text: orderMutation.isPending ? t("product.placingOrder") : t("product.placeOrder"),
     onClick: () => orderMutation.mutate(),
     visible: true,
     enabled: !orderMutation.isPending && Boolean(data?.product) && Boolean(selectedPayment),
@@ -129,7 +136,7 @@ export function ProductScreen({ productId }: { productId: string }) {
                 <PackageSearch />
               </EmptyMedia>
               <EmptyHeader>
-                <EmptyTitle>Загружаю товар</EmptyTitle>
+                <EmptyTitle>{t("product.loading")}</EmptyTitle>
               </EmptyHeader>
             </Empty>
           </CardContent>
@@ -140,17 +147,20 @@ export function ProductScreen({ productId }: { productId: string }) {
 
   const product = data.product
   const category = product.category || "digital"
-  const deliveryLabel = product.deliveryType === "AUTO_KEY" ? "Автовыдача" : "Ручная выдача"
+  const deliveryLabel =
+    product.deliveryType === "AUTO_KEY"
+      ? t("product.autoDelivery")
+      : t("product.manualDelivery")
 
   return (
     <Screen noTabBar className="min-h-[calc(100dvh-3rem)]">
       <ScreenBody className="mx-auto w-full max-w-2xl flex-1">
-        <Card size="sm" className="flex-1">
+        <Card className="flex-1">
           <CardHeader>
             <CardTitle>{product.title}</CardTitle>
             <CardDescription>{category}</CardDescription>
             <CardAction>
-              <Badge variant="secondary">{product.priceRub.toLocaleString("ru-RU")} ₽</Badge>
+              <Badge variant="secondary">{formatPrice(product.priceRub, locale)}</Badge>
             </CardAction>
           </CardHeader>
           <CardContent className="flex flex-1 flex-col gap-4">
@@ -163,7 +173,7 @@ export function ProductScreen({ productId }: { productId: string }) {
                 <FieldTitle>{deliveryLabel}</FieldTitle>
               </FieldContent>
               {product.deliveryType === "AUTO_KEY" ? (
-                <Badge variant="outline">{product.availableKeyCount ?? 0} ключей</Badge>
+                <Badge variant="outline">{tp("catalog.keys", product.availableKeyCount ?? 0)}</Badge>
               ) : null}
             </Field>
 
@@ -190,7 +200,7 @@ export function ProductScreen({ productId }: { productId: string }) {
               />
               {orderMutation.error ? (
                 <Field>
-                  <FieldTitle>Не удалось создать заказ</FieldTitle>
+                  <FieldTitle>{t("product.orderFailed")}</FieldTitle>
                   <FieldDescription>{orderMutation.error.message}</FieldDescription>
                 </Field>
               ) : null}
@@ -203,11 +213,11 @@ export function ProductScreen({ productId }: { productId: string }) {
               onClick={() => orderMutation.mutate()}
             >
               {orderMutation.isPending ? (
-                "Создаём..."
+                t("product.placingOrder")
               ) : (
                 <>
                   <ShoppingBag data-icon="inline-start" />
-                  Оформить заказ
+                  {t("product.placeOrder")}
                 </>
               )}
             </Button>
@@ -255,12 +265,13 @@ function PaymentMethodSelect({
   selectedKey: string
   onSelect: (key: string) => void
 }) {
+  const t = useTranslate()
   const [open, setOpen] = useState(false)
   const selectedOption = options.find((option) => option.key === selectedKey)
 
   return (
     <Field>
-      <FieldLabel>Способ оплаты</FieldLabel>
+      <FieldLabel>{t("product.paymentMethod")}</FieldLabel>
       <Select
         open={open}
         onOpenChange={(nextOpen) => setOpen(nextOpen)}
@@ -275,20 +286,20 @@ function PaymentMethodSelect({
       >
         <SelectTrigger className="h-11 w-full">
           {selectedOption ? (
-            <Avatar size="sm">
+            <Avatar className="size-6">
               {selectedOption.iconDataUrl ? (
                 <AvatarImage src={selectedOption.iconDataUrl} alt={selectedOption.title} />
               ) : null}
               <AvatarFallback>{getAvatarFallback(selectedOption.title)}</AvatarFallback>
             </Avatar>
           ) : null}
-          <SelectValue placeholder="Выбрать способ" />
+          <SelectValue placeholder={t("product.choosePayment")} />
         </SelectTrigger>
         <SelectContent className="max-h-72">
           <SelectGroup>
             {options.map((option) => (
               <SelectItem key={option.key} value={option.key} label={option.title}>
-                <Avatar size="sm">
+                <Avatar className="size-6">
                   {option.iconDataUrl ? <AvatarImage src={option.iconDataUrl} alt={option.title} /> : null}
                   <AvatarFallback>{getAvatarFallback(option.title)}</AvatarFallback>
                 </Avatar>

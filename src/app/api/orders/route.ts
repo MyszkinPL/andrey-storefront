@@ -4,6 +4,8 @@ import { z } from "zod"
 
 import { requireInteractiveUser, requireUser } from "@/lib/auth"
 import { createCryptoInvoice } from "@/lib/crypto-pay"
+import { translate } from "@/lib/i18n"
+import { resolveUserLocale } from "@/lib/i18n/config"
 import { prisma } from "@/lib/prisma"
 
 const schema = z.object({
@@ -64,7 +66,7 @@ export async function POST(request: Request) {
 
       if (activeOrdersCount >= 2) {
         return NextResponse.json(
-          { error: "Лимит: не больше 2 активных заказов на аккаунт." },
+          { error: translate(resolveUserLocale(user), "errors.orderLimit") },
           { status: 400 },
         )
       }
@@ -107,7 +109,7 @@ export async function POST(request: Request) {
       : paymentMethod?.type
     const selectedPaymentTitle = isCryptoPay ? "Crypto Bot" : paymentMethod?.title
     const selectedPaymentDetails = isCryptoPay
-      ? "Автоматическая оплата через invoice"
+      ? translate(resolveUserLocale(user), "product.cryptoAuto")
       : paymentMethod?.details
     const selectedPaymentIcon = isCryptoPay
       ? "/crypto-bot-logo.svg"
