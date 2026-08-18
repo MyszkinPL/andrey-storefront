@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { Fragment, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { KeyRound, PackageSearch, ShoppingBag } from "lucide-react"
@@ -179,14 +179,19 @@ export function ProductScreen({ productId }: { productId: string }) {
             {product.specs.length > 0 ? (
               <>
                 <Separator />
-                <FieldGroup className="gap-2">
+                {/* A real two-column grid: right-aligned values left a ragged
+                    edge as soon as one wrapped, and the label column collapsed
+                    onto two lines. */}
+                <dl className="grid grid-cols-[minmax(6rem,8rem)_1fr] gap-x-4 gap-y-2 sm:grid-cols-[minmax(8rem,10rem)_1fr]">
                   {product.specs.map((spec) => (
-                    <Field key={`${spec.label}-${spec.value}`} orientation="horizontal">
-                      <FieldDescription>{spec.label}</FieldDescription>
-                      <FieldTitle className="justify-end text-right">{spec.value}</FieldTitle>
-                    </Field>
+                    <Fragment key={`${spec.label}-${spec.value}`}>
+                      <dt className="text-muted-foreground text-xs leading-5">
+                        {spec.label}
+                      </dt>
+                      <dd className="text-sm leading-5">{spec.value}</dd>
+                    </Fragment>
                   ))}
-                </FieldGroup>
+                </dl>
               </>
             ) : null}
 

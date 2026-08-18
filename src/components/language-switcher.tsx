@@ -32,7 +32,9 @@ export function LanguageSwitcher({ className }: { className?: string }) {
             if (!item) return null
             return (
               <span className="flex items-center gap-2">
-                <span className="text-base leading-none">{item.flag}</span>
+                <span className="rounded bg-muted px-1.5 py-0.5 font-medium text-[10px] text-muted-foreground tabular-nums">
+                  {item.code}
+                </span>
                 <span className="truncate">{item.native}</span>
               </span>
             )
@@ -43,8 +45,8 @@ export function LanguageSwitcher({ className }: { className?: string }) {
         {LOCALES.map((value) => (
           <SelectItem key={value} value={value}>
             <span className="flex items-center gap-2">
-              <span className="text-base leading-none">
-                {LOCALE_LABELS[value].flag}
+              <span className="rounded bg-muted px-1.5 py-0.5 font-medium text-[10px] text-muted-foreground tabular-nums">
+                {LOCALE_LABELS[value].code}
               </span>
               <span className="truncate">{LOCALE_LABELS[value].native}</span>
             </span>

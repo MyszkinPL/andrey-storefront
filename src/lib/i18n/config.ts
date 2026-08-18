@@ -4,9 +4,14 @@ export type Locale = (typeof LOCALES)[number]
 
 export const DEFAULT_LOCALE: Locale = "ru"
 
-export const LOCALE_LABELS: Record<Locale, { native: string; flag: string }> = {
-  en: { native: "English", flag: "🇬🇧" },
-  ru: { native: "Русский", flag: "🇷🇺" },
+/**
+ * A short code rather than a flag emoji: Windows has no glyphs for regional
+ * indicator pairs and renders them as bare letters, so flags look broken on
+ * desktop Telegram.
+ */
+export const LOCALE_LABELS: Record<Locale, { native: string; code: string }> = {
+  en: { native: "English", code: "EN" },
+  ru: { native: "Русский", code: "RU" },
 }
 
 export function isLocale(value: unknown): value is Locale {

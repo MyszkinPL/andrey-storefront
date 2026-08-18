@@ -6,7 +6,6 @@ import { useQuery } from "@tanstack/react-query"
 import { PackageSearch, Search } from "lucide-react"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
 import { Card, CardHeader } from "@/components/ui/card"
 import {
   Empty,
@@ -138,29 +137,43 @@ export function CatalogScreen() {
                     key={product.id}
                   >
                     <FramePanel className="flex h-full items-center gap-3 p-3 transition-colors hover:bg-accent/40">
-                      <div className="flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-muted text-muted-foreground">
+                      <div className="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-muted font-medium text-muted-foreground sm:size-20">
                         <ProductThumbnail
                           imageDataUrl={product.imageDataUrl}
                           title={product.title}
                         />
                       </div>
-                      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                        <FrameTitle className="truncate">{product.title}</FrameTitle>
+
+                      <div className="flex min-w-0 flex-1 flex-col gap-1">
+                        {/* Price sits on the title line: it is the reason the
+                            row gets read at all, and a muted badge off to the
+                            side made it the weakest thing on the card. */}
+                        <div className="flex items-baseline gap-2">
+                          <FrameTitle className="min-w-0 flex-1 truncate">
+                            {product.title}
+                          </FrameTitle>
+                          <span className="shrink-0 font-semibold text-sm tabular-nums">
+                            {formatPrice(product.priceRub, locale)}
+                          </span>
+                        </div>
+
                         <FrameDescription className="truncate text-xs">
                           {product.category || t("catalog.noCategory")} ·{" "}
-                          {product.deliveryType === "AUTO_KEY"
-                            ? tp("catalog.keys", product.availableKeyCount || 0)
-                            : t("catalog.manualDelivery")}
+                          <span className={stockClassName(product)}>
+                            {product.deliveryType === "AUTO_KEY"
+                              ? tp("catalog.keys", product.availableKeyCount || 0)
+                              : t("catalog.manualDelivery")}
+                          </span>
                         </FrameDescription>
+
+                        {/* Truncated to a few words on a phone the description
+                            says nothing, so it only earns its line from sm up. */}
                         {product.description ? (
-                          <FrameDescription className="line-clamp-1 text-xs">
+                          <FrameDescription className="hidden truncate text-xs sm:block">
                             {product.description}
                           </FrameDescription>
                         ) : null}
                       </div>
-                      <Badge variant="secondary">
-                        {formatPrice(product.priceRub, locale)}
-                      </Badge>
                     </FramePanel>
                   </Link>
                 ))}
@@ -173,6 +186,14 @@ export function CatalogScreen() {
   )
 }
 
+
+/** Stock is a status, not trivia: out-of-stock keys should read as a warning. */
+function stockClassName(product: { deliveryType: string; availableKeyCount?: number | null }) {
+  if (product.deliveryType !== "AUTO_KEY") return undefined
+  return (product.availableKeyCount || 0) > 0
+    ? "text-success-foreground"
+    : "text-warning-foreground"
+}
 
 function ProductThumbnail({
   imageDataUrl,
@@ -188,7 +209,7 @@ function ProductThumbnail({
     )
   }
 
-  return <PackageSearch />
+  return <span className="text-lg">{title.slice(0, 2).toUpperCase()}</span>
 }
 
 

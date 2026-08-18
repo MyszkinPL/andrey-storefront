@@ -1,7 +1,7 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
-import { CreditCard, LifeBuoy } from "lucide-react"
+import { CreditCard, Languages, LifeBuoy } from "lucide-react"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Card, CardContent } from "@/components/ui/card"
@@ -87,11 +87,21 @@ export function ProfileScreen() {
               />
             </ListGroup>
 
-            <Field className="gap-1 px-1">
-              <FieldTitle>{t("language.label")}</FieldTitle>
-              <FieldDescription>{t("language.description")}</FieldDescription>
-              <LanguageSwitcher className="mt-1 w-full" />
-            </Field>
+            {/* The language control sits in the same panel as every other
+                row, so the screen keeps one rhythm instead of alternating
+                between panels and bare form controls. */}
+            <ListGroup>
+              <ListRow
+                description={t("language.description")}
+                media={
+                  <ListRowMedia>
+                    <Languages />
+                  </ListRowMedia>
+                }
+                title={t("language.label")}
+                trailing={<LanguageSwitcher className="w-36" />}
+              />
+            </ListGroup>
 
             {methods.length === 0 && !hasCryptoPay ? (
               <ProfileEmpty
