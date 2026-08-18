@@ -23,6 +23,9 @@ COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/prisma ./prisma
+# `prisma migrate deploy` reads the datasource from the config file; unlike
+# `db push` it has no --url flag, so the config has to ship with the image.
+COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
 COPY --from=builder /app/scripts ./scripts
 EXPOSE 3000
 CMD ["node", "scripts/start.mjs"]

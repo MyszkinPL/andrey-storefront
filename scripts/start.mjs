@@ -14,12 +14,15 @@ const prismaCli =
     ? ["node.exe", ["./node_modules/prisma/build/index.js"]]
     : ["node", ["./node_modules/prisma/build/index.js"]]
 
-const dbPushArgs = ["db", "push", "--accept-data-loss"]
-if (databaseUrl) {
-  dbPushArgs.push("--url", databaseUrl)
-}
+// `db push --accept-data-loss` silently dropped whatever the schema no longer
+// mentioned. `migrate deploy` only applies reviewed migrations and refuses to
+// start on a mismatch, so a bad change fails the deploy instead of the data.
+const migrateArgs = ["migrate", "deploy"]
 
-await run(prismaCli[0], [...prismaCli[1], ...dbPushArgs])
+await run(prismaCli[0], [...prismaCli[1], ...migrateArgs], {
+  ...process.env,
+  ...(databaseUrl ? { DATABASE_URL: databaseUrl } : {}),
+})
 await ensureBootstrapData()
 
 if (appUrl && botToken) {
@@ -103,11 +106,11 @@ async function telegram(method, payload) {
   }
 }
 
-function run(command, args) {
+function run(command, args, env = process.env) {
   return new Promise((resolve, reject) => {
     const child = spawn(process.platform === "win32" ? `${command}.cmd` : command, args, {
       stdio: "inherit",
-      env: process.env,
+      env,
     })
     child.on("exit", (code) => {
       if (code === 0) resolve()
