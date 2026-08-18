@@ -5,6 +5,7 @@ import { z } from "zod"
 import { requireAdmin } from "@/lib/auth"
 import { translate } from "@/lib/i18n"
 import { resolveUserLocale } from "@/lib/i18n/config"
+import { errorResponse } from "@/lib/api-error"
 import { prisma } from "@/lib/prisma"
 
 const schema = z.object({
@@ -120,10 +121,7 @@ export async function PATCH(
 
     return NextResponse.json({ ok: true })
   } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "User moderation failed" },
-      { status: 400 },
-    )
+    return errorResponse(error)
   }
 }
 
@@ -200,9 +198,6 @@ export async function GET(
       },
     })
   } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "User read failed" },
-      { status: 400 },
-    )
+    return errorResponse(error)
   }
 }

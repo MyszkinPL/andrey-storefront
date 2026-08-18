@@ -13,6 +13,7 @@ import {
 import { translate } from "@/lib/i18n"
 import { resolveUserLocale } from "@/lib/i18n/config"
 import type { OrderResponse } from "@/lib/contracts"
+import { errorResponse } from "@/lib/api-error"
 import { prisma } from "@/lib/prisma"
 import { confirmOrderPaymentFlow } from "@/lib/order-payment"
 
@@ -493,10 +494,7 @@ export async function PATCH(
 
     return NextResponse.json({ ok: true })
   } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Order update failed" },
-      { status: 400 },
-    )
+    return errorResponse(error)
   }
 }
 
@@ -543,9 +541,6 @@ export async function DELETE(
 
     return NextResponse.json({ ok: true })
   } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Order delete failed" },
-      { status: 400 },
-    )
+    return errorResponse(error)
   }
 }

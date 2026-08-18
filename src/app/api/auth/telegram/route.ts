@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server"
 
+import { errorResponse } from "@/lib/api-error"
+
 import { upsertTelegramUser } from "@/lib/auth"
 import { getServerEnv } from "@/lib/env"
 import { setSession } from "@/lib/session"
@@ -35,10 +37,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true })
   } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Authentication failed" },
-      { status: 400 },
-    )
+    return errorResponse(error)
   }
 }
 

@@ -7,6 +7,7 @@ import {
   verifyCryptoPaySignature,
 } from "@/lib/crypto-pay"
 import { notifyOrderPaid } from "@/lib/order-notifications"
+import { errorResponse } from "@/lib/api-error"
 import { prisma } from "@/lib/prisma"
 import { confirmOrderPaymentFlow } from "@/lib/order-payment"
 
@@ -76,9 +77,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true })
   } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Webhook failed" },
-      { status: 400 },
-    )
+    return errorResponse(error)
   }
 }

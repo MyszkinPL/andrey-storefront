@@ -1,5 +1,6 @@
 import { Role } from "@prisma/client"
 
+import { ApiFailure } from "@/lib/api-error"
 import { translate } from "@/lib/i18n"
 import { DEFAULT_LOCALE, resolveUserLocale } from "@/lib/i18n/config"
 import { prisma } from "@/lib/prisma"
@@ -46,7 +47,9 @@ function requireTelegramUsername(user: {
   language?: string | null
   languageCode?: string | null
 }) {
-  if (!hasTelegramUsername(user)) throw new Error(usernameRequiredMessage(user))
+  if (!hasTelegramUsername(user)) {
+    throw new ApiFailure("USERNAME_REQUIRED", usernameRequiredMessage(user))
+  }
 }
 
 export async function upsertTelegramUser(user: WebAppUser) {
@@ -93,9 +96,9 @@ export async function getCurrentUser() {
 
 export async function requireUser() {
   const user = await getCurrentUser()
-  if (!user) throw new Error("Unauthorized")
+  if (!user) throw new ApiFailure("UNAUTHORIZED", "Unauthorized")
   if (user.isBanned) {
-    throw new Error(bannedMessage(user))
+    throw new ApiFailure("BANNED", bannedMessage(user))
   }
   return user
 }
@@ -109,6 +112,6 @@ export async function requireInteractiveUser() {
 export async function requireAdmin() {
   const user = await requireUser()
   requireTelegramUsername(user)
-  if (user.role !== Role.ADMIN) throw new Error("Forbidden")
+  if (user.role !== Role.ADMIN) throw new ApiFailure("FORBIDDEN", "Forbidden")
   return user
 }

@@ -185,7 +185,7 @@ export async function placeOrder(
     where: { id: productId },
     select: { title: true },
   })
-  if (!product) throw new OrderCreateError(t("bot.notFound"), 404)
+  if (!product) throw new OrderCreateError("NOT_FOUND", t("bot.notFound"))
 
   return createOrder({
     paymentMethodId: methodToken === "c" ? undefined : methodToken,

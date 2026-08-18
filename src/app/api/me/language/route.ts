@@ -3,6 +3,7 @@ import { z } from "zod"
 
 import { requireUser } from "@/lib/auth"
 import { LOCALES } from "@/lib/i18n/config"
+import { errorResponse } from "@/lib/api-error"
 import { prisma } from "@/lib/prisma"
 
 const schema = z.object({
@@ -21,9 +22,6 @@ export async function PATCH(request: Request) {
 
     return NextResponse.json({ ok: true })
   } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Language update failed" },
-      { status: 400 },
-    )
+    return errorResponse(error)
   }
 }

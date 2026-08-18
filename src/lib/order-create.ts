@@ -1,5 +1,6 @@
 import { PaymentMethodType, Role } from "@prisma/client"
 
+import { ApiFailure, failure } from "@/lib/api-error"
 import { createCryptoInvoice } from "@/lib/crypto-pay"
 import { translate } from "@/lib/i18n"
 import { resolveUserLocale, type Locale } from "@/lib/i18n/config"
@@ -20,14 +21,8 @@ export type CreateOrderInput = {
   paymentMethodType?: PaymentMethodType
 }
 
-export class OrderCreateError extends Error {
-  status: number
-
-  constructor(message: string, status: number) {
-    super(message)
-    this.status = status
-  }
-}
+/** Kept as a named alias so existing call sites read the same. */
+export { ApiFailure as OrderCreateError }
 
 /**
  * Shared by the API route and the bot so an order placed from a chat goes
@@ -53,7 +48,7 @@ export async function createOrder({
     })
 
     if (activeOrders >= ACTIVE_ORDER_LIMIT) {
-      throw new OrderCreateError(translate(locale, "errors.orderLimit"), 400)
+      throw failure("ORDER_LIMIT", locale, "errors.orderLimit")
     }
   }
 
@@ -70,13 +65,13 @@ export async function createOrder({
   ])
 
   if (productId && !product) {
-    throw new OrderCreateError("Product not found", 404)
+    throw new ApiFailure("NOT_FOUND", "Product not found")
   }
   if (paymentMethodId && !paymentMethod) {
-    throw new OrderCreateError("Payment method not found", 404)
+    throw new ApiFailure("NOT_FOUND", "Payment method not found")
   }
   if (isCryptoPay && (!settings?.cryptoPayEnabled || !settings.cryptoPayToken)) {
-    throw new OrderCreateError("Crypto Pay disabled", 400)
+    throw new ApiFailure("PAYMENT_METHOD", "Crypto Pay disabled")
   }
 
   const order = await prisma.order.create({

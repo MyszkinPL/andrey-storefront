@@ -4,6 +4,7 @@ import { z } from "zod"
 import { requireAdmin } from "@/lib/auth"
 import type { ProductListResponse } from "@/lib/contracts"
 import { mediaUrl } from "@/lib/media"
+import { errorResponse } from "@/lib/api-error"
 import { prisma } from "@/lib/prisma"
 
 const schema = z.object({
@@ -145,9 +146,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true })
   } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Save failed" },
-      { status: 400 },
-    )
+    return errorResponse(error)
   }
 }

@@ -4,6 +4,7 @@ import { z } from "zod"
 import { getCurrentUser, requireAdmin } from "@/lib/auth"
 import type { ProductResponse } from "@/lib/contracts"
 import { mediaUrl } from "@/lib/media"
+import { errorResponse } from "@/lib/api-error"
 import { prisma } from "@/lib/prisma"
 
 const schema = z.object({
@@ -175,10 +176,7 @@ export async function PATCH(
 
     return NextResponse.json({ ok: true })
   } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Update failed" },
-      { status: 400 },
-    )
+    return errorResponse(error)
   }
 }
 
@@ -238,9 +236,6 @@ export async function DELETE(
 
     return NextResponse.json({ ok: true })
   } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Delete failed" },
-      { status: 400 },
-    )
+    return errorResponse(error)
   }
 }

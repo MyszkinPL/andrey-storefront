@@ -5,6 +5,7 @@ import { requireInteractiveUser } from "@/lib/auth"
 import { translate } from "@/lib/i18n"
 import { resolveUserLocale } from "@/lib/i18n/config"
 import { deliverReceiptToAdmins } from "@/lib/order-receipt"
+import { errorResponse } from "@/lib/api-error"
 import { prisma } from "@/lib/prisma"
 import { validateReceiptFile, RECEIPT_MAX_MB } from "@/lib/receipt-constants"
 
@@ -102,9 +103,6 @@ export async function POST(
       },
     })
   } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Receipt upload failed" },
-      { status: 400 },
-    )
+    return errorResponse(error)
   }
 }

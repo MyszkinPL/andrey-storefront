@@ -22,16 +22,16 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     async function fetchMe() {
       try {
         await getMe()
-        return { status: 200, message: "" }
+        return { status: 200, message: "", code: "" }
       } catch (err) {
         if (err instanceof ApiError) {
-          return { status: err.status, message: err.message }
+          return { status: err.status, message: err.message, code: err.code }
         }
-        return { status: 500, message: "" }
+        return { status: 500, message: "", code: "" }
       }
     }
 
-    function settle(result: { status: number; message: string }) {
+    function settle(result: { status: number; message: string; code: string }) {
       if (cancelled) return
       if (result.status === 200) {
         setState("ok")
@@ -52,10 +52,15 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
         return
       }
 
-      // The Telegram profile — username included — only reaches the server
-      // through initData. A stale session can therefore report 403 for a
-      // username the user has since added, so refresh the stored profile once
-      // before trusting the answer.
+      // A stale session reports USERNAME_REQUIRED for a username the user has
+      // since added, because the Telegram profile only reaches the server
+      // through initData. That one code is worth re-authenticating for; a ban
+      // is final and needs no retry.
+      if (first.code === "BANNED") {
+        settle(first)
+        return
+      }
+
       try {
         await authenticateWithTelegram(isTelegram ? initData : "", !isTelegram)
       } catch (err) {

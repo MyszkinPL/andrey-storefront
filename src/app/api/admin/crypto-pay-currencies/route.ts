@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server"
+
+import { errorResponse } from "@/lib/api-error"
 import { z } from "zod"
 
 import { requireAdmin } from "@/lib/auth"
@@ -25,9 +27,6 @@ export async function POST(request: Request) {
       fiats: currencies.filter((item) => item.isFiat),
     })
   } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Crypto Pay currencies failed" },
-      { status: 400 },
-    )
+    return errorResponse(error)
   }
 }

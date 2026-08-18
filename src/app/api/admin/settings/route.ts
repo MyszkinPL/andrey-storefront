@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { z } from "zod"
 
 import { requireAdmin } from "@/lib/auth"
+import { errorResponse } from "@/lib/api-error"
 import { prisma } from "@/lib/prisma"
 
 const schema = z.object({
@@ -108,9 +109,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true })
   } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Settings save failed" },
-      { status: 400 },
-    )
+    return errorResponse(error)
   }
 }

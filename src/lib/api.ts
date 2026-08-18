@@ -1,5 +1,6 @@
 "use client"
 
+import type { ApiErrorCode } from "@/lib/api-error"
 import type { PaymentMethodType, OrderStatus } from "@prisma/client"
 
 import type {
@@ -19,10 +20,13 @@ import { isLocalMockApiEnabled, mockApi } from "@/lib/mock-api"
 
 export class ApiError extends Error {
   status: number
+  /** Machine-readable reason, so callers branch on it instead of on prose. */
+  code: ApiErrorCode
 
-  constructor(status: number, message: string) {
+  constructor(status: number, message: string, code: ApiErrorCode = "UNKNOWN") {
     super(message)
     this.status = status
+    this.code = code
   }
 }
 
@@ -76,7 +80,7 @@ async function api<T>(input: RequestInfo, init?: RequestInit): Promise<T> {
 
   if (!response.ok) {
     const body = await response.json().catch(() => null)
-    throw new ApiError(response.status, body?.error || "Request failed")
+    throw new ApiError(response.status, body?.error || "Request failed", body?.code)
   }
 
   return response.json()
