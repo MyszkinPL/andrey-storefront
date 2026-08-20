@@ -27,7 +27,6 @@ import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
-import { useBackButton } from "@/hooks/use-telegram"
 import { useTranslate } from "@/components/i18n-provider"
 import { getMe, getPaymentMethods, saveSettings } from "@/lib/api"
 import { optimizeSquareImage } from "@/lib/image"
@@ -147,8 +146,7 @@ export function AdminPaymentMethodEditorScreen({
     },
   })
 
-  useBackButton(() => router.push("/admin/settings"))
-
+  
   async function handleIcon(file: File | null) {
     if (!file || !draft) return
     setUploadingIcon(true)
@@ -190,6 +188,7 @@ export function AdminPaymentMethodEditorScreen({
   return (
     <Screen noTabBar>
       <ScreenHeader
+        back="/admin/settings"
         title={methodId ? t("adminPaymentEditor.title") : t("adminPaymentEditor.newTitle")}
         subtitle={t("adminPaymentEditor.subtitle")}
         trailing={

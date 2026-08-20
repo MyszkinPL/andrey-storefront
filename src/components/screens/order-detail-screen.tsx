@@ -42,9 +42,9 @@ import {
   FieldDescription,
   FieldTitle,
 } from "@/components/ui/field"
+import { BackButton } from "@/components/back-button"
 import { Screen, ScreenBody } from "@/components/screen"
 import { useMode } from "@/components/mode-provider"
-import { useBackButton } from "@/hooks/use-telegram"
 import {
   cancelOwnOrder,
   changeOrderPaymentMethod,
@@ -151,8 +151,6 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
       router.push("/admin/orders")
     },
   })
-
-  useBackButton(() => router.back())
 
   const paymentOptions: PaymentOption[] = [
     ...((paymentData?.paymentMethods ?? []).filter((item) => item.isActive).map((method) => ({
@@ -273,6 +271,10 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
   return (
     <Screen noTabBar className="min-h-[calc(100dvh-3rem)]">
       <ScreenBody className="mx-auto w-full max-w-2xl flex-1">
+        <BackButton
+          className="-ms-1 self-start"
+          href={adminToolsVisible ? "/admin/orders" : "/orders"}
+        />
         {adminToolsVisible ? (
           <AdminOrderPanel
             order={order}

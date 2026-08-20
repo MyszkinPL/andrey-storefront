@@ -1,5 +1,6 @@
 export const ru = {
   common: {
+    back: "Назад",
     cancel: "Отмена",
     close: "Закрыть",
     copied: "Готово",

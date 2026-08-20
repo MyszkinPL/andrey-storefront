@@ -1,10 +1,8 @@
 "use client"
 
 import {
-  backButton,
   init,
   isTMA,
-  mainButton,
   miniApp,
   swipeBehavior,
   themeParams,
@@ -34,24 +32,8 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
         themeParams.mount()
       }
 
-      if (telegram && themeParams.bindCssVars.isAvailable()) {
-        themeParams.bindCssVars()
-      }
-
-      if (telegram && miniApp.bindCssVars.isAvailable()) {
-        miniApp.bindCssVars()
-      }
-
       if (telegram && miniApp.mount.isAvailable()) {
         miniApp.mount()
-      }
-
-      if (telegram && backButton.mount.isAvailable()) {
-        backButton.mount()
-      }
-
-      if (telegram && mainButton.mount.isAvailable()) {
-        mainButton.mount()
       }
 
       if (telegram && swipeBehavior.mount.isAvailable()) {

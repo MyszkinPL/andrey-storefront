@@ -2,7 +2,6 @@
 
 import Link from "next/link"
 import { useState } from "react"
-import { useRouter } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
 import { Check, CheckCircle2, CircleDashed, Copy } from "lucide-react"
 
@@ -40,14 +39,12 @@ import {
   InputGroupInput,
 } from "@/components/ui/input-group"
 import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
-import { useBackButton } from "@/hooks/use-telegram"
 import { getOrder } from "@/lib/api"
 
 type Order = Awaited<ReturnType<typeof getOrder>>["order"]
 
 export function OrderCompleteScreen({ orderId }: { orderId: string }) {
   const { t, locale, currency } = useI18n()
-  const router = useRouter()
   const [copied, setCopied] = useState(false)
   const { data, isLoading, isError } = useQuery({
     queryKey: ["order", orderId],
@@ -55,8 +52,7 @@ export function OrderCompleteScreen({ orderId }: { orderId: string }) {
     refetchInterval: 10_000,
   })
 
-  useBackButton(() => router.push(`/orders/${orderId}`))
-
+  
   async function copyKey(value: string) {
     await navigator.clipboard.writeText(value)
     setCopied(true)
@@ -90,6 +86,7 @@ export function OrderCompleteScreen({ orderId }: { orderId: string }) {
   return (
     <Screen noTabBar>
       <ScreenHeader
+        back={`/orders/${orderId}`}
         title={t(titleKey(order))}
         subtitle={t("orderComplete.orderNumber", { number: order.number })}
         trailing={<Badge variant={order.isPaid ? "default" : "secondary"}>{amountLabel}</Badge>}

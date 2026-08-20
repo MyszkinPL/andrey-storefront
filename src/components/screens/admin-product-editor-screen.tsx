@@ -31,7 +31,6 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
-import { useBackButton } from "@/hooks/use-telegram"
 import { useTranslate } from "@/components/i18n-provider"
 import { ResponsiveDialog } from "@/components/responsive-dialog"
 import { deleteAdminProduct, getMe, getProduct, getProducts, saveAdminProduct, updateAdminProduct } from "@/lib/api"
@@ -174,8 +173,7 @@ export function AdminProductEditorScreen({
     },
   })
 
-  useBackButton(() => router.push("/admin/products"))
-
+  
   async function handleImageChange(file: File | null) {
     if (!file) return
     setUploading(true)
@@ -217,6 +215,7 @@ export function AdminProductEditorScreen({
   return (
     <Screen noTabBar>
       <ScreenHeader
+        back="/admin/products"
         title={
           productId
             ? t("adminProductEditor.editTitle")

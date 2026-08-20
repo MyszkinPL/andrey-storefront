@@ -11,6 +11,7 @@ import {
   CardDescription,
   CardTitle,
 } from "@/components/ui/card"
+import { BackButton } from "@/components/back-button"
 import { cn } from "@/lib/utils"
 
 export function Screen({
@@ -43,11 +44,14 @@ export function Screen({
 }
 
 export function ScreenHeader({
+  back,
   before,
   title,
   subtitle,
   trailing,
 }: {
+  /** Renders an in-app back control; a string is the destination route. */
+  back?: boolean | string
   before?: React.ReactNode
   title: React.ReactNode
   subtitle?: React.ReactNode
@@ -56,6 +60,9 @@ export function ScreenHeader({
 }) {
   return (
     <header className="mb-2 flex items-center gap-3 px-1 lg:mb-4">
+      {back ? (
+        <BackButton className="-ms-1 shrink-0" href={typeof back === "string" ? back : undefined} />
+      ) : null}
       {before ? <div className="shrink-0">{before}</div> : null}
       <div className="min-w-0 flex-1">
         <CardTitle className="truncate lg:text-2xl">{title}</CardTitle>

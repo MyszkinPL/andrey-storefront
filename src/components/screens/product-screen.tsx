@@ -40,8 +40,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { BackButton } from "@/components/back-button"
 import { Screen, ScreenBody } from "@/components/screen"
-import { useBackButton, useHaptic, useMainButton } from "@/hooks/use-telegram"
+import { useHaptic } from "@/hooks/use-telegram"
 import { useI18n, useTranslate } from "@/components/i18n-provider"
 import { createOrder, getPaymentMethods, getProduct } from "@/lib/api"
 import { formatPrice } from "@/lib/format"
@@ -116,14 +117,6 @@ export function ProductScreen({ productId }: { productId: string }) {
     },
   })
 
-  useBackButton(() => router.back())
-  useMainButton({
-    text: orderMutation.isPending ? t("product.placingOrder") : t("product.placeOrder"),
-    onClick: () => orderMutation.mutate(),
-    visible: true,
-    enabled: !orderMutation.isPending && Boolean(data?.product) && Boolean(selectedPayment),
-    progress: orderMutation.isPending,
-  })
 
   if (!data?.product) {
     return (
@@ -154,6 +147,7 @@ export function ProductScreen({ productId }: { productId: string }) {
   return (
     <Screen noTabBar className="min-h-[calc(100dvh-3rem)]">
       <ScreenBody className="mx-auto w-full max-w-2xl flex-1">
+        <BackButton className="-ms-1 self-start" href="/catalog" />
         <Card className="flex-1">
           <CardHeader>
             <CardTitle>{product.title}</CardTitle>

@@ -68,13 +68,9 @@ if (appUrl && botToken) {
       { command: "help", description: "Помощь" },
     ],
   })
-  await telegram("setChatMenuButton", {
-    menu_button: {
-      type: "web_app",
-      text: "Открыть магазин",
-      web_app: { url: appUrl },
-    },
-  })
+  // No chat menu button: the app is opened from the bot's own /start keyboard,
+  // so a second Telegram-provided entry point is redundant.
+  await telegram("setChatMenuButton", { menu_button: { type: "default" } })
 }
 
 const serverCommand =

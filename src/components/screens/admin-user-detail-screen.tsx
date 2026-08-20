@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Ban, History, ShieldCheck, ShieldX } from "lucide-react"
 
@@ -31,7 +30,6 @@ import {
 } from "@/components/ui/field"
 import { ListGroup, ListRow, ListRowMedia } from "@/components/list-row"
 import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
-import { useBackButton } from "@/hooks/use-telegram"
 import { useI18n } from "@/components/i18n-provider"
 import { ResponsiveDialog } from "@/components/responsive-dialog"
 import { useNotify } from "@/hooks/use-notify"
@@ -42,7 +40,6 @@ import { getAdminUser, getMe, updateAdminUserModeration } from "@/lib/api"
 export function AdminUserDetailScreen({ userId }: { userId: string }) {
   const { t, tp, locale, currency } = useI18n()
   const notify = useNotify()
-  const router = useRouter()
   const queryClient = useQueryClient()
   const [confirmBanOpen, setConfirmBanOpen] = useState(false)
   const [confirmRole, setConfirmRole] = useState<"USER" | "ADMIN" | null>(null)
@@ -75,8 +72,7 @@ export function AdminUserDetailScreen({ userId }: { userId: string }) {
     },
   })
 
-  useBackButton(() => router.push("/admin/users"))
-
+  
   if (meData && meData.user.role !== "ADMIN") {
     return (
       <AccessStateScreen
@@ -113,6 +109,7 @@ export function AdminUserDetailScreen({ userId }: { userId: string }) {
   return (
     <Screen noTabBar>
       <ScreenHeader
+        back="/admin/users"
         title={displayName}
         subtitle={user.username ? `@${user.username}` : `tg:${user.telegramId}`}
         trailing={

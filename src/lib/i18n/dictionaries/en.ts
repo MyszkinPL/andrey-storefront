@@ -7,6 +7,7 @@ import type { Widen } from "@/lib/i18n/shape"
  */
 export const en: Widen<typeof ru> = {
   common: {
+    back: "Back",
     cancel: "Cancel",
     close: "Close",
     copied: "Copied",
