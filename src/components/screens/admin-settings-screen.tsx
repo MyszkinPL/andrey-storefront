@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/empty"
 import {
   Field,
+  FieldDescription,
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field"
@@ -68,6 +69,7 @@ export function AdminSettingsScreen() {
 
   const [shopName, setShopName] = useState("")
   const [supportUsername, setSupportUsername] = useState("")
+  const [requiredChannel, setRequiredChannel] = useState("")
   const [cryptoPayEnabled, setCryptoPayEnabled] = useState(false)
   const [cryptoPayToken, setCryptoPayToken] = useState("")
   const [cryptoPayUseTestnet, setCryptoPayUseTestnet] = useState(false)
@@ -101,6 +103,7 @@ export function AdminSettingsScreen() {
     queueMicrotask(() => {
       setShopName(meData.settings.shopName)
       setSupportUsername(meData.settings.supportUsername || "")
+      setRequiredChannel(meData.settings.requiredChannel || "")
       setCryptoPayEnabled(Boolean(meData.settings.cryptoPayEnabled))
       setCryptoPayToken(meData.settings.cryptoPayToken || "")
       setCryptoPayUseTestnet(Boolean(meData.settings.cryptoPayUseTestnet))
@@ -114,6 +117,7 @@ export function AdminSettingsScreen() {
       saveSettings({
         shopName,
         supportUsername,
+        requiredChannel,
         cryptoPayEnabled,
         cryptoPayToken,
         cryptoPayUseTestnet,
@@ -123,7 +127,7 @@ export function AdminSettingsScreen() {
           id: method.id,
           title: method.title,
           type: "MANUAL" as const,
-          details: method.details,
+          details: method.details ?? "",
           iconDataUrl: undefined,
           isActive: method.isActive,
         })),
@@ -197,6 +201,16 @@ export function AdminSettingsScreen() {
               <Field>
                 <FieldLabel htmlFor="shop-support">{t("adminSettings.support")}</FieldLabel>
                 <Input id="shop-support" value={supportUsername} onChange={(event) => setSupportUsername(event.target.value)} placeholder="@username" />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="shop-channel">{t("admin.channelLabel")}</FieldLabel>
+                <Input
+                  id="shop-channel"
+                  onChange={(event) => setRequiredChannel(event.target.value)}
+                  placeholder={t("admin.channelPlaceholder")}
+                  value={requiredChannel}
+                />
+                <FieldDescription>{t("admin.channelHint")}</FieldDescription>
               </Field>
             </FieldGroup>
           </CardContent>

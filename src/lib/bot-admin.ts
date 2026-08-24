@@ -6,7 +6,7 @@ import { clearPending, setPending, takePending } from "@/lib/bot-pending"
 import { formatPrice } from "@/lib/format"
 import { getShopCurrency } from "@/lib/shop-settings"
 import type { Locale } from "@/lib/i18n/config"
-import type { TranslateFn } from "@/lib/i18n"
+import type { TranslateFn, TranslatePluralFn } from "@/lib/i18n"
 import {
   notifyManualPaymentRejected,
   notifyOrderCancelled,
@@ -16,7 +16,10 @@ import { confirmOrderPaymentFlow } from "@/lib/order-payment"
 import { orderStatusKey } from "@/lib/order-status"
 import { prisma } from "@/lib/prisma"
 import { escapeHtml } from "@/lib/telegram-format"
-import { replaceMessage } from "@/lib/bot-view"
+import { replaceMessage, type View } from "@/lib/bot-view"
+import { countBroadcastAudience } from "@/lib/broadcast"
+import { getRequiredChannel, normalizeChannel } from "@/lib/channel-gate"
+import { getShopStats } from "@/lib/shop-stats"
 
 const PAGE_SIZE = 8
 
@@ -32,9 +35,141 @@ export function mainMenuKeyboard(t: TranslateFn) {
     .text(t("bot.menuProducts"), "p")
     .row()
     .text(t("bot.menuUsers"), "u")
+    .text(t("bot.menuStats"), "t")
+    .row()
+    .text(t("bot.menuBroadcast"), "b")
+    .text(t("bot.menuChannel"), "g")
     .row()
     // Back to the shop menu, so the admin panel is not a dead end.
     .text(t("bot.back"), "sm")
+}
+
+// ------------------------------------------------------------- statistics
+
+export async function renderStats(
+  t: TranslateFn,
+  tp: TranslatePluralFn,
+  locale: Locale,
+): Promise<View> {
+  const [stats, currency] = await Promise.all([getShopStats(5), getShopCurrency()])
+
+  const lines = [
+    t("bot.statsTitle"),
+    "",
+    t("bot.statsUsers", {
+      total: stats.users.total,
+      started: stats.users.botStarted,
+      fresh: stats.users.newLast7Days,
+      active: stats.users.activeLast7Days,
+    }),
+    t("bot.statsOrders", {
+      total: stats.orders.total,
+      paid: stats.orders.paid,
+      week: stats.orders.openLast7Days,
+      revenue: formatPrice(stats.orders.revenue, locale, currency),
+    }),
+    t("bot.statsProducts", {
+      total: stats.products.total,
+      active: stats.products.active,
+      views: stats.products.totalViews,
+    }),
+  ]
+
+  if (stats.topViewed.length > 0) {
+    lines.push("", t("bot.statsTop"))
+    stats.topViewed.forEach((product, index) => {
+      const counts = [
+        tp("admin.viewsCount", product.views),
+        tp("admin.viewersCount", product.viewers),
+        tp("admin.ordersCount", product.orders),
+      ].join(" · ")
+      lines.push(
+        t("bot.statsTopRow", {
+          counts,
+          place: index + 1,
+          title: escapeHtml(product.title.slice(0, 30)),
+        }),
+      )
+    })
+  } else {
+    lines.push("", t("bot.statsNoViews"))
+  }
+
+  return {
+    text: lines.join("\n"),
+    keyboard: new InlineKeyboard()
+      .text(t("common.refresh"), "t")
+      .row()
+      .text(t("bot.back"), "m"),
+  }
+}
+
+// -------------------------------------------------------------- broadcast
+
+export async function renderBroadcastIntro(t: TranslateFn): Promise<View> {
+  const audience = await countBroadcastAudience()
+  const last = await prisma.broadcast.findFirst({
+    orderBy: { startedAt: "desc" },
+    select: { sentCount: true, failedCount: true, totalCount: true, startedAt: true },
+  })
+
+  const lines = [t("bot.broadcastTitle"), "", t("bot.broadcastAudience", { count: audience })]
+  if (last) {
+    lines.push(
+      t("bot.broadcastLast", {
+        sent: last.sentCount,
+        failed: last.failedCount,
+        total: last.totalCount,
+      }),
+    )
+  }
+  lines.push("", t("bot.broadcastHint"))
+
+  return {
+    text: lines.join("\n"),
+    keyboard: new InlineKeyboard()
+      .text(t("bot.broadcastCompose"), "bc")
+      .row()
+      .text(t("bot.back"), "m"),
+  }
+}
+
+/** The post as the audience will see it, with send/cancel underneath. */
+export function broadcastPreview(text: string, count: number, t: TranslateFn): View {
+  return {
+    text: `${t("bot.broadcastPreview", { count })}\n\n${text}`,
+    keyboard: new InlineKeyboard()
+      .text(t("bot.broadcastSend"), "bs")
+      .row()
+      .text(t("bot.cancelAction"), "b"),
+  }
+}
+
+// ---------------------------------------------------------- channel gate
+
+export async function renderChannelGate(t: TranslateFn): Promise<View> {
+  const channel = await getRequiredChannel()
+
+  const keyboard = new InlineKeyboard().text(t("bot.channelSet"), "gc").row()
+  if (channel) keyboard.text(t("bot.channelClear"), "gx").row()
+  keyboard.text(t("bot.back"), "m")
+
+  return {
+    text: channel
+      ? t("bot.channelCurrent", { channel: escapeHtml(channel) })
+      : t("bot.channelNone"),
+    keyboard,
+  }
+}
+
+export async function setRequiredChannel(input: string | null) {
+  const channel = input ? normalizeChannel(input) : null
+  await prisma.shopSettings.upsert({
+    where: { id: 1 },
+    update: { requiredChannel: channel },
+    create: { id: 1, requiredChannel: channel },
+  })
+  return channel
 }
 
 // ------------------------------------------------------------------ orders

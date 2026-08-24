@@ -1,6 +1,5 @@
 import {
   Home,
-  LifeBuoy,
   Receipt,
   Settings,
   Shield,
@@ -18,10 +17,10 @@ export type NavItem = {
 }
 
 /** Single source of nav items, shared by the mobile tab bar and desktop rail. */
+/** Profile is reached from the avatar in the header, not from a tab. */
 export const BUYER_NAV: NavItem[] = [
   { href: "/catalog", icon: Store, labelKey: "nav.catalog" },
   { href: "/orders", icon: Receipt, labelKey: "nav.orders" },
-  { href: "/profile", icon: LifeBuoy, labelKey: "nav.profile" },
 ]
 
 export const ADMIN_NAV: NavItem[] = [

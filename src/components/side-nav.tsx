@@ -73,8 +73,18 @@ export function SideNav() {
 
         <LanguageSwitcher className="w-full" />
 
+        {/* The same account entry point the phone header has on the avatar. */}
         {displayName ? (
-          <div className="flex items-center gap-2.5 rounded-lg px-1 py-1">
+          <Link
+            aria-current={pathname === "/profile" ? "page" : undefined}
+            className={cn(
+              "flex items-center gap-2.5 rounded-lg px-1 py-1 transition-colors",
+              pathname === "/profile"
+                ? "bg-accent text-accent-foreground"
+                : "hover:bg-accent/50",
+            )}
+            href="/profile"
+          >
             <Avatar className="size-8">
               {meData?.user.photoUrl ? (
                 <AvatarImage alt={displayName} src={meData.user.photoUrl} />
@@ -89,7 +99,7 @@ export function SideNav() {
                   : t("auth.noUsername")}
               </p>
             </div>
-          </div>
+          </Link>
         ) : null}
       </div>
     </aside>

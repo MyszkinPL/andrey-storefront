@@ -3,10 +3,12 @@
 import type { PaymentMethodType } from "@prisma/client"
 
 import type {
+  ClearedHistoryResponse,
   MeResponse,
   OrderListResponse,
   PaymentMethodsResponse,
   ProductListResponse,
+  StatsResponse,
 } from "@/lib/contracts"
 
 const now = new Date().toISOString()
@@ -23,6 +25,8 @@ type MockProduct = {
   priceRub: number
   deliveryType: "MANUAL" | "AUTO_KEY"
   isActive: boolean
+  /** Mirrors Product.viewCount so the stats screen has something to show. */
+  viewCount?: number
   availableKeyCount: number
   editableKeys: {
     id: string
@@ -264,6 +268,13 @@ export async function mockApi<T>(input: RequestInfo, init?: RequestInit): Promis
     persistMockState()
     return { ok: true } as T
   }
+  if (/^\/api\/products\/[^/]+\/view$/.test(path) && method === "POST") {
+    const product = products.find((item) => item.id === path.split("/")[3])
+    if (product) product.viewCount = (product.viewCount || 0) + 1
+    persistMockState()
+    return { ok: true } as T
+  }
+
   if (path.startsWith("/api/products/")) {
     const id = path.split("/").at(-1) || ""
     const productIndex = products.findIndex((item) => item.id === id)
@@ -289,7 +300,11 @@ export async function mockApi<T>(input: RequestInfo, init?: RequestInit): Promis
 
   if (path === "/api/payment-methods") {
     return {
-      paymentMethods,
+      // Mirrors the route: requisites travel with an order, not with the menu.
+      paymentMethods: paymentMethods.map((method) => ({
+        ...method,
+        details: mockUser.role === "ADMIN" ? method.details : null,
+      })),
       cryptoPay: {
         enabled: mockSettings.cryptoPayEnabled,
         title: "Crypto Bot",
@@ -300,9 +315,68 @@ export async function mockApi<T>(input: RequestInfo, init?: RequestInit): Promis
     } satisfies PaymentMethodsResponse as T
   }
 
+  if (path === "/api/admin/stats" && method === "GET") {
+    const paid = orders.filter((order) => order.isPaid)
+    const topViewed = [...products]
+      .filter((product) => (product.viewCount || 0) > 0)
+      .sort((a, b) => (b.viewCount || 0) - (a.viewCount || 0))
+      .slice(0, 5)
+      .map((product) => ({
+        id: product.id,
+        title: product.title,
+        views: product.viewCount || 0,
+        viewers: Math.max(1, Math.round((product.viewCount || 0) / 2)),
+        orders: orders.filter((order) => order.productTitle === product.title).length,
+      }))
+
+    return {
+      stats: {
+        users: {
+          total: 2,
+          botStarted: 2,
+          activeLast7Days: 1,
+          newLast7Days: 1,
+          banned: 0,
+          admins: 1,
+        },
+        orders: {
+          total: orders.length,
+          paid: paid.length,
+          openLast7Days: orders.length,
+          revenue: paid.reduce(
+            (sum, order) =>
+              sum + (products.find((item) => item.title === order.productTitle)?.priceRub || 0),
+            0,
+          ),
+        },
+        products: {
+          total: products.length,
+          active: products.filter((product) => product.isActive).length,
+          totalViews: products.reduce((sum, product) => sum + (product.viewCount || 0), 0),
+        },
+        topViewed,
+      },
+    } satisfies StatsResponse as T
+  }
+
+  if (path === "/api/orders/history" && method === "DELETE") {
+    let cleared = 0
+    for (const order of orders) {
+      if (!order.isOwner || order.hiddenByBuyer) continue
+      if (order.status !== "CLOSED" && order.status !== "CANCELLED") continue
+      order.hiddenByBuyer = true
+      cleared += 1
+    }
+    persistMockState()
+    return { cleared } satisfies ClearedHistoryResponse as T
+  }
+
   if (path === "/api/orders" && method === "GET") {
     const scope = search.get("scope")
-    const visible = scope === "all" ? orders : orders.filter((order) => order.isOwner)
+    const visible =
+      scope === "all"
+        ? orders
+        : orders.filter((order) => order.isOwner && !order.hiddenByBuyer)
     return { hasMore: false, orders: visible } satisfies OrderListResponse as T
   }
 
@@ -378,6 +452,9 @@ export async function mockApi<T>(input: RequestInfo, init?: RequestInit): Promis
       }
       if (body?.cancelByUser) {
         order.status = "CANCELLED"
+      }
+      if (body?.hideFromHistory) {
+        order.hiddenByBuyer = true
       }
       if (body?.refreshCryptoInvoice && order.paymentMethodType === "CRYPTO_PAY") {
         order.isPaid = true
@@ -677,6 +754,7 @@ function makeOrder({
     } | null,
     isAdmin: true,
     isOwner: true,
+    hiddenByBuyer: false,
     createdBy: {
       id: mockUser.id,
       firstName: mockUser.firstName,

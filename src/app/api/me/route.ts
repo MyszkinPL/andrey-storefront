@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 
 import { bannedMessage, getCurrentUser, hasTelegramUsername, usernameRequiredMessage } from "@/lib/auth"
+import { checkChannelGate } from "@/lib/channel-gate"
 import { getServerEnv } from "@/lib/env"
 import type { MeResponse } from "@/lib/contracts"
 import { prisma } from "@/lib/prisma"
@@ -23,6 +24,10 @@ export async function GET() {
   const settings =
     (await prisma.shopSettings.findUnique({ where: { id: 1 } })) ||
     (await prisma.shopSettings.create({ data: { id: 1 } }))
+
+  // Admins are never locked out of their own shop by its own gate.
+  const gate =
+    user.role === "ADMIN" ? null : await checkChannelGate(user.telegramId)
 
   return NextResponse.json({
     user: {
@@ -48,5 +53,6 @@ export async function GET() {
             // Prices are entered in the shop's fiat, so buyers need it too.
             currency: settings.cryptoPayFiat || "RUB",
           },
+    channelGate: gate && !gate.joined ? { username: gate.username, url: gate.url } : null,
   } satisfies MeResponse)
 }

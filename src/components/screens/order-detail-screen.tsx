@@ -5,7 +5,7 @@ import Link from "next/link"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { ExternalLink } from "lucide-react"
+import { ExternalLink, Trash2 } from "lucide-react"
 
 import { AdminOrderPanel } from "@/components/order-detail/admin-panel"
 import { ConfirmDeleteDialog } from "@/components/order-detail/confirm-delete-dialog"
@@ -22,6 +22,7 @@ import {
 } from "@/components/order-detail/status"
 import type { PaymentOption } from "@/components/order-detail/types"
 import { ReceiptStatus, ReceiptUpload } from "@/components/receipt-upload"
+import { ResponsiveDialog } from "@/components/responsive-dialog"
 import { useI18n } from "@/components/i18n-provider"
 import { useNotify } from "@/hooks/use-notify"
 import { formatDateTime, formatInvoiceAmount, formatPrice } from "@/lib/format"
@@ -52,6 +53,7 @@ import {
   getMe,
   getOrder,
   getPaymentMethods,
+  hideOrderFromHistory,
   markManualOrderPaid,
   refreshCryptoInvoice,
   rejectManualOrderPayment,
@@ -65,6 +67,7 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
   const queryClient = useQueryClient()
   const { mode } = useMode()
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [isHideModalOpen, setIsHideModalOpen] = useState(false)
   const [draftPaymentKey, setDraftPaymentKey] = useState<string | null>(null)
   const [copiedField, setCopiedField] = useState<"payment" | "key" | null>(null)
 
@@ -141,6 +144,16 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
       setDraftPaymentKey(null)
     },
   })
+  const hideFromHistoryMutation = useMutation({
+    mutationFn: () => hideOrderFromHistory(orderId),
+    onError: notify.failure,
+    onSuccess: async () => {
+      setIsHideModalOpen(false)
+      notify.success("orderDetail.hideDone")
+      await queryClient.invalidateQueries({ queryKey: ["orders"] })
+      router.push("/orders")
+    },
+  })
   const deleteOrderMutation = useMutation({
     mutationFn: () => deleteAdminOrder(orderId),
     onError: notify.failure,
@@ -157,7 +170,8 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
       id: method.id,
       type: "MANUAL" as const,
       title: method.title,
-      subtitle: method.details,
+      // The requisites arrive with the order; the menu only names the method.
+      subtitle: method.details ?? t("product.requisitesLater"),
       iconUrl: method.iconUrl,
     })) ?? []),
     ...(paymentData?.cryptoPay.enabled
@@ -397,7 +411,7 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
             />
           </CardContent>
 
-          {(order.isPaid && isRealBuyerView) || (isRealBuyerView && !order.isPaid && !isClosed) ? (
+          {isRealBuyerView ? (
             <CardFooter className="mt-auto flex-col items-stretch gap-2">
               {order.isPaid && isRealBuyerView ? (
                 <Link
@@ -417,7 +431,7 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
                   {t("orderDetail.telegramSupport")}
                 </a>
               ) : null}
-              {isRealBuyerView && !order.isPaid && !isClosed ? (
+              {!order.isPaid && !isClosed ? (
                 <Button
                   variant="destructive"
                   disabled={cancelOrderMutation.isPending}
@@ -426,10 +440,32 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
                   {t("orderDetail.cancelOrder")}
                 </Button>
               ) : null}
+              {/* Only a finished order can leave the buyer's history — one
+                  still waiting for payment must not be able to vanish. */}
+              {isClosed ? (
+                <Button
+                  onClick={() => setIsHideModalOpen(true)}
+                  variant="destructive-outline"
+                >
+                  <Trash2 data-icon="inline-start" />
+                  {t("orderDetail.hideAction")}
+                </Button>
+              ) : null}
             </CardFooter>
           ) : null}
         </Card>
       </ScreenBody>
+
+      <ResponsiveDialog
+        confirmLabel={t("orderDetail.hideAction")}
+        confirmVariant="destructive"
+        description={t("orderDetail.hideDescription")}
+        loading={hideFromHistoryMutation.isPending}
+        onConfirm={() => hideFromHistoryMutation.mutate()}
+        onOpenChange={setIsHideModalOpen}
+        open={isHideModalOpen}
+        title={t("orderDetail.hideTitle")}
+      />
 
       <ConfirmDeleteDialog
         open={isDeleteModalOpen}

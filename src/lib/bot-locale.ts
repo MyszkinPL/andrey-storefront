@@ -2,17 +2,16 @@ import type { Context } from "grammy"
 
 import { createPluralTranslator, createTranslator } from "@/lib/i18n"
 import { DEFAULT_LOCALE, resolveLocale, resolveUserLocale } from "@/lib/i18n/config"
-import { prisma } from "@/lib/prisma"
+import { ensureBotUser } from "@/lib/bot-user"
 
 /**
  * Resolves who is talking to the bot and in which language. An explicit choice
  * made in the mini app wins; otherwise we follow the Telegram client language.
  */
 export async function resolveActor(ctx: Context) {
-  const telegramId = ctx.from?.id
-  const user = telegramId
-    ? await prisma.user.findUnique({ where: { telegramId: BigInt(telegramId) } })
-    : null
+  // Recording the person is part of resolving them: an unknown user used to
+  // fall through every handler as "not an admin".
+  const user = await ensureBotUser(ctx)
 
   const locale = user
     ? resolveUserLocale(user)

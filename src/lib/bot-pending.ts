@@ -4,6 +4,8 @@ export type PendingAction =
   | { kind: "addKeys"; productId: string }
   | { kind: "newProductTitle" }
   | { kind: "newProductPrice"; title: string }
+  | { kind: "broadcastText" }
+  | { kind: "requiredChannel" }
 
 export const PENDING_TTL_MS = 10 * 60 * 1000
 

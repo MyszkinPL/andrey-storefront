@@ -2,6 +2,7 @@ import { Bot, InlineKeyboard, type Context } from "grammy"
 
 import {
   addProductKeys,
+  broadcastPreview,
   cancelOrder,
   cancelRow,
   clearPending,
@@ -13,9 +14,13 @@ import {
   renderOrder,
   renderOrders,
   renderProduct,
+  renderBroadcastIntro,
+  renderChannelGate,
   renderProducts,
+  renderStats,
   renderUser,
   renderUsers,
+  setRequiredChannel,
   setPending,
   setProductPrice,
   setUserBanned,
@@ -26,6 +31,7 @@ import {
 import { parseBuyToken, parseCallback, parseKeys, parsePrice } from "@/lib/bot-callback"
 import {
   cancelOwnOrder,
+  hideOrderFromHistory,
   markOrderPaid,
   placeOrder,
   renderCatalog,
@@ -37,6 +43,10 @@ import {
   shopMenu,
 } from "@/lib/bot-shop"
 import { resolveActor } from "@/lib/bot-locale"
+import { markBotStarted } from "@/lib/bot-user"
+import { countBroadcastAudience, notifyAdmins, sendBroadcast } from "@/lib/broadcast"
+import { checkChannelGate, normalizeChannel } from "@/lib/channel-gate"
+import type { TranslateFn } from "@/lib/i18n"
 import { replaceMessage } from "@/lib/bot-view"
 import { isLocale } from "@/lib/i18n/config"
 import { OrderCreateError } from "@/lib/order-create"
@@ -47,6 +57,38 @@ import { prisma } from "@/lib/prisma"
 
 let botInstance: Bot | null = null
 let initPromise: Promise<void> | null = null
+
+/** Buyer actions a channel subscription can stand in front of. */
+const GATED_ACTIONS = new Set(["sc", "sq"])
+
+/**
+ * A composed post waiting for its confirm button. Kept beside the pending
+ * actions and for the same reason: cheap to retype, not worth a table.
+ */
+const broadcastDrafts = new Map<number, { text: string; at: number }>()
+const BROADCAST_DRAFT_TTL_MS = 30 * 60 * 1000
+
+function putBroadcastDraft(telegramId: number, text: string) {
+  broadcastDrafts.set(telegramId, { text, at: Date.now() })
+}
+
+function takeBroadcastDraft(telegramId: number) {
+  const entry = broadcastDrafts.get(telegramId)
+  if (!entry) return null
+
+  broadcastDrafts.delete(telegramId)
+  return Date.now() - entry.at > BROADCAST_DRAFT_TTL_MS ? null : entry.text
+}
+
+function channelGateView(channel: string, url: string, t: TranslateFn) {
+  return {
+    text: `${t("bot.gateTitle")}\n${t("bot.gateBody", { channel })}`,
+    keyboard: new InlineKeyboard()
+      .url(t("bot.gateOpen"), url)
+      .row()
+      .text(t("bot.gateRecheck"), "sg"),
+  }
+}
 
 /**
  * grammy refuses to route an update until it knows who the bot is, so the
@@ -75,7 +117,9 @@ export function getBot() {
   // ------------------------------------------------------------- commands
 
   bot.command("start", async (ctx) => {
-    const { t, isAdmin } = await resolveActor(ctx)
+    const { t, isAdmin, user } = await resolveActor(ctx)
+    // Someone who reached the mini app first has no start time yet.
+    if (user) await markBotStarted(user.id)
     const settings = await prisma.shopSettings.findUnique({ where: { id: 1 } })
     const menu = shopMenu(t, settings?.shopName || "Shop", isAdmin, env.APP_URL)
 
@@ -121,14 +165,31 @@ export function getBot() {
   // ------------------------------------------------------- inline buttons
 
   bot.on("callback_query:data", async (ctx) => {
-    const { t, locale, isAdmin, user } = await resolveActor(ctx)
+    const { t, tp, locale, isAdmin, user } = await resolveActor(ctx)
 
     if (!user) {
       await ctx.answerCallbackQuery({ text: t("bot.notAdmin"), show_alert: true })
       return
     }
 
+    if (user.isBanned) {
+      await ctx.answerCallbackQuery({ text: t("auth.banned"), show_alert: true })
+      return
+    }
+
     const { action, id } = parseCallback(ctx.callbackQuery.data)
+
+    // Shopping sits behind the channel subscription when one is configured.
+    // Profile and language stay reachable, so a gated buyer can at least read
+    // the reason in their own language.
+    if (GATED_ACTIONS.has(action)) {
+      const gate = await checkChannelGate(BigInt(ctx.from.id))
+      if (gate && !gate.joined) {
+        await ctx.answerCallbackQuery()
+        await replaceMessage(ctx, channelGateView(gate.username, gate.url, t))
+        return
+      }
+    }
 
     // Buyer actions are open to everyone; only the admin panel is gated.
     if (action.startsWith("s")) {
@@ -147,7 +208,9 @@ export function getBot() {
           await ctx.answerCallbackQuery()
           await replaceMessage(
             ctx,
-            id ? await renderShopProduct(id, t, locale) : await renderCatalog(t, locale),
+            id
+              ? await renderShopProduct(id, t, locale, user.id)
+              : await renderCatalog(t, locale),
           )
           return
 
@@ -186,6 +249,33 @@ export function getBot() {
           await ctx.answerCallbackQuery({ text: t("shop.cancelled") })
           await replaceMessage(ctx, await renderMyOrder(id, user, t, locale))
           return
+
+        case "sx": {
+          const hidden = await hideOrderFromHistory(id, user.id)
+          await ctx.answerCallbackQuery({
+            text: hidden ? t("shop.hiddenFromHistory") : t("shop.hideFailed"),
+          })
+          await replaceMessage(ctx, await renderMyOrders(user.id, t))
+          return
+        }
+
+        case "sg": {
+          const gate = await checkChannelGate(BigInt(ctx.from.id))
+          if (gate && !gate.joined) {
+            await ctx.answerCallbackQuery({
+              show_alert: true,
+              text: t("bot.gateStillMissing"),
+            })
+            return
+          }
+          const settings = await prisma.shopSettings.findUnique({ where: { id: 1 } })
+          await ctx.answerCallbackQuery({ text: t("bot.gateJoined") })
+          await replaceMessage(
+            ctx,
+            shopMenu(t, settings?.shopName || "Shop", isAdmin, env.APP_URL),
+          )
+          return
+        }
 
         case "su":
           await ctx.answerCallbackQuery()
@@ -348,6 +438,80 @@ export function getBot() {
         await rerenderUser(t("bot.roleChanged"))
         return
 
+      case "t":
+        await ctx.answerCallbackQuery()
+        await replaceMessage(ctx, await renderStats(t, tp, locale))
+        return
+
+      case "b":
+        clearPending(ctx.from.id)
+        await ctx.answerCallbackQuery()
+        await replaceMessage(ctx, await renderBroadcastIntro(t))
+        return
+
+      case "bc": {
+        const audience = await countBroadcastAudience()
+        if (audience === 0) {
+          await ctx.answerCallbackQuery({
+            show_alert: true,
+            text: t("bot.broadcastNoAudience"),
+          })
+          return
+        }
+        setPending(ctx.from.id, { kind: "broadcastText" })
+        await ctx.answerCallbackQuery()
+        await ctx.reply(t("bot.broadcastPrompt"), { reply_markup: cancelRow(t) })
+        return
+      }
+
+      case "bs": {
+        const draft = takeBroadcastDraft(ctx.from.id)
+        if (!draft) {
+          await ctx.answerCallbackQuery({
+            show_alert: true,
+            text: t("bot.broadcastEmpty"),
+          })
+          return
+        }
+
+        await ctx.answerCallbackQuery({ text: t("bot.broadcastSending") })
+        await replaceMessage(ctx, await renderBroadcastIntro(t))
+
+        // Deliberately not awaited: a large audience takes longer than
+        // Telegram will wait for the webhook to answer, so the result comes
+        // back as its own message instead.
+        void sendBroadcast({ text: draft }, user.id)
+          .then((result) =>
+            notifyAdmins(
+              t("bot.broadcastDone", {
+                failed: result.failed,
+                sent: result.sent,
+                total: result.total,
+              }),
+            ),
+          )
+          .catch((error) => console.error("Broadcast failed", error))
+        return
+      }
+
+      case "g":
+        clearPending(ctx.from.id)
+        await ctx.answerCallbackQuery()
+        await replaceMessage(ctx, await renderChannelGate(t))
+        return
+
+      case "gc":
+        setPending(ctx.from.id, { kind: "requiredChannel" })
+        await ctx.answerCallbackQuery()
+        await ctx.reply(t("bot.channelPrompt"), { reply_markup: cancelRow(t) })
+        return
+
+      case "gx":
+        await setRequiredChannel(null)
+        await ctx.answerCallbackQuery({ text: t("bot.channelCleared") })
+        await replaceMessage(ctx, await renderChannelGate(t))
+        return
+
       case "x":
         clearPending(ctx.from.id)
         await ctx.answerCallbackQuery({ text: t("bot.actionCancelled") })
@@ -414,6 +578,38 @@ export function getBot() {
         await ctx.reply(t("bot.promptNewPrice", { title }), {
           reply_markup: cancelRow(t),
         })
+        return
+      }
+
+      case "broadcastText": {
+        const draft = text.trim()
+        if (!draft) {
+          setPending(ctx.from.id, action)
+          await ctx.reply(t("bot.broadcastEmpty"), { reply_markup: cancelRow(t) })
+          return
+        }
+
+        putBroadcastDraft(ctx.from.id, draft)
+        const audience = await countBroadcastAudience()
+        const preview = broadcastPreview(draft, audience, t)
+        await ctx.reply(preview.text, {
+          parse_mode: "HTML",
+          reply_markup: preview.keyboard,
+        })
+        return
+      }
+
+      case "requiredChannel": {
+        const channel = normalizeChannel(text)
+        if (!channel) {
+          setPending(ctx.from.id, action)
+          await ctx.reply(t("bot.channelInvalid"), { reply_markup: cancelRow(t) })
+          return
+        }
+
+        await setRequiredChannel(channel)
+        await ctx.reply(t("bot.channelSaved", { channel }))
+        await replaceMessage(ctx, await renderChannelGate(t))
         return
       }
 

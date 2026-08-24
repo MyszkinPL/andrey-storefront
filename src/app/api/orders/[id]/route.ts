@@ -13,7 +13,7 @@ import {
 import { translate } from "@/lib/i18n"
 import { resolveUserLocale } from "@/lib/i18n/config"
 import type { OrderResponse } from "@/lib/contracts"
-import { errorResponse } from "@/lib/api-error"
+import { errorResponse, failure } from "@/lib/api-error"
 import { prisma } from "@/lib/prisma"
 import { confirmOrderPaymentFlow } from "@/lib/order-payment"
 
@@ -23,6 +23,7 @@ const schema = z.object({
   markManualPaid: z.boolean().optional(),
   rejectManualPayment: z.boolean().optional(),
   cancelByUser: z.boolean().optional(),
+  hideFromHistory: z.boolean().optional(),
   paymentMethodId: z.string().optional(),
   paymentMethodType: z.nativeEnum(PaymentMethodType).optional(),
 })
@@ -228,6 +229,23 @@ export async function PATCH(
     })
 
     if (!order) return NextResponse.json({ error: "Not found" }, { status: 404 })
+
+    // Removing an order from your own history is not a deletion: the record
+    // stays for the shop, the buyer just stops seeing it.
+    if (payload.hideFromHistory) {
+      if (order.createdById !== user.id) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+      }
+      if (order.status !== "CLOSED" && order.status !== "CANCELLED") {
+        throw failure("ORDER_STATE", locale, "orderDetail.hideOnlyFinished")
+      }
+
+      await prisma.order.update({
+        where: { id },
+        data: { hiddenByBuyerAt: new Date() },
+      })
+      return NextResponse.json({ ok: true })
+    }
 
     if (payload.refreshCryptoInvoice) {
       if (user.role !== "ADMIN" && order.createdById !== user.id) {

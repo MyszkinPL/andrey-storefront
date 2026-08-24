@@ -1,6 +1,6 @@
 "use client"
 
-import { Fragment, useMemo, useState } from "react"
+import { Fragment, useEffect, useMemo, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { KeyRound, PackageSearch, ShoppingBag } from "lucide-react"
@@ -39,7 +39,7 @@ import { BackButton } from "@/components/back-button"
 import { Screen, ScreenBody, ScreenState } from "@/components/screen"
 import { useHaptic } from "@/hooks/use-telegram"
 import { useI18n, useTranslate } from "@/components/i18n-provider"
-import { createOrder, getPaymentMethods, getProduct } from "@/lib/api"
+import { createOrder, getPaymentMethods, getProduct, recordProductView } from "@/lib/api"
 import { formatPrice } from "@/lib/format"
 
 export function ProductScreen({ productId }: { productId: string }) {
@@ -53,6 +53,15 @@ export function ProductScreen({ productId }: { productId: string }) {
     queryKey: ["product", productId],
     queryFn: () => getProduct(productId),
   })
+
+  // One view per card open, not per render: React Strict Mode mounts effects
+  // twice in development and would otherwise double every number.
+  const viewedProductId = useRef<string | null>(null)
+  useEffect(() => {
+    if (viewedProductId.current === productId) return
+    viewedProductId.current = productId
+    void recordProductView(productId)
+  }, [productId])
   const { data: paymentData } = useQuery({
     queryKey: ["payment-methods"],
     queryFn: getPaymentMethods,
@@ -69,7 +78,8 @@ export function ProductScreen({ productId }: { productId: string }) {
         type: "MANUAL" as const,
         id: method.id,
         title: method.title,
-        subtitle: method.details,
+        // The requisites arrive with the order; the menu only names the method.
+        subtitle: method.details ?? t("product.requisitesLater"),
         iconUrl: method.iconUrl,
       })),
       ...(paymentData?.cryptoPay.enabled

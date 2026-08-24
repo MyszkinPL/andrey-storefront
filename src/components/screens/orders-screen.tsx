@@ -1,11 +1,11 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { useQuery } from "@tanstack/react-query"
-import { ExternalLink, Receipt } from "lucide-react"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { LifeBuoy, Receipt, Trash2 } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
-import { buttonVariants } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import {
   Empty,
@@ -15,10 +15,13 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty"
 import { ListGroup, ListRow, ListRowMedia, ListSkeleton } from "@/components/list-row"
+import { ProfileAvatarLink } from "@/components/profile-avatar-link"
+import { ResponsiveDialog } from "@/components/responsive-dialog"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Screen, ScreenBody, ScreenError, ScreenHeader } from "@/components/screen"
 import { useI18n } from "@/components/i18n-provider"
-import { getMe, getOrders } from "@/lib/api"
+import { clearOrderHistory, getMe, getOrders } from "@/lib/api"
+import { useNotify } from "@/hooks/use-notify"
 import { useRelativeTime } from "@/hooks/use-relative-time"
 import { orderBadgeVariant, orderStatusKey } from "@/lib/order-status"
 
@@ -33,6 +36,18 @@ export function OrdersScreen() {
   })
   const { data: meData } = useQuery({ queryKey: ["me"], queryFn: getMe })
   const [filter, setFilter] = useState<FilterKey>("all")
+  const [isClearOpen, setIsClearOpen] = useState(false)
+  const queryClient = useQueryClient()
+  const notify = useNotify()
+  const clearMutation = useMutation({
+    mutationFn: clearOrderHistory,
+    onSuccess: async () => {
+      setIsClearOpen(false)
+      notify.success("orders.clearHistoryDone")
+      await queryClient.invalidateQueries({ queryKey: ["orders"] })
+    },
+    onError: notify.failure,
+  })
   const supportLink = meData?.settings.supportUsername
     ? `https://t.me/${meData.settings.supportUsername.replace(/^@/, "")}`
     : null
@@ -70,17 +85,23 @@ export function OrdersScreen() {
           waiting: buckets.waiting.length,
         })}
         trailing={
-          supportLink ? (
-            <a
-              href={supportLink}
-              target="_blank"
-              rel="noreferrer"
-              className={buttonVariants({ size: "sm", variant: "secondary" })}
-            >
-              {t("orders.support")}
-              <ExternalLink data-icon="inline-end" />
-            </a>
-          ) : null
+          <div className="flex items-center gap-2">
+            {supportLink ? (
+              <a
+                aria-label={t("orders.support")}
+                className={buttonVariants({ size: "sm", variant: "secondary" })}
+                href={supportLink}
+                rel="noreferrer"
+                target="_blank"
+              >
+                <LifeBuoy data-icon="inline-start" />
+                {/* The label costs more width than it is worth next to the
+                    avatar on a narrow phone. */}
+                <span className="max-sm:hidden">{t("orders.support")}</span>
+              </a>
+            ) : null}
+            <ProfileAvatarLink />
+          </div>
         }
       />
 
@@ -111,6 +132,20 @@ export function OrdersScreen() {
               ))}
             </TabsList>
           </Tabs>
+
+          {/* Clearing is offered where the finished orders actually are. */}
+          {filter === "closed" && buckets.closed.length > 0 ? (
+            <div className="flex justify-end px-1">
+              <Button
+                onClick={() => setIsClearOpen(true)}
+                size="sm"
+                variant="destructive-outline"
+              >
+                <Trash2 data-icon="inline-start" />
+                {t("orders.clearHistoryAction")}
+              </Button>
+            </div>
+          ) : null}
 
           {visibleOrders.length === 0 ? (
             <OrdersEmpty title={t("orders.filterEmptyTitle")} description={t("orders.filterEmptyDescription")} />
@@ -144,6 +179,17 @@ export function OrdersScreen() {
           )}
         </ScreenBody>
       )}
+
+      <ResponsiveDialog
+        confirmLabel={t("orders.clearHistoryAction")}
+        confirmVariant="destructive"
+        description={t("orders.clearHistoryDescription")}
+        loading={clearMutation.isPending}
+        onConfirm={() => clearMutation.mutate()}
+        onOpenChange={setIsClearOpen}
+        open={isClearOpen}
+        title={t("orders.clearHistoryTitle")}
+      />
     </Screen>
   )
 }

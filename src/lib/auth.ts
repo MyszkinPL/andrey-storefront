@@ -29,7 +29,7 @@ export function bannedMessage(user: {
     : translate(locale, "auth.banned")
 }
 
-function parseAdminIds() {
+export function parseAdminIds() {
   return new Set(
     (process.env.ADMIN_TELEGRAM_IDS || "")
       .split(",")

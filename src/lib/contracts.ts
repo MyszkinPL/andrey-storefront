@@ -66,8 +66,17 @@ export type MeResponse = {
     cryptoPayUseTestnet?: boolean
     cryptoPayFiat?: string
     cryptoPayDefaultAssets?: string | null
+    requiredChannel?: string | null
     appUrl?: string
   }
+  /**
+   * Present only while the shop asks for a channel subscription the caller
+   * does not have. Absent means nothing is blocking them.
+   */
+  channelGate?: {
+    username: string
+    url: string
+  } | null
 }
 
 export type OrderSummary = {
@@ -145,7 +154,12 @@ export type PaymentMethodSummary = {
   id: string
   title: string
   type: PaymentMethodType
-  details: string
+  /**
+   * Card numbers and phone numbers, so only an admin gets them here. A buyer
+   * receives them inside their own order, where they are actually needed —
+   * the browse list used to hand every requisite to anyone who opened the app.
+   */
+  details: string | null
   iconUrl: string | null
   cryptoAcceptedAssets: string | null
   isActive: boolean
@@ -163,6 +177,32 @@ export type PaymentMethodsResponse = {
 }
 
 export type ReceiptUploadResponse = { receipt: OrderReceiptInfo }
+
+export type TopViewedProduct = {
+  id: string
+  title: string
+  views: number
+  viewers: number
+  orders: number
+}
+
+export type StatsResponse = {
+  stats: {
+    users: {
+      total: number
+      botStarted: number
+      activeLast7Days: number
+      newLast7Days: number
+      banned: number
+      admins: number
+    }
+    orders: { total: number; paid: number; openLast7Days: number; revenue: number }
+    products: { total: number; active: number; totalViews: number }
+    topViewed: TopViewedProduct[]
+  }
+}
+
+export type ClearedHistoryResponse = { cleared: number }
 
 export type OkResponse = { ok: true }
 export type CreatedOrderResponse = { orderId: string }

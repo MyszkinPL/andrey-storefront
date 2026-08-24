@@ -29,10 +29,12 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const scope = searchParams.get("scope")
   const limit = readLimit(searchParams)
+  // The shop keeps every order; a buyer only stops seeing the ones they
+  // removed from their own history.
   const where =
     user.role === "ADMIN" && scope === "all"
       ? {}
-      : { createdById: user.id }
+      : { createdById: user.id, hiddenByBuyerAt: null }
 
   // One extra row tells the client whether more exist without a count query.
   const rows = await prisma.order.findMany({

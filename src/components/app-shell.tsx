@@ -1,6 +1,7 @@
 "use client"
 
 import { BottomTabs } from "@/components/bottom-tabs"
+import { ChannelGate } from "@/components/channel-gate"
 import { ModeSwitcher } from "@/components/mode-switcher"
 import { SideNav } from "@/components/side-nav"
 
@@ -11,13 +12,15 @@ import { SideNav } from "@/components/side-nav"
  */
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="lg:flex lg:min-h-dvh">
-      <SideNav />
-      <div className="flex min-w-0 flex-1 flex-col">
-        <ModeSwitcher className="lg:hidden" />
-        {children}
-        <BottomTabs />
+    <ChannelGate>
+      <div className="lg:flex lg:min-h-dvh">
+        <SideNav />
+        <div className="flex min-w-0 flex-1 flex-col">
+          <ModeSwitcher className="lg:hidden" />
+          {children}
+          <BottomTabs />
+        </div>
       </div>
-    </div>
+    </ChannelGate>
   )
 }

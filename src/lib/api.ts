@@ -4,6 +4,7 @@ import type { ApiErrorCode } from "@/lib/api-error"
 import type { PaymentMethodType, OrderStatus } from "@prisma/client"
 
 import type {
+  ClearedHistoryResponse,
   CreatedOrderResponse,
   MeResponse,
   OkResponse,
@@ -13,6 +14,7 @@ import type {
   ProductListResponse,
   ProductResponse,
   ProductSpec,
+  StatsResponse,
   ProductKeyItem,
   ReceiptUploadResponse,
 } from "@/lib/contracts"
@@ -51,6 +53,7 @@ export type ShopSettingsPayload = {
   cryptoPayUseTestnet: boolean
   cryptoPayFiat: string
   cryptoPayDefaultAssets?: string
+  requiredChannel?: string
   paymentMethods: PaymentMethodInput[]
 }
 
@@ -191,6 +194,30 @@ export function cancelOwnOrder(id: string) {
     method: "PATCH",
     body: JSON.stringify({ cancelByUser: true }),
   })
+}
+
+export function getShopStats() {
+  return api<StatsResponse>("/api/admin/stats")
+}
+
+/** Counts a product card open. Fire-and-forget: never blocks the screen. */
+export function recordProductView(id: string) {
+  return api<OkResponse>(`/api/products/${id}/view`, { method: "POST" }).catch(
+    () => undefined,
+  )
+}
+
+/** Hides one finished order from the caller's own history. */
+export function hideOrderFromHistory(id: string) {
+  return api<OkResponse>(`/api/orders/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ hideFromHistory: true }),
+  })
+}
+
+/** Hides every finished order of the caller in one request. */
+export function clearOrderHistory() {
+  return api<ClearedHistoryResponse>("/api/orders/history", { method: "DELETE" })
 }
 
 export function deleteAdminOrder(id: string) {

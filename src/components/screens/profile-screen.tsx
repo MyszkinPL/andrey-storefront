@@ -46,6 +46,7 @@ export function ProfileScreen() {
   return (
     <Screen>
       <ScreenHeader
+        back="/catalog"
         title={meData?.user.firstName || t("profile.title")}
         subtitle={
           meData?.user.username
@@ -57,7 +58,7 @@ export function ProfileScreen() {
         trailing={
           <Avatar className="size-10">
             {meData?.user.photoUrl ? (
-              <AvatarImage src={meData.user.photoUrl} alt={meData.user.firstName} />
+              <AvatarImage alt={meData.user.firstName} src={meData.user.photoUrl} />
             ) : null}
             <AvatarFallback>{(meData?.user.firstName || "S").slice(0, 1)}</AvatarFallback>
           </Avatar>
@@ -130,7 +131,7 @@ export function ProfileScreen() {
                       key={method.id}
                       iconUrl={method.iconUrl}
                       title={method.title}
-                      subtitle={method.details}
+                      subtitle={method.details ?? t("product.requisitesLater")}
                     />
                   ))}
                   {hasCryptoPay ? (

@@ -11,6 +11,7 @@ import { getShopCurrency } from "@/lib/shop-settings"
 import { notifyManualPaymentRequested, notifyOrderCancelled } from "@/lib/order-notifications"
 import { orderStatusKey } from "@/lib/order-status"
 import { prisma } from "@/lib/prisma"
+import { recordProductView } from "@/lib/shop-stats"
 import { escapeHtml } from "@/lib/telegram-format"
 import { CAPTION_LIMIT, clamp, dataUrlToBuffer, type View } from "@/lib/bot-view"
 
@@ -80,7 +81,11 @@ export async function renderShopProduct(
   productId: string,
   t: TranslateFn,
   locale: Locale,
+  viewerId?: string,
 ): Promise<View> {
+  // The bot is a shopfront too, so its card opens belong in the same counter.
+  if (viewerId) await recordProductView(productId, viewerId).catch(() => {})
+
   const [product, methods, settings] = await Promise.all([
     prisma.product.findUnique({
       where: { id: productId },
@@ -203,7 +208,7 @@ export async function renderMyOrders(
   t: TranslateFn,
 ): Promise<View> {
   const orders = await prisma.order.findMany({
-    where: { createdById: userId },
+    where: { createdById: userId, hiddenByBuyerAt: null },
     orderBy: { updatedAt: "desc" },
     take: PAGE_SIZE,
     include: { product: true },
@@ -295,6 +300,10 @@ export async function renderMyOrder(
   if (!order.isPaid && !isClosed) {
     keyboard.text(t("shop.cancel"), `sk:${order.id}`).row()
   }
+  // Same rule as the mini app: only a finished order can leave the history.
+  if (isClosed) {
+    keyboard.text(t("shop.hideFromHistory"), `sx:${order.id}`).row()
+  }
   keyboard.text(t("bot.back"), "so")
 
   return { text: lines.join("\n"), keyboard }
@@ -344,4 +353,22 @@ export function renderProfile(user: BotUser, t: TranslateFn, locale: Locale): Vi
 
 export async function setUserLanguage(userId: string, language: Locale) {
   return prisma.user.update({ where: { id: userId }, data: { language } })
+}
+
+/**
+ * Drops a finished order from the buyer's own list. The order itself stays —
+ * the shop still needs the record if the payment is ever disputed.
+ */
+export async function hideOrderFromHistory(orderId: string, userId: string) {
+  const updated = await prisma.order.updateMany({
+    where: {
+      id: orderId,
+      createdById: userId,
+      hiddenByBuyerAt: null,
+      status: { in: [OrderStatus.CLOSED, OrderStatus.CANCELLED] },
+    },
+    data: { hiddenByBuyerAt: new Date() },
+  })
+
+  return updated.count > 0
 }

@@ -3,6 +3,7 @@ import { z } from "zod"
 
 import { requireAdmin } from "@/lib/auth"
 import { errorResponse } from "@/lib/api-error"
+import { normalizeChannel } from "@/lib/channel-gate"
 import { prisma } from "@/lib/prisma"
 
 const schema = z.object({
@@ -13,6 +14,7 @@ const schema = z.object({
   cryptoPayUseTestnet: z.boolean(),
   cryptoPayFiat: z.string().min(3).max(6),
   cryptoPayDefaultAssets: z.string().optional(),
+  requiredChannel: z.string().optional(),
   paymentMethods: z.array(
     z.object({
       id: z.string().optional(),
@@ -30,6 +32,8 @@ export async function POST(request: Request) {
   try {
     await requireAdmin()
     const payload = schema.parse(await request.json())
+    // Stored bare, so "@shop", "t.me/shop" and "shop" all mean one channel.
+    const requiredChannel = normalizeChannel(payload.requiredChannel)
     const paymentMethods = payload.paymentMethods.map((method) => ({
       ...method,
       details: method.details.trim(),
@@ -48,6 +52,7 @@ export async function POST(request: Request) {
           cryptoPayUseTestnet: payload.cryptoPayUseTestnet,
           cryptoPayFiat: payload.cryptoPayFiat.toUpperCase(),
           cryptoPayDefaultAssets: payload.cryptoPayDefaultAssets,
+          requiredChannel,
         },
         update: {
           shopName: payload.shopName,
@@ -57,6 +62,7 @@ export async function POST(request: Request) {
           cryptoPayUseTestnet: payload.cryptoPayUseTestnet,
           cryptoPayFiat: payload.cryptoPayFiat.toUpperCase(),
           cryptoPayDefaultAssets: payload.cryptoPayDefaultAssets,
+          requiredChannel,
         },
       })
 

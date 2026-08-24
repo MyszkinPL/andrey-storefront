@@ -100,7 +100,8 @@ export function AdminPaymentMethodEditorScreen({
     queueMicrotask(() => {
       if (methodId) {
         const method = paymentMethods.find((item) => item.id === methodId)
-        if (method) setDraft(method)
+        // details is null for a buyer, and this screen is admin-only.
+        if (method) setDraft({ ...method, details: method.details ?? "" })
       } else {
         setDraft(template ? templateMethod : emptyMethod)
       }
@@ -135,6 +136,7 @@ export function AdminPaymentMethodEditorScreen({
         cryptoPayDefaultAssets: meData.settings.cryptoPayDefaultAssets || "",
         paymentMethods: nextMethods.map((method) => ({
           ...method,
+          details: method.details ?? "",
           type: "MANUAL" as const,
         })),
       })

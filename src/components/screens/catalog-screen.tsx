@@ -5,7 +5,6 @@ import { useMemo, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { PackageSearch } from "lucide-react"
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Card, CardHeader } from "@/components/ui/card"
 import {
   Empty,
@@ -18,6 +17,7 @@ import { Frame, FrameDescription, FramePanel, FrameTitle } from "@/components/ui
 import { SearchInput } from "@/components/search-input"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ListSkeleton } from "@/components/list-row"
+import { ProfileAvatarLink } from "@/components/profile-avatar-link"
 import { Screen, ScreenBody, ScreenError, ScreenHeader } from "@/components/screen"
 import { ShopLogo } from "@/components/shop-logo"
 import { useI18n } from "@/components/i18n-provider"
@@ -72,14 +72,7 @@ export function CatalogScreen() {
       <ScreenHeader
         before={<ShopLogo className="lg:h-8" />}
         title={shopName}
-        trailing={
-          <Avatar className="size-10">
-            {meData?.user.photoUrl ? (
-              <AvatarImage src={meData.user.photoUrl} alt={meData.user.firstName} />
-            ) : null}
-            <AvatarFallback>{(meData?.user.firstName || "S").slice(0, 1)}</AvatarFallback>
-          </Avatar>
-        }
+        trailing={<ProfileAvatarLink />}
       />
 
       <ScreenBody>

@@ -9,11 +9,12 @@ import { prisma } from "@/lib/prisma"
 
 export async function GET() {
   const user = await getCurrentUser()
+  const isAdmin = user?.role === "ADMIN"
   const [paymentMethods, settings] = await Promise.all([
     prisma.paymentMethod.findMany({
       where: {
         type: "MANUAL",
-        ...(user?.role === "ADMIN" ? {} : { isActive: true }),
+        ...(isAdmin ? {} : { isActive: true }),
       },
       orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
       select: {
@@ -33,6 +34,8 @@ export async function GET() {
   return NextResponse.json({
     paymentMethods: paymentMethods.map((method) => ({
       ...method,
+      // Requisites are handed out with an order, not with the menu.
+      details: isAdmin ? method.details : null,
       iconUrl: mediaUrl("payment-method", method.id, method.iconUpdatedAt),
     })),
     cryptoPay: {
