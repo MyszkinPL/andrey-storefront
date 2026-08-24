@@ -13,9 +13,9 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty"
-import { ListGroup, ListRow, ListRowMedia } from "@/components/list-row"
+import { ListGroup, ListRow, ListRowMedia, ListSkeleton } from "@/components/list-row"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
+import { Screen, ScreenBody, ScreenError, ScreenHeader } from "@/components/screen"
 import { useI18n } from "@/components/i18n-provider"
 import type { TranslationKey } from "@/lib/i18n"
 import { getMe, getOrders } from "@/lib/api"
@@ -28,7 +28,7 @@ export function AdminOrdersScreen() {
   const { t } = useI18n()
   const formatRelative = useRelativeTime()
   const { data: meData } = useQuery({ queryKey: ["me"], queryFn: getMe })
-  const { data, isLoading, isError } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["orders", "all"],
     queryFn: () => getOrders({ scope: "all" }),
     refetchInterval: 10_000,
@@ -66,14 +66,12 @@ export function AdminOrdersScreen() {
       <ScreenHeader title={t("admin.ordersTitle")} subtitle={t("admin.ordersSubtitle")} />
 
       {isLoading ? (
-        <OrdersEmpty
-          title={t("admin.ordersLoadingTitle")}
-          description={t("admin.ordersLoadingDescription")}
-        />
-      ) : isError ? (
-        <OrdersEmpty
+        <ListSkeleton className="lg:grid lg:grid-cols-2" />
+      ) : isError && !data ? (
+        <ScreenError
+          onRetry={() => refetch()}
+          subtitle={t("admin.ordersErrorDescription")}
           title={t("admin.ordersErrorTitle")}
-          description={t("admin.ordersErrorDescription")}
         />
       ) : orders.length === 0 ? (
         <OrdersEmpty

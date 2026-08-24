@@ -9,6 +9,7 @@ export const en: Widen<typeof ru> = {
   common: {
     back: "Back",
     cancel: "Cancel",
+    clear: "Clear",
     close: "Close",
     copied: "Copied",
     copy: "Copy",
@@ -122,6 +123,8 @@ export const en: Widen<typeof ru> = {
     filterHistory: "History",
   },
   product: {
+    errorTitle: "The product did not open",
+    errorDescription: "It may have been removed. Try again or go back to the catalog.",
     loading: "Loading product",
     autoDelivery: "Instant delivery",
     manualDelivery: "Manual delivery",
@@ -254,6 +257,11 @@ export const en: Widen<typeof ru> = {
     title: "Products",
     subtitle: "{count} in the catalog",
     new: "New",
+    searchPlaceholder: "Search by title or category",
+    noMatchTitle: "Nothing matched",
+    noMatchDescription: "Try another title or category.",
+    errorTitle: "The catalog did not load",
+    errorDescription: "Check the connection and try again.",
     emptyTitle: "No products yet",
     emptyDescription: "Create the first product card.",
     create: "Create product",

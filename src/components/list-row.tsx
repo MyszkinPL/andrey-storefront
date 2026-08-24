@@ -6,6 +6,7 @@ import {
   FramePanel,
   FrameTitle,
 } from "@/components/ui/frame"
+import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
 
 /**
@@ -96,5 +97,46 @@ export function ListRowMedia({
     >
       {children}
     </div>
+  )
+}
+
+/**
+ * Loading placeholder shaped like the rows it replaces. Every list used to show
+ * the same "nothing here" card while fetching, which reads as an empty result
+ * and makes the layout jump once data lands.
+ */
+export function ListSkeleton({
+  className,
+  media = true,
+  mediaClassName,
+  rows = 4,
+  trailing = true,
+}: {
+  className?: string
+  media?: boolean
+  /** Match the real row's media box so the layout does not jump. */
+  mediaClassName?: string
+  rows?: number
+  trailing?: boolean
+}) {
+  // Fixed widths rather than random ones: a skeleton has to render the same on
+  // the server and the client, and the variation only needs to look organic.
+  const widths = ["w-2/5", "w-1/2", "w-1/3", "w-2/5", "w-5/12"]
+
+  return (
+    <ListGroup aria-hidden="true" className={className}>
+      {Array.from({ length: rows }, (_, index) => (
+        <FramePanel className="flex h-full items-center gap-3 p-3" key={index}>
+          {media ? (
+            <Skeleton className={cn("size-10 shrink-0 rounded-xl", mediaClassName)} />
+          ) : null}
+          <div className="flex min-w-0 flex-1 flex-col gap-2">
+            <Skeleton className={cn("h-3.5 max-w-40", widths[index % widths.length])} />
+            <Skeleton className="h-3 w-3/5 max-w-56" />
+          </div>
+          {trailing ? <Skeleton className="h-5 w-16 shrink-0 rounded-full" /> : null}
+        </FramePanel>
+      ))}
+    </ListGroup>
   )
 }

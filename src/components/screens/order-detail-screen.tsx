@@ -10,7 +10,6 @@ import { ExternalLink } from "lucide-react"
 import { AdminOrderPanel } from "@/components/order-detail/admin-panel"
 import { ConfirmDeleteDialog } from "@/components/order-detail/confirm-delete-dialog"
 import { CopyField } from "@/components/order-detail/copy-field"
-import { OrderState } from "@/components/order-detail/order-state"
 import { OrderReceipt } from "@/components/order-detail/order-summary"
 import {
   PaymentMethodSelector,
@@ -43,7 +42,7 @@ import {
   FieldTitle,
 } from "@/components/ui/field"
 import { BackButton } from "@/components/back-button"
-import { Screen, ScreenBody } from "@/components/screen"
+import { Screen, ScreenBody, ScreenState } from "@/components/screen"
 import { useMode } from "@/components/mode-provider"
 import {
   cancelOwnOrder,
@@ -74,7 +73,7 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
     queryKey: ["payment-methods"],
     queryFn: getPaymentMethods,
   })
-  const { data, isLoading, isError } = useQuery({
+  const { data, isLoading, refetch } = useQuery({
     queryKey: ["order", orderId],
     queryFn: () => getOrder(orderId),
     refetchInterval: 10_000,
@@ -179,20 +178,25 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
       : []),
   ]
 
+  const listHref = mode === "admin" ? "/admin/orders" : "/orders"
+
   if (isLoading) {
     return (
-      <OrderState
-        title={t("orderDetail.loadingTitle")}
+      <ScreenState
+        back={listHref}
         description={t("orderDetail.loadingDescription")}
+        title={t("orderDetail.loadingTitle")}
       />
     )
   }
 
-  if (isError || !data?.order) {
+  if (!data?.order) {
     return (
-      <OrderState
-        title={t("orderDetail.errorTitle")}
+      <ScreenState
+        back={listHref}
         description={t("orderDetail.errorDescription")}
+        onRetry={() => refetch()}
+        title={t("orderDetail.errorTitle")}
       />
     )
   }
@@ -273,7 +277,7 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
       <ScreenBody className="mx-auto w-full max-w-2xl flex-1">
         <BackButton
           className="-ms-1 self-start"
-          href={adminToolsVisible ? "/admin/orders" : "/orders"}
+          href={listHref}
         />
         {adminToolsVisible ? (
           <AdminOrderPanel

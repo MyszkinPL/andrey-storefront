@@ -2,6 +2,7 @@ export const ru = {
   common: {
     back: "Назад",
     cancel: "Отмена",
+    clear: "Очистить",
     close: "Закрыть",
     copied: "Готово",
     copy: "Копировать",
@@ -115,6 +116,8 @@ export const ru = {
     filterHistory: "История",
   },
   product: {
+    errorTitle: "Товар не открылся",
+    errorDescription: "Возможно, его сняли с продажи. Попробуй ещё раз или вернись в каталог.",
     loading: "Загружаю товар",
     autoDelivery: "Автовыдача",
     manualDelivery: "Ручная выдача",
@@ -247,6 +250,11 @@ export const ru = {
     title: "Товары",
     subtitle: "{count} в каталоге",
     new: "Новый",
+    searchPlaceholder: "Поиск по названию или категории",
+    noMatchTitle: "Ничего не нашлось",
+    noMatchDescription: "Попробуй другое название или категорию.",
+    errorTitle: "Каталог не загрузился",
+    errorDescription: "Проверь соединение и попробуй ещё раз.",
     emptyTitle: "Товаров пока нет",
     emptyDescription: "Создай первую карточку магазина.",
     create: "Создать товар",

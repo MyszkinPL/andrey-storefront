@@ -14,14 +14,19 @@ import {
 } from "@/components/ui/empty"
 import { Field, FieldDescription, FieldTitle } from "@/components/ui/field"
 import { ListGroup, ListRow, ListRowMedia } from "@/components/list-row"
-import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
+import { Screen, ScreenBody, ScreenError, ScreenHeader } from "@/components/screen"
 import { LanguageSwitcher } from "@/components/language-switcher"
 import { useTranslate } from "@/components/i18n-provider"
 import { getMe, getPaymentMethods } from "@/lib/api"
 
 export function ProfileScreen() {
   const t = useTranslate()
-  const { data: meData, isLoading: isLoadingMe, isError: isErrorMe } = useQuery({
+  const {
+    data: meData,
+    isLoading: isLoadingMe,
+    isError: isErrorMe,
+    refetch: refetchMe,
+  } = useQuery({
     queryKey: ["me"],
     queryFn: getMe,
   })
@@ -29,6 +34,7 @@ export function ProfileScreen() {
     data: paymentData,
     isLoading: isLoadingPayments,
     isError: isErrorPayments,
+    refetch: refetchPayments,
   } = useQuery({
     queryKey: ["payment-methods"],
     queryFn: getPaymentMethods,
@@ -65,9 +71,13 @@ export function ProfileScreen() {
             description={t("profile.loadingDescription")}
           />
         ) : isErrorMe || isErrorPayments ? (
-          <ProfileEmpty
+          <ScreenError
+            onRetry={() => {
+              refetchMe()
+              refetchPayments()
+            }}
+            subtitle={t("profile.errorDescription")}
             title={t("profile.errorTitle")}
-            description={t("profile.errorDescription")}
           />
         ) : (
           <>

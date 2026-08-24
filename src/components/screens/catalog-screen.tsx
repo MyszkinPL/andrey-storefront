@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { useMemo, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
-import { PackageSearch, Search } from "lucide-react"
+import { PackageSearch } from "lucide-react"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Card, CardHeader } from "@/components/ui/card"
@@ -15,9 +15,10 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty"
 import { Frame, FrameDescription, FramePanel, FrameTitle } from "@/components/ui/frame"
-import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group"
+import { SearchInput } from "@/components/search-input"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
+import { ListSkeleton } from "@/components/list-row"
+import { Screen, ScreenBody, ScreenError, ScreenHeader } from "@/components/screen"
 import { ShopLogo } from "@/components/shop-logo"
 import { useI18n } from "@/components/i18n-provider"
 import { getMe, getProducts } from "@/lib/api"
@@ -31,7 +32,7 @@ const ALL_CATEGORIES = "__all__"
 
 export function CatalogScreen() {
   const { t, tp, locale, currency } = useI18n()
-  const { data: productsData, isLoading, isError } = useQuery({
+  const { data: productsData, isLoading, isError, refetch } = useQuery({
     queryKey: ["products"],
     queryFn: getProducts,
   })
@@ -69,7 +70,7 @@ export function CatalogScreen() {
   return (
     <Screen>
       <ScreenHeader
-        before={<ShopLogo />}
+        before={<ShopLogo className="lg:h-8" />}
         title={shopName}
         trailing={
           <Avatar className="size-10">
@@ -83,30 +84,27 @@ export function CatalogScreen() {
 
       <ScreenBody>
         {isLoading ? (
-          <CatalogEmpty
-            title={t("catalog.loadingTitle")}
-            description={t("catalog.loadingDescription")}
+          <ListSkeleton
+            className="lg:grid lg:grid-cols-2 xl:grid-cols-3"
+            mediaClassName="size-16 sm:size-20"
+            trailing={false}
           />
-        ) : isError ? (
-          <CatalogEmpty
+        ) : isError && !productsData ? (
+          <ScreenError
+            onRetry={() => refetch()}
+            subtitle={t("catalog.errorDescription")}
             title={t("catalog.errorTitle")}
-            description={t("catalog.errorDescription")}
           />
         ) : (
           <>
             {/* Search and categories stack on phones and share a row on desktop. */}
             <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:gap-3">
-            <InputGroup className="lg:max-w-xs">
-              <InputGroupAddon>
-                <Search />
-              </InputGroupAddon>
-              <InputGroupInput
-                aria-label={t("catalog.searchPlaceholder")}
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder={t("catalog.searchPlaceholder")}
-              />
-            </InputGroup>
+            <SearchInput
+              className="lg:max-w-xs"
+              onValueChange={setSearch}
+              placeholder={t("catalog.searchPlaceholder")}
+              value={search}
+            />
 
             {/* Tabs rather than a toggle group: exactly one category is always
                 active, so the catalog can never end up filtered to nothing.

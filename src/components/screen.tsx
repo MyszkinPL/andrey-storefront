@@ -1,5 +1,11 @@
+"use client"
+
+import { CircleDashed, RotateCw, TriangleAlert } from "lucide-react"
+
+import { Button } from "@/components/ui/button"
 import {
   Empty,
+  EmptyContent,
   EmptyDescription,
   EmptyHeader,
   EmptyMedia,
@@ -12,6 +18,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { BackButton } from "@/components/back-button"
+import { useTranslate } from "@/components/i18n-provider"
 import { cn } from "@/lib/utils"
 
 export function Screen({
@@ -84,10 +91,12 @@ export function ScreenBody({
 }
 
 export function ScreenEmpty({
+  action,
   icon,
   title,
   subtitle,
 }: {
+  action?: React.ReactNode
   icon: React.ReactNode
   title: string
   subtitle?: string
@@ -101,8 +110,81 @@ export function ScreenEmpty({
             <EmptyTitle>{title}</EmptyTitle>
             {subtitle ? <EmptyDescription>{subtitle}</EmptyDescription> : null}
           </EmptyHeader>
+          {action ? <EmptyContent>{action}</EmptyContent> : null}
         </Empty>
       </CardContent>
     </Card>
+  )
+}
+
+/**
+ * A failed fetch used to look exactly like an empty list, and offered no way
+ * out short of restarting the app. It gets its own icon and a retry button.
+ */
+export function ScreenError({
+  onRetry,
+  title,
+  subtitle,
+}: {
+  onRetry?: () => void
+  title: string
+  subtitle?: string
+}) {
+  const t = useTranslate()
+
+  return (
+    <ScreenEmpty
+      action={
+        onRetry ? (
+          <Button onClick={onRetry} variant="outline">
+            <RotateCw data-icon="inline-start" />
+            {t("common.retry")}
+          </Button>
+        ) : undefined
+      }
+      icon={<TriangleAlert />}
+      subtitle={subtitle}
+      title={title}
+    />
+  )
+}
+
+/**
+ * Whole-screen placeholder for a detail route with nothing to show yet. It
+ * keeps the back control, because a screen that failed to load is otherwise a
+ * dead end when it was opened straight from a bot link.
+ */
+export function ScreenState({
+  back,
+  description,
+  icon,
+  onRetry,
+  title,
+}: {
+  back?: boolean | string
+  description?: string
+  icon?: React.ReactNode
+  /** Renders a retry button and switches the icon to the failure one. */
+  onRetry?: () => void
+  title: string
+}) {
+  return (
+    <Screen noTabBar>
+      {back ? (
+        <BackButton
+          className="-ms-1 mb-2 self-start"
+          href={typeof back === "string" ? back : undefined}
+        />
+      ) : null}
+      {onRetry ? (
+        <ScreenError onRetry={onRetry} subtitle={description} title={title} />
+      ) : (
+        <ScreenEmpty
+          icon={icon ?? <CircleDashed />}
+          subtitle={description}
+          title={title}
+        />
+      )}
+    </Screen>
   )
 }

@@ -29,7 +29,7 @@ import {
   FieldLabel,
 } from "@/components/ui/field"
 import { ListGroup, ListRow, ListRowMedia } from "@/components/list-row"
-import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
+import { Screen, ScreenBody, ScreenHeader, ScreenState } from "@/components/screen"
 import { useI18n } from "@/components/i18n-provider"
 import { ResponsiveDialog } from "@/components/responsive-dialog"
 import { useNotify } from "@/hooks/use-notify"
@@ -45,7 +45,7 @@ export function AdminUserDetailScreen({ userId }: { userId: string }) {
   const [confirmRole, setConfirmRole] = useState<"USER" | "ADMIN" | null>(null)
 
   const { data: meData } = useQuery({ queryKey: ["me"], queryFn: getMe })
-  const { data, isLoading, isError } = useQuery({
+  const { data, isLoading, refetch } = useQuery({
     queryKey: ["admin-user", userId],
     queryFn: () => getAdminUser(userId),
     refetchInterval: 10_000,
@@ -84,18 +84,21 @@ export function AdminUserDetailScreen({ userId }: { userId: string }) {
 
   if (isLoading) {
     return (
-      <UserState
-        title={t("adminUserDetail.loadingTitle")}
+      <ScreenState
+        back="/admin/users"
         description={t("adminUserDetail.loadingDescription")}
+        title={t("adminUserDetail.loadingTitle")}
       />
     )
   }
 
-  if (isError || !data?.user) {
+  if (!data?.user) {
     return (
-      <UserState
-        title={t("adminUserDetail.errorTitle")}
+      <ScreenState
+        back="/admin/users"
         description={t("adminUserDetail.errorDescription")}
+        onRetry={() => refetch()}
+        title={t("adminUserDetail.errorTitle")}
       />
     )
   }
@@ -281,22 +284,6 @@ export function AdminUserDetailScreen({ userId }: { userId: string }) {
   )
 }
 
-function UserState({ title, description }: { title: string; description: string }) {
-  return (
-    <Screen noTabBar>
-      <Card>
-        <CardContent>
-          <Empty>
-            <EmptyHeader>
-              <EmptyTitle>{title}</EmptyTitle>
-              <EmptyDescription>{description}</EmptyDescription>
-            </EmptyHeader>
-          </Empty>
-        </CardContent>
-      </Card>
-    </Screen>
-  )
-}
 
 function orderStatusKey2(status: string, isPaid: boolean): TranslationKey {
   if (status === "CANCELLED") return "adminUserDetail.statusCancelled"

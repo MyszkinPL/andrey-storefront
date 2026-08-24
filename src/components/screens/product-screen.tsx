@@ -17,12 +17,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import {
-  Empty,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@/components/ui/empty"
+import { Empty, EmptyMedia } from "@/components/ui/empty"
 import {
   Field,
   FieldContent,
@@ -41,7 +36,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { BackButton } from "@/components/back-button"
-import { Screen, ScreenBody } from "@/components/screen"
+import { Screen, ScreenBody, ScreenState } from "@/components/screen"
 import { useHaptic } from "@/hooks/use-telegram"
 import { useI18n, useTranslate } from "@/components/i18n-provider"
 import { createOrder, getPaymentMethods, getProduct } from "@/lib/api"
@@ -54,7 +49,7 @@ export function ProductScreen({ productId }: { productId: string }) {
   const haptic = useHaptic()
   const [selectedPaymentKey, setSelectedPaymentKey] = useState("")
 
-  const { data } = useQuery({
+  const { data, isLoading, refetch } = useQuery({
     queryKey: ["product", productId],
     queryFn: () => getProduct(productId),
   })
@@ -118,22 +113,20 @@ export function ProductScreen({ productId }: { productId: string }) {
   })
 
 
+  // A missing product used to sit on "loading" forever with no way back: the
+  // branch could not tell a pending request from a deleted or wrong id.
+  if (isLoading) {
+    return <ScreenState back="/catalog" title={t("product.loading")} />
+  }
+
   if (!data?.product) {
     return (
-      <Screen noTabBar>
-        <Card>
-          <CardContent>
-            <Empty>
-              <EmptyMedia variant="icon">
-                <PackageSearch />
-              </EmptyMedia>
-              <EmptyHeader>
-                <EmptyTitle>{t("product.loading")}</EmptyTitle>
-              </EmptyHeader>
-            </Empty>
-          </CardContent>
-        </Card>
-      </Screen>
+      <ScreenState
+        back="/catalog"
+        description={t("product.errorDescription")}
+        onRetry={() => refetch()}
+        title={t("product.errorTitle")}
+      />
     )
   }
 

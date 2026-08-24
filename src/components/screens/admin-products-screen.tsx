@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { useMemo, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { CopyPlus, ImagePlus, PackagePlus, PencilLine, Trash2 } from "lucide-react"
+import { CopyPlus, ImagePlus, PackagePlus, PackageSearch, PencilLine, Trash2 } from "lucide-react"
 
 import { AccessStateScreen } from "@/components/access-state-screen"
 import { Badge } from "@/components/ui/badge"
@@ -16,8 +16,9 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty"
-import { ListGroup, ListRow, ListRowMedia } from "@/components/list-row"
-import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
+import { ListGroup, ListRow, ListRowMedia, ListSkeleton } from "@/components/list-row"
+import { SearchInput } from "@/components/search-input"
+import { Screen, ScreenBody, ScreenEmpty, ScreenError, ScreenHeader } from "@/components/screen"
 import { useI18n } from "@/components/i18n-provider"
 import { ResponsiveDialog } from "@/components/responsive-dialog"
 import { deleteAdminProduct, getMe, getProducts } from "@/lib/api"
@@ -29,9 +30,22 @@ export function AdminProductsScreen() {
   const { t, tp, locale, currency } = useI18n()
   const queryClient = useQueryClient()
   const [deleteProduct, setDeleteProduct] = useState<AdminProduct | null>(null)
+  const [search, setSearch] = useState("")
   const { data: meData } = useQuery({ queryKey: ["me"], queryFn: getMe })
-  const { data } = useQuery({ queryKey: ["products"], queryFn: getProducts })
-  const products = useMemo(() => data?.products ?? [], [data?.products])
+  const { data, isError, isLoading, refetch } = useQuery({
+    queryKey: ["products"],
+    queryFn: getProducts,
+  })
+  const allProducts = useMemo(() => data?.products ?? [], [data?.products])
+  // The buyer catalog has always been searchable; the admin list it mirrors
+  // was the one place you had to scroll to find a product.
+  const products = useMemo(() => {
+    const query = search.trim().toLowerCase()
+    if (!query) return allProducts
+    return allProducts.filter((product) =>
+      `${product.title} ${product.category || ""}`.toLowerCase().includes(query),
+    )
+  }, [allProducts, search])
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteAdminProduct(id),
     onSuccess: async () => {
@@ -53,7 +67,7 @@ export function AdminProductsScreen() {
     <Screen>
       <ScreenHeader
         title={t("adminProducts.title")}
-        subtitle={t("adminProducts.subtitle", { count: products.length })}
+        subtitle={t("adminProducts.subtitle", { count: allProducts.length })}
         trailing={
           <Link href="/admin/products/new" className={buttonVariants({ size: "sm" })}>
             <PackagePlus data-icon="inline-start" />
@@ -63,7 +77,18 @@ export function AdminProductsScreen() {
       />
 
       <ScreenBody>
-        {products.length === 0 ? (
+        {/* Without these two branches an unfinished or failed request rendered
+            the "no products yet" card, which told the admin their catalog was
+            empty when it was only unread. */}
+        {isLoading ? (
+          <ListSkeleton className="lg:grid lg:grid-cols-2" />
+        ) : isError && !data ? (
+          <ScreenError
+            onRetry={() => refetch()}
+            subtitle={t("adminProducts.errorDescription")}
+            title={t("adminProducts.errorTitle")}
+          />
+        ) : allProducts.length === 0 ? (
           <Card>
             <CardContent>
               <Empty>
@@ -81,6 +106,23 @@ export function AdminProductsScreen() {
             </CardContent>
           </Card>
         ) : (
+          <>
+            {allProducts.length > 4 ? (
+              <SearchInput
+                className="lg:max-w-xs"
+                onValueChange={setSearch}
+                placeholder={t("adminProducts.searchPlaceholder")}
+                value={search}
+              />
+            ) : null}
+
+            {products.length === 0 ? (
+              <ScreenEmpty
+                icon={<PackageSearch />}
+                subtitle={t("adminProducts.noMatchDescription")}
+                title={t("adminProducts.noMatchTitle")}
+              />
+            ) : (
           <ListGroup className="lg:grid lg:grid-cols-2">
             {products.map((product) => (
               <ListRow
@@ -133,6 +175,8 @@ export function AdminProductsScreen() {
               />
             ))}
           </ListGroup>
+            )}
+          </>
         )}
       </ScreenBody>
 

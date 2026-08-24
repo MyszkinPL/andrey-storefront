@@ -38,7 +38,7 @@ import {
   InputGroupButton,
   InputGroupInput,
 } from "@/components/ui/input-group"
-import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
+import { Screen, ScreenBody, ScreenHeader, ScreenState } from "@/components/screen"
 import { getOrder } from "@/lib/api"
 
 type Order = Awaited<ReturnType<typeof getOrder>>["order"]
@@ -46,7 +46,7 @@ type Order = Awaited<ReturnType<typeof getOrder>>["order"]
 export function OrderCompleteScreen({ orderId }: { orderId: string }) {
   const { t, locale, currency } = useI18n()
   const [copied, setCopied] = useState(false)
-  const { data, isLoading, isError } = useQuery({
+  const { data, isLoading, refetch } = useQuery({
     queryKey: ["order", orderId],
     queryFn: () => getOrder(orderId),
     refetchInterval: 10_000,
@@ -61,18 +61,21 @@ export function OrderCompleteScreen({ orderId }: { orderId: string }) {
 
   if (isLoading) {
     return (
-      <CompleteState
-        title={t("orderComplete.loadingTitle")}
+      <ScreenState
+        back={`/orders/${orderId}`}
         description={t("orderComplete.loadingDescription")}
+        title={t("orderComplete.loadingTitle")}
       />
     )
   }
 
-  if (isError || !data?.order) {
+  if (!data?.order) {
     return (
-      <CompleteState
-        title={t("orderComplete.errorTitle")}
+      <ScreenState
+        back={`/orders/${orderId}`}
         description={t("orderComplete.errorDescription")}
+        onRetry={() => refetch()}
+        title={t("orderComplete.errorTitle")}
       />
     )
   }
@@ -188,22 +191,3 @@ function descriptionKey(order: Order): TranslationKey {
   return "orderComplete.descriptionAwaiting"
 }
 
-function CompleteState({ title, description }: { title: string; description: string }) {
-  return (
-    <Screen noTabBar>
-      <Card>
-        <CardContent>
-          <Empty>
-            <EmptyMedia variant="icon">
-              <CircleDashed />
-            </EmptyMedia>
-            <EmptyHeader>
-              <EmptyTitle>{title}</EmptyTitle>
-              <EmptyDescription>{description}</EmptyDescription>
-            </EmptyHeader>
-          </Empty>
-        </CardContent>
-      </Card>
-    </Screen>
-  )
-}

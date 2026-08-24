@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
-import { Search, ShieldCheck } from "lucide-react"
+import { ShieldCheck } from "lucide-react"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -15,10 +15,10 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty"
-import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group"
-import { ListGroup, ListRow } from "@/components/list-row"
+import { SearchInput } from "@/components/search-input"
+import { ListGroup, ListRow, ListSkeleton } from "@/components/list-row"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
+import { Screen, ScreenBody, ScreenError, ScreenHeader } from "@/components/screen"
 import { useI18n } from "@/components/i18n-provider"
 import { getAdminUsers, getMe } from "@/lib/api"
 
@@ -44,7 +44,7 @@ export function AdminUsersScreen() {
   const [filter, setFilter] = useState<"all" | "buyers" | "admins" | "banned">("all")
   const [page, setPage] = useState(1)
 
-  const { data, isLoading, isError } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["admin-users", search, filter, page],
     queryFn: () => getAdminUsers({ q: search, filter, page, limit: 30 }),
     refetchInterval: 10_000,
@@ -69,20 +69,14 @@ export function AdminUsersScreen() {
       />
 
       <ScreenBody>
-        <InputGroup>
-          <InputGroupAddon>
-            <Search />
-          </InputGroupAddon>
-          <InputGroupInput
-            value={search}
-            aria-label={t("adminUsers.searchPlaceholder")}
-              placeholder={t("adminUsers.searchPlaceholder")}
-            onChange={(event) => {
-              setSearch(event.target.value)
-              setPage(1)
-            }}
-          />
-        </InputGroup>
+        <SearchInput
+          onValueChange={(value) => {
+            setSearch(value)
+            setPage(1)
+          }}
+          placeholder={t("adminUsers.searchPlaceholder")}
+          value={search}
+        />
 
         <Tabs value={filter} onValueChange={(value) => {
           setFilter(value as typeof filter)
@@ -103,14 +97,12 @@ export function AdminUsersScreen() {
         </Tabs>
 
         {isLoading ? (
-          <UsersEmpty
-            title={t("adminUsers.loadingTitle")}
-            description={t("adminUsers.loadingDescription")}
-          />
-        ) : isError ? (
-          <UsersEmpty
+          <ListSkeleton className="lg:grid lg:grid-cols-2" trailing={false} />
+        ) : isError && !data ? (
+          <ScreenError
+            onRetry={() => refetch()}
+            subtitle={t("adminUsers.errorDescription")}
             title={t("adminUsers.errorTitle")}
-            description={t("adminUsers.errorDescription")}
           />
         ) : users.length === 0 ? (
           <UsersEmpty

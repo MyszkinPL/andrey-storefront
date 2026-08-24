@@ -18,26 +18,46 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty"
-import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
+import { Screen, ScreenBody, ScreenError, ScreenHeader } from "@/components/screen"
 import { useTranslate } from "@/components/i18n-provider"
 import { getAdminUsers, getMe, getOrders, getPaymentMethods, getProducts } from "@/lib/api"
 
 export function AdminOverviewScreen() {
   const t = useTranslate()
   const { data: meData } = useQuery({ queryKey: ["me"], queryFn: getMe })
-  const { data: productsData, isLoading: isLoadingProducts, isError: isErrorProducts } = useQuery({
+  const {
+    data: productsData,
+    isLoading: isLoadingProducts,
+    isError: isErrorProducts,
+    refetch: refetchProducts,
+  } = useQuery({
     queryKey: ["products"],
     queryFn: getProducts,
   })
-  const { data: ordersData, isLoading: isLoadingOrders, isError: isErrorOrders } = useQuery({
+  const {
+    data: ordersData,
+    isLoading: isLoadingOrders,
+    isError: isErrorOrders,
+    refetch: refetchOrders,
+  } = useQuery({
     queryKey: ["orders", "all"],
     queryFn: () => getOrders({ scope: "all" }),
   })
-  const { data: paymentData, isLoading: isLoadingPayments, isError: isErrorPayments } = useQuery({
+  const {
+    data: paymentData,
+    isLoading: isLoadingPayments,
+    isError: isErrorPayments,
+    refetch: refetchPayments,
+  } = useQuery({
     queryKey: ["payment-methods"],
     queryFn: getPaymentMethods,
   })
-  const { data: usersData, isLoading: isLoadingUsers, isError: isErrorUsers } = useQuery({
+  const {
+    data: usersData,
+    isLoading: isLoadingUsers,
+    isError: isErrorUsers,
+    refetch: refetchUsers,
+  } = useQuery({
     queryKey: ["admin-users"],
     queryFn: () => getAdminUsers(),
   })
@@ -95,9 +115,15 @@ export function AdminOverviewScreen() {
             description={t("admin.overviewLoadingDescription")}
           />
         ) : isErrorProducts || isErrorOrders || isErrorPayments || isErrorUsers ? (
-          <OverviewEmpty
+          <ScreenError
+            onRetry={() => {
+              refetchProducts()
+              refetchOrders()
+              refetchPayments()
+              refetchUsers()
+            }}
+            subtitle={t("admin.overviewErrorDescription")}
             title={t("admin.overviewErrorTitle")}
-            description={t("admin.overviewErrorDescription")}
           />
         ) : (
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">

@@ -14,9 +14,9 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty"
-import { ListGroup, ListRow, ListRowMedia } from "@/components/list-row"
+import { ListGroup, ListRow, ListRowMedia, ListSkeleton } from "@/components/list-row"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
+import { Screen, ScreenBody, ScreenError, ScreenHeader } from "@/components/screen"
 import { useI18n } from "@/components/i18n-provider"
 import { getMe, getOrders } from "@/lib/api"
 import { useRelativeTime } from "@/hooks/use-relative-time"
@@ -27,7 +27,7 @@ type FilterKey = "all" | "waiting" | "review" | "active" | "closed"
 export function OrdersScreen() {
   const { t } = useI18n()
   const formatRelative = useRelativeTime()
-  const { data: ordersData, isLoading, isError } = useQuery({
+  const { data: ordersData, isLoading, isError, refetch } = useQuery({
     queryKey: ["orders"],
     queryFn: () => getOrders(),
   })
@@ -85,9 +85,13 @@ export function OrdersScreen() {
       />
 
       {isLoading ? (
-        <OrdersEmpty title={t("orders.loadingTitle")} description={t("orders.loadingDescription")} />
-      ) : isError ? (
-        <OrdersEmpty title={t("orders.errorTitle")} description={t("orders.errorDescription")} />
+        <ListSkeleton className="lg:grid lg:grid-cols-2" />
+      ) : isError && !ordersData ? (
+        <ScreenError
+          onRetry={() => refetch()}
+          subtitle={t("orders.errorDescription")}
+          title={t("orders.errorTitle")}
+        />
       ) : orders.length === 0 ? (
         <OrdersEmpty title={t("orders.emptyTitle")} description={t("orders.emptyDescription")} />
       ) : (

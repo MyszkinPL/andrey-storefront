@@ -216,8 +216,16 @@ export function isLocalMockApiEnabled() {
   return process.env.NODE_ENV === "development" && typeof window !== "undefined"
 }
 
+/**
+ * The mock answered synchronously, so no loading state ever rendered in
+ * development — which is how a list screen shipped with no isLoading branch at
+ * all. A short delay makes skeletons and spinners visible while working.
+ */
+const MOCK_LATENCY_MS = 400
+
 export async function mockApi<T>(input: RequestInfo, init?: RequestInit): Promise<T> {
   hydrateMockState()
+  await new Promise((resolve) => window.setTimeout(resolve, MOCK_LATENCY_MS))
 
   const url = typeof input === "string" ? input : input.url
   const method = (init?.method || "GET").toUpperCase()
