@@ -31,7 +31,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
-import { useTranslate } from "@/components/i18n-provider"
+import { useI18n, useTranslate } from "@/components/i18n-provider"
 import { ResponsiveDialog } from "@/components/responsive-dialog"
 import { deleteAdminProduct, getMe, getProduct, getProducts, saveAdminProduct, updateAdminProduct } from "@/lib/api"
 import { optimizeSquareImage } from "@/lib/image"
@@ -80,7 +80,7 @@ export function AdminProductEditorScreen({
   productId?: string
   copyProductId?: string
 }) {
-  const t = useTranslate()
+  const { t, tp } = useI18n()
   const router = useRouter()
   const queryClient = useQueryClient()
   const [form, setForm] = useState<ProductForm>(emptyForm)
@@ -410,9 +410,7 @@ export function AdminProductEditorScreen({
                     {/* Base UI field parts need a Field.Root ancestor. */}
                     <Field>
                       <FieldDescription>
-                        {t("adminProductEditor.keysInStock", {
-                          count: visibleKeys.length,
-                        })}
+                        {tp("adminProductEditor.keysInStockCount", visibleKeys.length)}
                         {form.removeKeyIds.length > 0
                           ? t("adminProductEditor.pendingRemoval", {
                               count: form.removeKeyIds.length,

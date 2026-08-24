@@ -17,7 +17,6 @@ import { ListGroup, ListRow, ListRowMedia, ListSkeleton } from "@/components/lis
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Screen, ScreenBody, ScreenError, ScreenHeader } from "@/components/screen"
 import { useI18n } from "@/components/i18n-provider"
-import type { TranslationKey } from "@/lib/i18n"
 import { getMe, getOrders } from "@/lib/api"
 import { useRelativeTime } from "@/hooks/use-relative-time"
 import { orderBadgeVariant, orderStatusKey } from "@/lib/order-status"
@@ -105,11 +104,17 @@ export function AdminOrdersScreen() {
             <ListGroup className="lg:grid lg:grid-cols-2">
               {visibleOrders.map((order) => (
                 <ListRow
-                  description={`#${order.number}${
-                    order.productCategory ? ` · ${order.productCategory}` : ""
-                  }${
-                    order.paymentMethodTitle ? ` · ${order.paymentMethodTitle}` : ""
-                  } · ${t(summaryKey(order))} · ${formatRelative(order.updatedAt)}`}
+                  // The badge already names the state and the filter tabs
+                  // already group the work, so a sentence saying the same
+                  // thing only pushed the order number out of the row.
+                  description={[
+                    `#${order.number}`,
+                    order.productCategory,
+                    order.paymentMethodTitle,
+                    formatRelative(order.updatedAt),
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
                   href={`/orders/${order.id}`}
                   key={order.id}
                   media={
@@ -151,14 +156,3 @@ function OrdersEmpty({ title, description }: { title: string; description: strin
   )
 }
 
-
-function summaryKey(
-  order: Awaited<ReturnType<typeof getOrders>>["orders"][number],
-): TranslationKey {
-  if (order.status === "PAYMENT_REVIEW") return "admin.hintReview"
-  if (order.status === "CANCELLED") return "admin.hintCancelled"
-  if (order.status === "CLOSED" && !order.isPaid) return "admin.hintClosedUnpaid"
-  if (!order.isPaid) return "admin.hintAwaiting"
-  if (order.status === "CLOSED") return "admin.hintDone"
-  return "admin.hintNeedsDelivery"
-}

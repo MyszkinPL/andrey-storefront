@@ -47,7 +47,7 @@ import {
 import { Switch } from "@/components/ui/switch"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
-import { useTranslate } from "@/components/i18n-provider"
+import { useI18n } from "@/components/i18n-provider"
 import { useNotify } from "@/hooks/use-notify"
 import { getCryptoPayCurrencies, getMe, getPaymentMethods, saveSettings } from "@/lib/api"
 
@@ -58,7 +58,7 @@ const FALLBACK_FIATS = [
 ]
 
 export function AdminSettingsScreen() {
-  const t = useTranslate()
+  const { t, tp } = useI18n()
   const notify = useNotify()
   const queryClient = useQueryClient()
   const { data: meData } = useQuery({ queryKey: ["me"], queryFn: getMe })
@@ -314,7 +314,12 @@ export function AdminSettingsScreen() {
         <Card>
           <CardHeader>
             <CardTitle>{t("adminSettings.manualSection")}</CardTitle>
-            <CardDescription>{paymentMethods.length} всего · {activeCount} активных</CardDescription>
+            <CardDescription>
+              {[
+                tp("adminSettings.methodsTotal", paymentMethods.length),
+                tp("adminSettings.methodsActive", activeCount),
+              ].join(" · ")}
+            </CardDescription>
             <CardAction className="flex gap-2">
               <Link
                 href="/admin/settings/payments/new?template=bank"

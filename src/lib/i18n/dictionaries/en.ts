@@ -112,6 +112,18 @@ export const en: Widen<typeof ru> = {
     paid: "Paid",
   },
   orders: {
+    activeCount: {
+      one: "{count} active",
+      few: "{count} active",
+      many: "{count} active",
+      other: "{count} active",
+    },
+    waitingCount: {
+      one: "{count} awaiting payment",
+      few: "{count} awaiting payment",
+      many: "{count} awaiting payment",
+      other: "{count} awaiting payment",
+    },
     clearHistoryAction: "Clear history",
     clearHistoryTitle: "Clear history?",
     clearHistoryDescription:
@@ -136,6 +148,8 @@ export const en: Widen<typeof ru> = {
     filterHistory: "History",
   },
   product: {
+    noPaymentTitle: "Payment is unavailable right now",
+    noPaymentDescription: "The shop has no payment method connected yet. Message support and they will tell you when you can buy.",
     requisitesLater: "You get the details with your order",
     errorTitle: "The product did not open",
     errorDescription: "It may have been removed. Try again or go back to the catalog.",
@@ -178,6 +192,8 @@ export const en: Widen<typeof ru> = {
     descriptionAwaiting: "Go back to the order and finish the payment.",
   },
   orderDetail: {
+    paymentManualLabel: "Bank transfer",
+    paymentCryptoLabel: "Automatic Crypto Bot payment",
     hideTitle: "Remove from history?",
     hideDescription:
       "The order leaves your list. The shop keeps it, in case there is ever a dispute about payment or delivery.",
@@ -239,6 +255,8 @@ export const en: Widen<typeof ru> = {
     paymentMethodsHint: "Available when placing an order.",
   },
   admin: {
+    shopTitle: "Shop",
+    shopHint: "What is listed and in flight right now.",
     viewsCount: {
       one: "{count} view",
       few: "{count} views",
@@ -266,12 +284,12 @@ export const en: Widen<typeof ru> = {
     audienceHint: "Everyone who opened the shop or started the bot.",
     revenueHint: "Revenue · {paid} of {total} orders paid",
     topViewedTitle: "Most viewed",
-    topViewedHint: "Card opens in the app and the bot together.",
+    topViewedHint: "in the app and the bot together.",
     topViewedRow: "{views} views · {viewers} people · {orders} orders",
     topViewedEmpty: "No views yet",
     topViewedEmptyHint: "As soon as somebody opens a product card, it shows up here.",
     channelTitle: "Required subscription",
-    channelHint: "The shop stays shut until they join the channel. The bot has to be an admin there.",
+    channelHint: "The catalog and checkout open to subscribers only. Orders and support stay reachable either way. The bot has to be an admin there.",
     channelLabel: "Channel",
     channelPlaceholder: "@mychannel",
     deniedTitle: "Access denied",
@@ -500,6 +518,18 @@ export const en: Widen<typeof ru> = {
     keyLabel: "Key:",
   },
   adminSettings: {
+    methodsTotal: {
+      one: "{count} total",
+      few: "{count} total",
+      many: "{count} total",
+      other: "{count} total",
+    },
+    methodsActive: {
+      one: "{count} active",
+      few: "{count} active",
+      many: "{count} active",
+      other: "{count} active",
+    },
     deniedDescription: "Shop settings are available to admins only.",
     title: "Settings",
     subtitle: "Shop and payments",
@@ -527,6 +557,12 @@ export const en: Widen<typeof ru> = {
     noMethodsDescription: "Add SBP, a card or another manual method.",
   },
   adminUserDetail: {
+    orderHistoryRecent: {
+      one: "{count} recent order",
+      few: "{count} recent orders",
+      many: "{count} recent orders",
+      other: "{count} recent orders",
+    },
     deniedDescription: "The user card is available to admins only.",
     loadingTitle: "Loading user",
     loadingDescription: "Fetching profile and orders.",
@@ -583,6 +619,12 @@ export const en: Widen<typeof ru> = {
     removeMethod: "Delete method",
   },
   adminProductEditor: {
+    keysInStockCount: {
+      one: "{count} key in stock",
+      few: "{count} keys in stock",
+      many: "{count} keys in stock",
+      other: "{count} keys in stock",
+    },
     deniedDescription: "The product editor is available to admins only.",
     loadingTitle: "Loading product",
     loadingDescription: "Fetching the card and keys.",

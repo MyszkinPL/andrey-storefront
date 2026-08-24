@@ -10,6 +10,7 @@ import {
   Send,
   ShieldCheck,
   UserPlus,
+  UserX,
   Users,
   Wallet,
   type LucideIcon,
@@ -104,7 +105,11 @@ export function AdminOverviewScreen() {
     { label: t("admin.statBotStarted"), value: stats?.users.botStarted ?? 0, icon: Send },
     { label: t("admin.statNewUsers"), value: stats?.users.newLast7Days ?? 0, icon: UserPlus },
     { label: t("admin.statActiveUsers"), value: stats?.users.activeLast7Days ?? 0, icon: Activity },
-    { label: t("admin.statViews"), value: stats?.products.totalViews ?? 0, icon: Eye },
+    {
+      label: t("admin.statBans"),
+      value: usersData?.summary.banned || 0,
+      icon: UserX,
+    },
   ]
 
   const tiles = [
@@ -134,11 +139,6 @@ export function AdminOverviewScreen() {
       value: paymentData?.paymentMethods.length || 0,
       icon: CreditCard,
     },
-    {
-      label: t("admin.statBans"),
-      value: usersData?.summary.banned || 0,
-      icon: Users,
-    },
   ]
 
   return (
@@ -165,6 +165,10 @@ export function AdminOverviewScreen() {
           />
         ) : (
           <>
+            <Field className="gap-1 px-1">
+              <FieldTitle>{t("admin.shopTitle")}</FieldTitle>
+              <FieldDescription>{t("admin.shopHint")}</FieldDescription>
+            </Field>
             <StatTiles items={tiles} />
 
             <Field className="gap-1 px-1 pt-2">
@@ -194,7 +198,11 @@ export function AdminOverviewScreen() {
 
             <Field className="gap-1 px-1 pt-2">
               <FieldTitle>{t("admin.topViewedTitle")}</FieldTitle>
-              <FieldDescription>{t("admin.topViewedHint")}</FieldDescription>
+              <FieldDescription>
+                {`${tp("admin.viewsCount", stats?.products.totalViews ?? 0)} — ${t(
+                  "admin.topViewedHint",
+                )}`}
+              </FieldDescription>
             </Field>
             {stats && stats.topViewed.length > 0 ? (
               <ListGroup>

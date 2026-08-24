@@ -28,7 +28,7 @@ import { orderBadgeVariant, orderStatusKey } from "@/lib/order-status"
 type FilterKey = "all" | "waiting" | "review" | "active" | "closed"
 
 export function OrdersScreen() {
-  const { t } = useI18n()
+  const { t, tp } = useI18n()
   const formatRelative = useRelativeTime()
   const { data: ordersData, isLoading, isError, refetch } = useQuery({
     queryKey: ["orders"],
@@ -80,10 +80,10 @@ export function OrdersScreen() {
     <Screen>
       <ScreenHeader
         title={t("orders.title")}
-        subtitle={t("orders.subtitle", {
-          active: buckets.active.length,
-          waiting: buckets.waiting.length,
-        })}
+        subtitle={[
+          tp("orders.activeCount", buckets.active.length),
+          tp("orders.waitingCount", buckets.waiting.length),
+        ].join(" · ")}
         trailing={
           <div className="flex items-center gap-2">
             {supportLink ? (

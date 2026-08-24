@@ -7,7 +7,7 @@ import { KeyRound, PackageSearch, ShoppingBag } from "lucide-react"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import {
   Card,
   CardAction,
@@ -39,7 +39,13 @@ import { BackButton } from "@/components/back-button"
 import { Screen, ScreenBody, ScreenState } from "@/components/screen"
 import { useHaptic } from "@/hooks/use-telegram"
 import { useI18n, useTranslate } from "@/components/i18n-provider"
-import { createOrder, getPaymentMethods, getProduct, recordProductView } from "@/lib/api"
+import {
+  createOrder,
+  getMe,
+  getPaymentMethods,
+  getProduct,
+  recordProductView,
+} from "@/lib/api"
 import { formatPrice } from "@/lib/format"
 
 export function ProductScreen({ productId }: { productId: string }) {
@@ -66,6 +72,10 @@ export function ProductScreen({ productId }: { productId: string }) {
     queryKey: ["payment-methods"],
     queryFn: getPaymentMethods,
   })
+  const { data: meData } = useQuery({ queryKey: ["me"], queryFn: getMe })
+  const supportLink = meData?.settings.supportUsername
+    ? `https://t.me/${meData.settings.supportUsername.replace(/^@/, "")}`
+    : null
 
   const methods = useMemo(
     () => (paymentData?.paymentMethods ?? []).filter((item) => item.isActive),
@@ -194,11 +204,20 @@ export function ProductScreen({ productId }: { productId: string }) {
 
             <FieldGroup className="mt-auto gap-4">
               <Separator />
-              <PaymentMethodSelect
-                options={paymentOptions}
-                selectedKey={selectedPayment?.key || ""}
-                onSelect={setSelectedPaymentKey}
-              />
+              {/* An admin who deactivates every method leaves the buyer with an
+                  empty dropdown and a dead button, and no idea why. */}
+              {paymentOptions.length === 0 ? (
+                <Field>
+                  <FieldTitle>{t("product.noPaymentTitle")}</FieldTitle>
+                  <FieldDescription>{t("product.noPaymentDescription")}</FieldDescription>
+                </Field>
+              ) : (
+                <PaymentMethodSelect
+                  options={paymentOptions}
+                  selectedKey={selectedPayment?.key || ""}
+                  onSelect={setSelectedPaymentKey}
+                />
+              )}
               {orderMutation.error ? (
                 <Field>
                   <FieldTitle>{t("product.orderFailed")}</FieldTitle>
@@ -207,21 +226,35 @@ export function ProductScreen({ productId }: { productId: string }) {
               ) : null}
             </FieldGroup>
           </CardContent>
-          <CardFooter className="mt-auto">
-            <Button
-              className="w-full"
-              disabled={!selectedPayment || orderMutation.isPending}
-              onClick={() => orderMutation.mutate()}
-            >
-              {orderMutation.isPending ? (
-                t("product.placingOrder")
-              ) : (
-                <>
-                  <ShoppingBag data-icon="inline-start" />
-                  {t("product.placeOrder")}
-                </>
-              )}
-            </Button>
+          <CardFooter className="mt-auto flex-col items-stretch gap-2">
+            {paymentOptions.length === 0 && supportLink ? (
+              <a
+                className={buttonVariants({ variant: "secondary" })}
+                href={supportLink}
+                rel="noreferrer"
+                target="_blank"
+              >
+                {t("orderDetail.telegramSupport")}
+              </a>
+            ) : null}
+            {/* A button that can never be pressed is worse than no button:
+                the note above already says why buying is off. */}
+            {paymentOptions.length > 0 ? (
+              <Button
+                className="w-full"
+                disabled={!selectedPayment || orderMutation.isPending}
+                onClick={() => orderMutation.mutate()}
+              >
+                {orderMutation.isPending ? (
+                  t("product.placingOrder")
+                ) : (
+                  <>
+                    <ShoppingBag data-icon="inline-start" />
+                    {t("product.placeOrder")}
+                  </>
+                )}
+              </Button>
+            ) : null}
           </CardFooter>
         </Card>
       </ScreenBody>

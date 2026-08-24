@@ -245,10 +245,13 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
     !isClosed &&
     !order.manualPaymentRequestedAt &&
     paymentOptions.length > 1
+  // A closed or cancelled order kept printing the requisites with a copy
+  // button directly under "no actions are available any more".
   const showManualPayment =
     order.paymentMethodType === "MANUAL" &&
     Boolean(order.paymentMethodDetails) &&
     !order.isPaid &&
+    !isClosed &&
     order.status !== "PAYMENT_REVIEW"
   const showCryptoPayment =
     order.paymentMethodType === "CRYPTO_PAY" && Boolean(order.cryptoInvoiceUrl) && !order.isPaid
@@ -332,7 +335,10 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
               </Field>
             ) : null}
 
-            {canSwitchPaymentMethod ? (
+            {/* On a finished order this row only repeated the "Оплата" line of
+                the summary below it, so it stops at the point it stops being
+                something you can act on. */}
+            {isClosed ? null : canSwitchPaymentMethod ? (
               <PaymentMethodSelector
                 options={paymentOptions}
                 selectedKey={selectedPaymentKey}
@@ -343,9 +349,15 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
               <PaymentMethodSummary
                 title={order.paymentMethodTitle || t("orderDetail.paymentMethodFallback")}
                 description={
-                  order.paymentMethodDetails ||
-                  order.paymentMethodType ||
-                  t("common.notSelected")
+                  // Requisites are for paying with. Once the order is closed or
+                  // cancelled they are nobody's business, including its own
+                  // buyer's — the summary below still names the method.
+                  (!isClosed && order.paymentMethodDetails) ||
+                  (order.paymentMethodType === "CRYPTO_PAY"
+                    ? t("orderDetail.paymentCryptoLabel")
+                    : order.paymentMethodType === "MANUAL"
+                      ? t("orderDetail.paymentManualLabel")
+                      : t("common.notSelected"))
                 }
                 iconUrl={order.paymentMethodIconDataUrl}
               />
@@ -389,7 +401,16 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
               />
             ) : null}
 
-            {adminToolsVisible ? (
+            {/* A Crypto Bot order is confirmed by its webhook, so there is
+                never a receipt to wait for — the row only made sense for a
+                manual transfer, or once a file actually arrived. */}
+            {/* A Crypto Bot order is confirmed by its webhook and a closed one
+                is finished, so neither has a receipt still to come. The row
+                only earns its place while one could still arrive, or once a
+                file actually did. */}
+            {adminToolsVisible &&
+            (order.receipt ||
+              (order.paymentMethodType === "MANUAL" && !isClosed)) ? (
               <ReceiptStatus receipt={order.receipt} />
             ) : null}
 

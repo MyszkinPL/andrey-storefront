@@ -206,7 +206,7 @@ export function AdminUserDetailScreen({ userId }: { userId: string }) {
           <CardHeader>
             <CardTitle>{t("adminUserDetail.orderHistory")}</CardTitle>
             <CardDescription>
-              {t("adminUserDetail.orderHistoryCount", { count: user.orders.length })}
+              {tp("adminUserDetail.orderHistoryRecent", user.orders.length)}
             </CardDescription>
           </CardHeader>
           <CardContent>

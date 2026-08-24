@@ -105,6 +105,18 @@ export const ru = {
     paid: "Оплачен",
   },
   orders: {
+    activeCount: {
+      one: "{count} активный",
+      few: "{count} активных",
+      many: "{count} активных",
+      other: "{count} активных",
+    },
+    waitingCount: {
+      one: "{count} ждёт оплату",
+      few: "{count} ждут оплату",
+      many: "{count} ждут оплату",
+      other: "{count} ждут оплату",
+    },
     clearHistoryAction: "Очистить историю",
     clearHistoryTitle: "Очистить историю?",
     clearHistoryDescription:
@@ -129,6 +141,8 @@ export const ru = {
     filterHistory: "История",
   },
   product: {
+    noPaymentTitle: "Оплата временно недоступна",
+    noPaymentDescription: "Магазин ещё не подключил ни одного способа оплаты. Напиши в поддержку — подскажут, когда можно будет купить.",
     requisitesLater: "Реквизиты придут вместе с заказом",
     errorTitle: "Товар не открылся",
     errorDescription: "Возможно, его сняли с продажи. Попробуй ещё раз или вернись в каталог.",
@@ -171,6 +185,8 @@ export const ru = {
     descriptionAwaiting: "Вернись к заказу и заверши оплату.",
   },
   orderDetail: {
+    paymentManualLabel: "Перевод по реквизитам",
+    paymentCryptoLabel: "Автооплата через Crypto Bot",
     hideTitle: "Убрать из истории?",
     hideDescription:
       "Заказ пропадёт из твоего списка. У магазина он останется — на случай спора по оплате или выдаче.",
@@ -232,6 +248,8 @@ export const ru = {
     paymentMethodsHint: "Доступны при оформлении заказа.",
   },
   admin: {
+    shopTitle: "Магазин",
+    shopHint: "Что сейчас выставлено и в работе.",
     viewsCount: {
       one: "{count} просмотр",
       few: "{count} просмотра",
@@ -259,12 +277,12 @@ export const ru = {
     audienceHint: "Все, кто открывал магазин или запускал бота.",
     revenueHint: "Выручка · оплачено {paid} из {total} заказов",
     topViewedTitle: "Чаще всего смотрят",
-    topViewedHint: "Просмотры карточек в аппке и в боте вместе.",
+    topViewedHint: "в аппке и в боте вместе.",
     topViewedRow: "{views} просмотров · {viewers} чел. · {orders} заказов",
     topViewedEmpty: "Просмотров пока нет",
     topViewedEmptyHint: "Как только кто-то откроет карточку товара, она появится здесь.",
     channelTitle: "Обязательная подписка",
-    channelHint: "Пока не подпишутся на канал, магазин будет закрыт. Бот должен быть админом канала.",
+    channelHint: "Каталог и покупка откроются только подписчикам. Заказы и поддержка остаются доступны всегда. Бот должен быть админом канала.",
     channelLabel: "Канал",
     channelPlaceholder: "@mychannel",
     deniedTitle: "Доступ закрыт",
@@ -493,6 +511,18 @@ export const ru = {
     keyLabel: "Ключ:",
   },
   adminSettings: {
+    methodsTotal: {
+      one: "{count} всего",
+      few: "{count} всего",
+      many: "{count} всего",
+      other: "{count} всего",
+    },
+    methodsActive: {
+      one: "{count} активный",
+      few: "{count} активных",
+      many: "{count} активных",
+      other: "{count} активных",
+    },
     deniedDescription: "Настройки магазина доступны только админу.",
     title: "Настройки",
     subtitle: "Магазин и платежи",
@@ -520,6 +550,12 @@ export const ru = {
     noMethodsDescription: "Добавь СБП, карту или другой ручной способ.",
   },
   adminUserDetail: {
+    orderHistoryRecent: {
+      one: "{count} последний заказ",
+      few: "{count} последних заказа",
+      many: "{count} последних заказов",
+      other: "{count} последних заказов",
+    },
     deniedDescription: "Карточка пользователя доступна только админу.",
     loadingTitle: "Загружаю пользователя",
     loadingDescription: "Подтягиваю профиль и заказы.",
@@ -576,6 +612,12 @@ export const ru = {
     removeMethod: "Удалить способ",
   },
   adminProductEditor: {
+    keysInStockCount: {
+      one: "{count} ключ в наличии",
+      few: "{count} ключа в наличии",
+      many: "{count} ключей в наличии",
+      other: "{count} ключей в наличии",
+    },
     deniedDescription: "Редактор товаров доступен только админу.",
     loadingTitle: "Загружаю товар",
     loadingDescription: "Подтягиваю карточку и ключи.",

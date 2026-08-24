@@ -13,7 +13,6 @@ import { Badge } from "@/components/ui/badge"
 import { buttonVariants } from "@/components/ui/button"
 import {
   Card,
-  CardAction,
   CardContent,
   CardFooter,
   CardHeader,
@@ -90,8 +89,8 @@ export function OrderCompleteScreen({ orderId }: { orderId: string }) {
     <Screen noTabBar>
       <ScreenHeader
         back={`/orders/${orderId}`}
-        title={t(titleKey(order))}
-        subtitle={t("orderComplete.orderNumber", { number: order.number })}
+        title={t("orderComplete.orderNumber", { number: order.number })}
+        subtitle={order.productTitle || order.subject}
         trailing={<Badge variant={order.isPaid ? "default" : "secondary"}>{amountLabel}</Badge>}
       />
 
@@ -107,9 +106,7 @@ export function OrderCompleteScreen({ orderId }: { orderId: string }) {
                 <EmptyDescription>{t(descriptionKey(order))}</EmptyDescription>
               </EmptyHeader>
             </Empty>
-            <CardAction>
-              {order.status === "CANCELLED" ? <Badge variant="destructive">{t("orderStatus.cancelled")}</Badge> : null}
-            </CardAction>
+
           </CardHeader>
 
           <CardContent className="flex flex-1 flex-col gap-3">
@@ -126,7 +123,7 @@ export function OrderCompleteScreen({ orderId }: { orderId: string }) {
                   </InputGroupAddon>
                 </InputGroup>
               </Field>
-            ) : (
+            ) : order.status === "CANCELLED" ? null : (
               <Field>
                 <FieldTitle>
                   {order.isPaid ? t("orderComplete.delivery") : t("orderComplete.payment")}
