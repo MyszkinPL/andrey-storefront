@@ -61,9 +61,15 @@ export function ListRow({
     </FramePanel>
   )
 
+  // The row is a single tab stop, and coss puts a ring on everything it owns;
+  // these wrappers are ours, so they had none and a keyboard user could not
+  // see where they were.
+  const focusRing =
+    "block rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background"
+
   if (href) {
     return (
-      <Link className="block" href={href}>
+      <Link className={focusRing} href={href}>
         {panel}
       </Link>
     )
@@ -71,7 +77,7 @@ export function ListRow({
 
   if (onClick) {
     return (
-      <button className="block w-full text-left" onClick={onClick} type="button">
+      <button className={cn(focusRing, "w-full text-left")} onClick={onClick} type="button">
         {panel}
       </button>
     )

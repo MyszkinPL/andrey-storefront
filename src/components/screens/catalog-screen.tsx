@@ -124,7 +124,7 @@ export function CatalogScreen() {
               <Frame className="gap-1 lg:grid lg:grid-cols-2 xl:grid-cols-3">
                 {filtered.map((product) => (
                   <Link
-                    className="block"
+                    className="block rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background"
                     href={`/product/${product.id}`}
                     key={product.id}
                   >

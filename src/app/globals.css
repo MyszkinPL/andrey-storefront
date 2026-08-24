@@ -17,7 +17,10 @@
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
+  /* Darkened from shadcn's 0.556: secondary text on a muted surface only
+     reached 4.35:1 there, under the 4.5 that 14px text needs. 0.52 clears it
+     at 5.04 and still reads as clearly secondary next to --foreground. */
+  --muted-foreground: oklch(0.52 0 0);
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
@@ -236,7 +239,11 @@ textarea,
   --muted-foreground: oklch(0.708 0 0);
   --accent: oklch(0.269 0 0);
   --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
+  /* Darkened from shadcn's 0.704: a solid destructive button is white on this
+     colour, and at 0.704 that reads at 2.89:1 — the delete action was the
+     least legible label in the app. 0.577 matches the light theme and clears
+     4.5 at 4.7. */
+  --destructive: oklch(0.577 0.191 22.216);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.556 0 0);
