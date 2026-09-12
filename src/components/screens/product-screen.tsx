@@ -362,11 +362,21 @@ function PaymentMethodSelect({
           <SelectGroup>
             {options.map((option) => (
               <SelectItem key={option.key} value={option.key} label={option.title}>
-                <Avatar className="size-6">
-                  {option.iconUrl ? <AvatarImage src={option.iconUrl} alt={option.title} /> : null}
-                  <AvatarFallback>{getAvatarFallback(option.title)}</AvatarFallback>
-                </Avatar>
-                {option.title}
+                {/* The item text slot is a plain inline box, so the avatar
+                    and the name used to touch. A flex row gives them a gap
+                    and room for the one-line hint under the name. */}
+                <span className="flex min-w-0 items-center gap-2.5 py-0.5">
+                  <Avatar className="size-7">
+                    {option.iconUrl ? <AvatarImage src={option.iconUrl} alt={option.title} /> : null}
+                    <AvatarFallback>{getAvatarFallback(option.title)}</AvatarFallback>
+                  </Avatar>
+                  <span className="flex min-w-0 flex-col leading-tight">
+                    <span className="truncate">{option.title}</span>
+                    {option.subtitle ? (
+                      <span className="truncate text-muted-foreground text-xs">{option.subtitle}</span>
+                    ) : null}
+                  </span>
+                </span>
               </SelectItem>
             ))}
           </SelectGroup>
