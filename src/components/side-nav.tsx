@@ -42,6 +42,14 @@ export function SideNav() {
 
       <Separator />
 
+      {/* The mode decides which sections the nav below even lists, so it
+          belongs above the nav, not among the account controls at the foot. */}
+      {canSwitch ? (
+        <div className="px-3 pt-3">
+          <ModeSwitcher variant="rail" />
+        </div>
+      ) : null}
+
       <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-3">
         {items.map((item) => {
           const Icon = item.icon
@@ -70,8 +78,6 @@ export function SideNav() {
       <Separator />
 
       <div className="flex flex-col gap-3 p-3">
-        {canSwitch ? <ModeSwitcher className="w-full px-0 pt-0" /> : null}
-
         <LanguageSwitcher className="w-full" />
 
         {/* The same account entry point the phone header has on the avatar. */}

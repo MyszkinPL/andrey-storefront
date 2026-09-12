@@ -11,7 +11,18 @@ import { SCREEN_CONTAINER } from "@/components/screen"
 import { resolveModePath } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
 
-export function ModeSwitcher({ className }: { className?: string }) {
+/**
+ * `page`: sits above a phone screen and shares its container. `rail`: lives
+ * inside the desktop side panel, which has its own padding, so the page
+ * container's margins would only squeeze it.
+ */
+export function ModeSwitcher({
+  className,
+  variant = "page",
+}: {
+  className?: string
+  variant?: "page" | "rail"
+}) {
   const { mode, setMode, canSwitch } = useMode()
   const t = useTranslate()
   const haptic = useHaptic()
@@ -22,7 +33,7 @@ export function ModeSwitcher({ className }: { className?: string }) {
 
   return (
     <Tabs
-      className={cn(SCREEN_CONTAINER, "pt-3", className)}
+      className={cn(variant === "page" ? [SCREEN_CONTAINER, "pt-3"] : "w-full", className)}
       onValueChange={(value) => {
         const nextMode = value as "buyer" | "admin"
         if (nextMode === mode) return
