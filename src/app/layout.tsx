@@ -34,6 +34,9 @@ export default function RootLayout({
   return (
     <html lang="ru" suppressHydrationWarning className="dark font-sans">
       <body className="min-h-dvh bg-background text-foreground">
+        {/* Paints the root before any script runs, so the first frame and
+            any overscroll area are already the app's dark colour. */}
+        <style>{`html{background-color:#0a0a0a;color-scheme:dark}`}</style>
         <Script
           src="https://telegram.org/js/telegram-web-app.js"
           strategy="beforeInteractive"

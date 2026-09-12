@@ -11,8 +11,11 @@ type ReceiptUpload = {
   orderId: string
   fileName: string
   fileSize: number
-  buffer: Buffer
-}
+} & (
+  | { buffer: Buffer; telegramFileId?: undefined }
+  /** Already on Telegram's servers: a document the buyer sent to the bot. */
+  | { telegramFileId: string; buffer?: undefined }
+)
 
 /**
  * Sends the PDF to the admins through the bot and stores only the resulting
@@ -24,6 +27,7 @@ export async function deliverReceiptToAdmins({
   fileName,
   fileSize,
   buffer,
+  telegramFileId: knownFileId,
 }: ReceiptUpload) {
   const order = await prisma.order.findUnique({
     where: { id: orderId },
@@ -44,7 +48,7 @@ export async function deliverReceiptToAdmins({
     : order.createdBy.firstName
 
   const bot = getBot()
-  let telegramFileId: string | null = null
+  let telegramFileId: string | null = knownFileId ?? null
   let telegramFileUniqueId: string | null = null
 
   for (const admin of admins) {
@@ -59,7 +63,7 @@ export async function deliverReceiptToAdmins({
     try {
       const message = await bot.api.sendDocument(
         Number(admin.telegramId),
-        telegramFileId ?? new InputFile(buffer, fileName),
+        telegramFileId ?? new InputFile(buffer as Buffer, fileName),
         { caption, parse_mode: "HTML" },
       )
 

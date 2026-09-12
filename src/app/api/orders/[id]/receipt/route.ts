@@ -90,11 +90,6 @@ export async function POST(
       buffer,
     })
 
-    await prisma.order.update({
-      where: { id: order.id },
-      data: { manualPaymentRequestedAt: new Date() },
-    })
-
     return NextResponse.json({
       receipt: {
         fileName: receipt.fileName,

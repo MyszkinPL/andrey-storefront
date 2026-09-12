@@ -436,7 +436,6 @@ export async function mockApi<T>(input: RequestInfo, init?: RequestInit): Promis
     }
 
     order.receipt = uploaded
-    order.manualPaymentRequestedAt = uploaded.uploadedAt
     persistMockState()
     return { receipt: uploaded } as T
   }
@@ -455,6 +454,7 @@ export async function mockApi<T>(input: RequestInfo, init?: RequestInit): Promis
     if (method === "PATCH") {
       if (body?.markManualPaid) {
         if (order.status !== "OPEN") throw new Error("Время на оплату истекло, заказ закрыт. Оформи новый.")
+        if (!order.receipt) throw new Error("Сначала приложи PDF-чек об оплате.")
         order.status = "PAYMENT_REVIEW"
         order.manualPaymentRequestedAt = new Date().toISOString()
       }

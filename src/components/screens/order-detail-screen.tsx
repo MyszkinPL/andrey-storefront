@@ -9,6 +9,7 @@ import { ExternalLink, LifeBuoy, Timer, Trash2 } from "lucide-react"
 
 import { AdminOrderPanel } from "@/components/order-detail/admin-panel"
 import { ConfirmDeleteDialog } from "@/components/order-detail/confirm-delete-dialog"
+import { ConfirmPaymentDialog } from "@/components/order-detail/confirm-payment-dialog"
 import { CopyField } from "@/components/order-detail/copy-field"
 import { OrderProgress } from "@/components/order-detail/order-progress"
 import { OrderReceipt } from "@/components/order-detail/order-summary"
@@ -62,7 +63,6 @@ import {
   getOrder,
   getPaymentMethods,
   hideOrderFromHistory,
-  markManualOrderPaid,
   refreshCryptoInvoice,
   rejectManualOrderPayment,
 } from "@/lib/api"
@@ -76,6 +76,7 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
   const { mode } = useMode()
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [isHideModalOpen, setIsHideModalOpen] = useState(false)
+  const [isConfirmPaymentOpen, setIsConfirmPaymentOpen] = useState(false)
   const [draftPaymentKey, setDraftPaymentKey] = useState<string | null>(null)
   const [copiedField, setCopiedField] = useState<"payment" | "key" | null>(null)
 
@@ -138,14 +139,6 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
   const refreshMutation = useMutation({
     mutationFn: () => refreshCryptoInvoice(orderId),
     onSuccess: invalidate,
-  })
-  const markManualPaidMutation = useMutation({
-    mutationFn: () => markManualOrderPaid(orderId),
-    onError: notify.failure,
-    onSuccess: async () => {
-      notify.success("uiNotify.markedPaid")
-      await invalidate()
-    },
   })
   const changePaymentMethodMutation = useMutation({
     mutationFn: (payload: { paymentMethodId?: string; paymentMethodType?: PaymentMethodType }) =>
@@ -271,11 +264,13 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
     order.status !== "PAYMENT_REVIEW"
   const showCryptoPayment =
     order.paymentMethodType === "CRYPTO_PAY" && Boolean(order.cryptoInvoiceUrl) && !order.isPaid
-  // A receipt only helps while a manual transfer is still awaiting confirmation.
+  // Before "I have paid" the receipt is collected inside that sheet; the
+  // standalone row only remains while the order is under review, so a
+  // buyer can swap in a better scan without bothering support.
   const canAttachReceipt =
     isRealBuyerView &&
+    order.status === "PAYMENT_REVIEW" &&
     !order.isPaid &&
-    !isClosed &&
     order.paymentMethodType !== "CRYPTO_PAY"
   const amountLabel =
     formatInvoiceAmount(order.cryptoInvoiceAmount, order.cryptoInvoiceFiat, locale) ??
@@ -430,10 +425,7 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
             ) : null}
 
             {isRealBuyerView && showManualPayment && !isClosed ? (
-              <Button
-                disabled={markManualPaidMutation.isPending}
-                onClick={() => markManualPaidMutation.mutate()}
-              >
+              <Button onClick={() => setIsConfirmPaymentOpen(true)}>
                 {t("orderDetail.markPaid")}
               </Button>
             ) : null}
@@ -536,6 +528,14 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
         onOpenChange={setIsHideModalOpen}
         open={isHideModalOpen}
         title={t("orderDetail.hideTitle")}
+      />
+
+      <ConfirmPaymentDialog
+        onDone={() => void invalidate()}
+        onOpenChange={setIsConfirmPaymentOpen}
+        open={isConfirmPaymentOpen}
+        orderId={order.id}
+        receipt={order.receipt}
       />
 
       <ConfirmDeleteDialog

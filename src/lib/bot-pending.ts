@@ -6,6 +6,8 @@ export type PendingAction =
   | { kind: "newProductPrice"; title: string }
   | { kind: "broadcastText" }
   | { kind: "requiredChannel" }
+  /** The one buyer-side action: a PDF receipt expected for this order. */
+  | { kind: "sendReceipt"; orderId: string }
 
 export const PENDING_TTL_MS = 10 * 60 * 1000
 

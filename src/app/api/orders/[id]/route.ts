@@ -278,6 +278,7 @@ export async function PATCH(
           isPaid: true,
           paymentMethodType: true,
           manualPaymentRequestedAt: true,
+          receipt: { select: { id: true } },
         },
       })
 
@@ -299,6 +300,15 @@ export async function PATCH(
 
       if (manualOrder.isPaid || manualOrder.manualPaymentRequestedAt) {
         return NextResponse.json({ ok: true })
+      }
+
+      // A review with nothing to review is a chat with the buyer, not a
+      // check. The receipt goes first, then the mark.
+      if (!manualOrder.receipt) {
+        return NextResponse.json(
+          { error: translate(locale, "errors.receiptRequired") },
+          { status: 400 },
+        )
       }
 
       await prisma.$transaction(async (tx) => {

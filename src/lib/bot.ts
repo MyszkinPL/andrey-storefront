@@ -53,6 +53,8 @@ import { OrderCreateError } from "@/lib/order-create"
 import { getServerEnv } from "@/lib/env"
 import { getShopCurrency } from "@/lib/shop-settings"
 import { formatPrice } from "@/lib/format"
+import { deliverReceiptToAdmins } from "@/lib/order-receipt"
+import { RECEIPT_MAX_MB, validateReceiptFile } from "@/lib/receipt-constants"
 import { prisma } from "@/lib/prisma"
 
 let botInstance: Bot | null = null
@@ -261,6 +263,27 @@ export function getBot() {
           return
 
         case "sd": {
+          // The receipt comes first. Without one the button only asks for
+          // the PDF; the mark happens when the document arrives.
+          const receipt = await prisma.orderReceipt.findUnique({
+            where: { orderId: id },
+            select: { id: true },
+          })
+          if (!receipt) {
+            const own = await prisma.order.findFirst({
+              where: { id, createdById: user.id, isPaid: false, status: "OPEN" },
+              select: { id: true },
+            })
+            if (!own) {
+              await ctx.answerCallbackQuery({ show_alert: true, text: t("shop.markPaidFailed") })
+              return
+            }
+            setPending(ctx.from.id, { kind: "sendReceipt", orderId: id })
+            await ctx.answerCallbackQuery()
+            await ctx.reply(t("shop.receiptPrompt"), { reply_markup: cancelRow(t) })
+            return
+          }
+
           // A stale card (timer ran out, admin already acted) must say why
           // nothing happened instead of cheerfully confirming.
           const marked = await markOrderPaid(id, user.id)
@@ -341,6 +364,13 @@ export function getBot() {
           await ctx.answerCallbackQuery()
           return
       }
+    }
+
+    // Cancel is for everyone: a buyer asked for a receipt needs a way out.
+    if (action === "x") {
+      clearPending(ctx.from.id)
+      await ctx.answerCallbackQuery({ text: t("bot.actionCancelled") })
+      return
     }
 
     if (!isAdmin) {
@@ -565,6 +595,60 @@ export function getBot() {
     }
   })
 
+  // ------------------------------------------------------ receipt PDFs
+
+  bot.on("message:document", async (ctx) => {
+    const { t, locale, user } = await resolveActor(ctx)
+    if (!user) return
+
+    const action = takePending(ctx.from.id)
+    if (!action) return
+    if (action.kind !== "sendReceipt") {
+      // An admin mid-way through typing a price gets to keep that.
+      setPending(ctx.from.id, action)
+      return
+    }
+
+    const document = ctx.message.document
+    const problem = validateReceiptFile({
+      name: document.file_name || "",
+      size: document.file_size || 0,
+      type: document.mime_type || "",
+    })
+    if (problem) {
+      setPending(ctx.from.id, action)
+      await ctx.reply(
+        problem === "size"
+          ? t("receipt.errorSize", { limit: RECEIPT_MAX_MB })
+          : problem === "empty"
+            ? t("receipt.errorEmpty")
+            : t("receipt.errorType"),
+        { reply_markup: cancelRow(t) },
+      )
+      return
+    }
+
+    try {
+      // The file already lives on Telegram; admins get it by id, no download.
+      await deliverReceiptToAdmins({
+        orderId: action.orderId,
+        fileName: document.file_name || "receipt.pdf",
+        fileSize: document.file_size || 0,
+        telegramFileId: document.file_id,
+      })
+    } catch (error) {
+      console.error("Receipt delivery failed", error)
+      setPending(ctx.from.id, action)
+      await ctx.reply(t("receipt.errorFailed"), { reply_markup: cancelRow(t) })
+      return
+    }
+
+    const marked = await markOrderPaid(action.orderId, user.id)
+    await ctx.reply(marked ? t("shop.receiptReceived") : t("shop.markPaidFailed"))
+    const view = await renderMyOrder(action.orderId, user, t, locale)
+    await ctx.reply(view.text, { parse_mode: "HTML", reply_markup: view.keyboard })
+  })
+
   // ------------------------------------------------- free-text follow-ups
 
   bot.on("message:text", async (ctx) => {
@@ -572,11 +656,18 @@ export function getBot() {
     if (text.startsWith("/")) return
 
     const { t, locale, isAdmin, user } = await resolveActor(ctx)
-    // Pending actions only exist for admins, and every one of them writes as
-    // that admin, so both are required before consuming it.
-    const action = isAdmin && user ? takePending(ctx.from.id) : null
+    const action = user ? takePending(ctx.from.id) : null
 
-    if (!action || !user) {
+    // A buyer who owes a receipt and types instead gets reminded, and the
+    // request stays armed for the file that follows.
+    if (action?.kind === "sendReceipt") {
+      setPending(ctx.from.id, action)
+      await ctx.reply(t("shop.receiptPrompt"), { reply_markup: cancelRow(t) })
+      return
+    }
+
+    // Every remaining pending action writes as an admin.
+    if (!action || !user || !isAdmin) {
       // Any stray text brings the menu back, so a lost buyer is never left
       // with a bare "open the app" and nothing else to press.
       const settings = await prisma.shopSettings.findUnique({ where: { id: 1 } })

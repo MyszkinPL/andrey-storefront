@@ -49,7 +49,9 @@ export function Screen({
         // From `lg` the side rail replaces the tab bar, so the space it
         // reserved at the bottom becomes ordinary page padding.
         "lg:px-8 lg:pt-8 lg:pb-10",
-        !noTabBar && "min-h-[calc(100dvh-3rem)] lg:min-h-0",
+        // How much the docked tab bar covers, for anything pinned above it.
+        !noTabBar && "min-h-[calc(100dvh-3rem)] [--dock:3.5rem] lg:min-h-0 lg:[--dock:0px]",
+        noTabBar && "[--dock:0px]",
         noTabBar && "min-h-0",
         // Clears the tab bar: 0.75rem offset + its natural coss height.
         !noTabBar && "pb-[calc(env(safe-area-inset-bottom)+4.5rem)]",
@@ -79,7 +81,7 @@ export function StickyActions({
   return (
     <div
       className={cn(
-        "sticky bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] z-20 mt-2 flex gap-2 rounded-xl border bg-card/95 p-2 shadow-lg/10 backdrop-blur sm:hidden",
+        "sticky bottom-[calc(env(safe-area-inset-bottom)+var(--dock,0px)+0.75rem)] z-20 mt-2 flex gap-2 rounded-xl border bg-card/95 p-2 shadow-lg/10 backdrop-blur sm:hidden",
         "*:flex-1",
         className,
       )}

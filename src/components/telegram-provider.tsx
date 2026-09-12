@@ -50,8 +50,11 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
         viewport.mount().catch(() => {})
       }
 
-      const isDark = !telegram || themeParams.isDark()
-      document.documentElement.classList.toggle("dark", isDark)
+      // Always dark. Following Telegram's theme meant a light-theme user got
+      // a white app under a dark logo and a dark Telegram header — the
+      // "background is not fixed" complaint. One palette, everywhere.
+      const isDark = true
+      document.documentElement.classList.add("dark")
 
       if (telegram) {
         if (miniApp.ready.isAvailable()) {

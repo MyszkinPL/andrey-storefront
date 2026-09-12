@@ -37,7 +37,10 @@ export async function POST(request: Request) {
     const paymentMethods = payload.paymentMethods.map((method) => ({
       ...method,
       details: method.details.trim(),
-      iconDataUrl: method.iconDataUrl?.trim() || undefined,
+      // Three states, kept apart: a new image, an explicit clear (null), or
+      // nothing sent (undefined) meaning "leave the stored icon alone".
+      iconDataUrl:
+        method.iconDataUrl === null ? null : method.iconDataUrl?.trim() || undefined,
     }))
 
     await prisma.$transaction(async (tx) => {
@@ -83,8 +86,15 @@ export async function POST(request: Request) {
               title: method.title,
               type: method.type,
               details: method.details,
-              iconDataUrl: method.iconDataUrl,
-              iconUpdatedAt: method.iconDataUrl ? new Date() : null,
+              // Saving the settings page sends no icon at all; it used to
+              // null iconUpdatedAt anyway, and since the icon URL is built
+              // from that stamp every save made the icon vanish.
+              ...(method.iconDataUrl !== undefined
+                ? {
+                    iconDataUrl: method.iconDataUrl,
+                    iconUpdatedAt: method.iconDataUrl ? new Date() : null,
+                  }
+                : {}),
               cryptoAcceptedAssets: null,
               isActive: method.isActive,
               sortOrder: index,
@@ -96,7 +106,7 @@ export async function POST(request: Request) {
               title: method.title,
               type: method.type,
               details: method.details,
-              iconDataUrl: method.iconDataUrl,
+              iconDataUrl: method.iconDataUrl ?? null,
               iconUpdatedAt: method.iconDataUrl ? new Date() : null,
               cryptoAcceptedAssets: null,
               isActive: method.isActive,
