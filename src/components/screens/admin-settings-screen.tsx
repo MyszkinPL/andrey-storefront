@@ -46,7 +46,7 @@ import {
 } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
-import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
+import { Screen, ScreenBody, ScreenHeader, StickyActions } from "@/components/screen"
 import { useI18n } from "@/components/i18n-provider"
 import { useNotify } from "@/hooks/use-notify"
 import { getCryptoPayCurrencies, getMe, getPaymentMethods, saveSettings } from "@/lib/api"
@@ -180,13 +180,18 @@ export function AdminSettingsScreen() {
         title={t("adminSettings.title")}
         subtitle={t("adminSettings.subtitle")}
         trailing={
-          <Button size="sm" disabled={mutation.isPending} onClick={() => mutation.mutate()}>
+          <Button
+            className="max-sm:hidden"
+            size="sm"
+            disabled={mutation.isPending}
+            onClick={() => mutation.mutate()}
+          >
             {mutation.isPending ? t("common.saving") : t("common.save")}
           </Button>
         }
       />
 
-      <ScreenBody className="mx-auto w-full max-w-3xl">
+      <ScreenBody>
         <Card>
           <CardHeader>
             <CardTitle>{t("adminSettings.shopSection")}</CardTitle>
@@ -373,6 +378,12 @@ export function AdminSettingsScreen() {
             ) : null}
           </CardContent>
         </Card>
+
+        <StickyActions>
+          <Button disabled={mutation.isPending} onClick={() => mutation.mutate()}>
+            {mutation.isPending ? t("common.saving") : t("common.save")}
+          </Button>
+        </StickyActions>
       </ScreenBody>
     </Screen>
   )

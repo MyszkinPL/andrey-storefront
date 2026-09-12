@@ -43,7 +43,9 @@ export function Screen({
     <main
       className={cn(
         SCREEN_CONTAINER,
-        "box-border flex flex-col overflow-x-hidden pt-[calc(env(safe-area-inset-top)+0.75rem)]",
+        // `clip`, not `hidden`: hidden turns the main into a scroll container
+        // and position: sticky then sticks to it instead of the viewport.
+        "box-border flex flex-col overflow-x-clip pt-[calc(env(safe-area-inset-top)+0.75rem)]",
         // From `lg` the side rail replaces the tab bar, so the space it
         // reserved at the bottom becomes ordinary page padding.
         "lg:px-8 lg:pt-8 lg:pb-10",
@@ -57,6 +59,33 @@ export function Screen({
     >
       {children}
     </main>
+  )
+}
+
+/**
+ * Primary actions pinned above the bottom edge on a phone. A long form used
+ * to keep "Save" only in the header, so after filling it in the admin had
+ * to scroll all the way back up; the same for "Place order" under a long
+ * product card. From `sm` the header actions are within reach and this
+ * bar hides.
+ */
+export function StickyActions({
+  children,
+  className,
+}: {
+  children: React.ReactNode
+  className?: string
+}) {
+  return (
+    <div
+      className={cn(
+        "sticky bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] z-20 mt-2 flex gap-2 rounded-xl border bg-card/95 p-2 shadow-lg/10 backdrop-blur sm:hidden",
+        "*:flex-1",
+        className,
+      )}
+    >
+      {children}
+    </div>
   )
 }
 

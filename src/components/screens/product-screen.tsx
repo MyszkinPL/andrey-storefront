@@ -248,7 +248,9 @@ export function ProductScreen({ productId }: { productId: string }) {
               ) : null}
             </FieldGroup>
           </CardContent>
-          <CardFooter className="mt-auto flex-col items-stretch gap-2">
+          {/* Pinned to the bottom edge while the card scrolls, so the buyer
+              never has to hunt for the button under a long description. */}
+          <CardFooter className="sticky bottom-0 z-10 mt-auto flex-col items-stretch gap-2 rounded-b-2xl border-t bg-card/95 pt-4 backdrop-blur">
             {paymentOptions.length === 0 && supportLink ? (
               <a
                 className={buttonVariants({ variant: "secondary" })}

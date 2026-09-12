@@ -23,6 +23,7 @@ export const en: Widen<typeof ru> = {
     saving: "Saving...",
   },
   nav: {
+    sections: "Sections",
     catalog: "Catalog",
     orders: "Orders",
     profile: "Profile",
@@ -63,7 +64,7 @@ export const en: Widen<typeof ru> = {
   receipt: {
     title: "Payment receipt",
     description: "Attach a PDF receipt so the admin can verify payment faster.",
-    upload: "Upload PDF receipt",
+    upload: "Upload receipt (PDF)",
     replace: "Replace receipt",
     uploading: "Uploading receipt...",
     uploaded: "Receipt uploaded",
@@ -370,6 +371,7 @@ export const en: Widen<typeof ru> = {
     edit: "Edit product",
     duplicate: "Duplicate product",
     remove: "Delete product",
+    more: "More actions",
     deleteTitle: "Delete product?",
     deleteDescription:
       "The card disappears from the catalog. Order history keeps the title, price and already delivered keys.",

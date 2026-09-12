@@ -133,7 +133,8 @@ export function AdminUserDetailScreen({ userId }: { userId: string }) {
             </Avatar>
             <CardTitle>{t("adminUserDetail.profile")}</CardTitle>
             <CardDescription>
-              {user.role === "ADMIN" ? "Администратор" : "Покупатель"} · {tp("adminUsers.countActive", user.activeOrderCount)}
+              {user.role === "ADMIN" ? t("profile.administrator") : t("profile.buyer")} ·{" "}
+              {tp("adminUsers.countActive", user.activeOrderCount)}
             </CardDescription>
             <CardAction className="flex flex-wrap justify-end gap-2">
               {user.role === "ADMIN" ? (

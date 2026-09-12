@@ -26,7 +26,7 @@ import { ImagePicker } from "@/components/image-picker"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
-import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
+import { Screen, ScreenBody, ScreenHeader, StickyActions } from "@/components/screen"
 import { useTranslate } from "@/components/i18n-provider"
 import { getMe, getPaymentMethods, saveSettings } from "@/lib/api"
 import { optimizeSquareImage } from "@/lib/image"
@@ -195,6 +195,7 @@ export function AdminPaymentMethodEditorScreen({
         subtitle={t("adminPaymentEditor.subtitle")}
         trailing={
           <Button
+            className="max-sm:hidden"
             size="sm"
             disabled={!draft.title.trim() || uploadingIcon || mutation.isPending}
             onClick={() => mutation.mutate("save")}
@@ -262,7 +263,7 @@ export function AdminPaymentMethodEditorScreen({
 
           {methodId ? (
             <Button
-              variant="destructive"
+              variant="destructive-outline"
               disabled={mutation.isPending}
               onClick={() => mutation.mutate("delete")}
             >
@@ -271,6 +272,15 @@ export function AdminPaymentMethodEditorScreen({
             </Button>
           ) : null}
         </FieldGroup>
+
+        <StickyActions>
+          <Button
+            disabled={!draft.title.trim() || uploadingIcon || mutation.isPending}
+            onClick={() => mutation.mutate("save")}
+          >
+            {mutation.isPending ? t("common.saving") : t("common.save")}
+          </Button>
+        </StickyActions>
       </ScreenBody>
     </Screen>
   )

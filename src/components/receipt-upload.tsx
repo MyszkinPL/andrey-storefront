@@ -127,23 +127,27 @@ export function ReceiptUpload({
     : ""
 
   return (
-    <Field orientation="horizontal">
-      {receipt ? (
-        <FileCheck2 className="size-4 text-muted-foreground" />
-      ) : (
-        <Paperclip className="size-4 text-muted-foreground" />
-      )}
+    // On a phone the button drops under the text instead of squeezing the
+    // title into two words beside it.
+    <Field className="max-sm:flex-col max-sm:items-stretch" orientation="horizontal">
+      <div className="flex min-w-0 flex-1 items-center gap-2">
+        {receipt ? (
+          <FileCheck2 className="size-4 shrink-0 text-muted-foreground" />
+        ) : (
+          <Paperclip className="size-4 shrink-0 text-muted-foreground" />
+        )}
 
-      <FieldContent>
-        <FieldTitle>{t("receipt.title")}</FieldTitle>
-        <FieldDescription className="truncate">
-          {error
-            ? error
-            : receipt
-              ? t("receipt.uploadedAt", { date: uploadedAtLabel })
-              : t("receipt.description")}
-        </FieldDescription>
-      </FieldContent>
+        <FieldContent>
+          <FieldTitle>{t("receipt.title")}</FieldTitle>
+          <FieldDescription className={error ? "text-destructive-foreground" : undefined}>
+            {error
+              ? error
+              : receipt
+                ? t("receipt.uploadedAt", { date: uploadedAtLabel })
+                : t("receipt.description")}
+          </FieldDescription>
+        </FieldContent>
+      </div>
 
       <input
         accept="application/pdf,.pdf"
@@ -159,11 +163,12 @@ export function ReceiptUpload({
       />
 
       <Button
+        className="max-sm:w-full"
         disabled={mutation.isPending}
         loading={mutation.isPending}
         onClick={() => inputRef.current?.click()}
         size="sm"
-        variant={receipt ? "outline" : "default"}
+        variant={receipt ? "outline" : "secondary"}
       >
         <FileUp data-icon="inline-start" />
         {receipt ? t("receipt.replace") : t("receipt.upload")}

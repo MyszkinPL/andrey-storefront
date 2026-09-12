@@ -5,7 +5,7 @@ import Link from "next/link"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { ExternalLink, Timer, Trash2 } from "lucide-react"
+import { ExternalLink, LifeBuoy, Timer, Trash2 } from "lucide-react"
 
 import { AdminOrderPanel } from "@/components/order-detail/admin-panel"
 import { ConfirmDeleteDialog } from "@/components/order-detail/confirm-delete-dialog"
@@ -487,19 +487,24 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
                   {t("orderDetail.openDelivery")}
                 </Link>
               ) : null}
-              {order.isPaid && supportLink && isRealBuyerView ? (
+              {/* Support is for anyone stuck, and a buyer stuck on paying
+                  needs it more than one who already got their key. */}
+              {supportLink ? (
                 <a
                   href={supportLink}
                   target="_blank"
                   rel="noreferrer"
                   className={buttonVariants({ variant: "secondary" })}
                 >
+                  <LifeBuoy data-icon="inline-start" />
                   {t("orderDetail.telegramSupport")}
                 </a>
               ) : null}
+              {/* Outlined: a solid red block under "I have paid" pulled the
+                  eye to the one action the buyer should not take. */}
               {!order.isPaid && !isClosed ? (
                 <Button
-                  variant="destructive"
+                  variant="destructive-outline"
                   disabled={cancelOrderMutation.isPending}
                   onClick={() => cancelOrderMutation.mutate()}
                 >

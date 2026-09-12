@@ -30,7 +30,7 @@ import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
-import { Screen, ScreenBody, ScreenHeader } from "@/components/screen"
+import { Screen, ScreenBody, ScreenHeader, StickyActions } from "@/components/screen"
 import { useI18n, useTranslate } from "@/components/i18n-provider"
 import { ResponsiveDialog } from "@/components/responsive-dialog"
 import { deleteAdminProduct, getMe, getProduct, getProducts, saveAdminProduct, updateAdminProduct } from "@/lib/api"
@@ -225,11 +225,11 @@ export function AdminProductEditorScreen({
         }
         subtitle={t("adminProductEditor.subtitle")}
         trailing={
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 max-sm:hidden">
             {productId ? (
               <Button
                 size="sm"
-                variant="destructive"
+                variant="destructive-outline"
                 disabled={deleteMutation.isPending}
                 onClick={() => setDeleteOpen(true)}
               >
@@ -451,6 +451,22 @@ export function AdminProductEditorScreen({
             </Card>
           ) : null}
         </FieldGroup>
+
+        <StickyActions>
+          {productId ? (
+            <Button
+              variant="destructive-outline"
+              disabled={deleteMutation.isPending}
+              onClick={() => setDeleteOpen(true)}
+            >
+              <Trash2 data-icon="inline-start" />
+              {t("common.delete")}
+            </Button>
+          ) : null}
+          <Button disabled={!canSave || mutation.isPending} onClick={() => mutation.mutate()}>
+            {mutation.isPending ? t("common.saving") : t("common.save")}
+          </Button>
+        </StickyActions>
       </ScreenBody>
 
       <ResponsiveDialog

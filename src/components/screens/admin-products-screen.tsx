@@ -3,7 +3,15 @@
 import Link from "next/link"
 import { useMemo, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { CopyPlus, ImagePlus, PackagePlus, PackageSearch, PencilLine, Trash2 } from "lucide-react"
+import {
+  CopyPlus,
+  EllipsisVertical,
+  ImagePlus,
+  PackagePlus,
+  PackageSearch,
+  PencilLine,
+  Trash2,
+} from "lucide-react"
 
 import { AccessStateScreen } from "@/components/access-state-screen"
 import { Badge } from "@/components/ui/badge"
@@ -17,6 +25,14 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty"
 import { ListGroup, ListRow, ListRowMedia, ListSkeleton } from "@/components/list-row"
+import {
+  Menu,
+  MenuItem,
+  MenuLinkItem,
+  MenuPopup,
+  MenuSeparator,
+  MenuTrigger,
+} from "@/components/ui/menu"
 import { SearchInput } from "@/components/search-input"
 import { Screen, ScreenBody, ScreenEmpty, ScreenError, ScreenHeader } from "@/components/screen"
 import { useI18n } from "@/components/i18n-provider"
@@ -146,30 +162,43 @@ export function AdminProductsScreen() {
                 }
                 title={product.title}
                 trailing={
+                  /* Three icon buttons per row, one of them red, crowded the
+                     title off a phone and put "delete" one thumb-slip from
+                     "edit". Edit is the obvious tap and stays; the rest sit
+                     behind a menu. */
                   <div className="flex items-center gap-1">
-                    {!product.isActive ? <Badge variant="secondary">{t("adminProducts.hidden")}</Badge> : null}
-                  <Link
-                    href={`/admin/products/${product.id}/edit`}
-                    className={buttonVariants({ size: "icon-sm", variant: "secondary" })}
-                    aria-label={t("adminProducts.edit")}
-                  >
-                    <PencilLine />
-                  </Link>
-                  <Link
-                    href={`/admin/products/new?copy=${product.id}`}
-                    className={buttonVariants({ size: "icon-sm", variant: "ghost" })}
-                    aria-label={t("adminProducts.duplicate")}
-                  >
-                    <CopyPlus />
-                  </Link>
-                  <Button
-                    size="icon-sm"
-                    variant="destructive"
-                    aria-label={t("adminProducts.remove")}
-                    onClick={() => setDeleteProduct(product)}
-                  >
-                    <Trash2 />
-                  </Button>
+                    {!product.isActive ? (
+                      <Badge variant="secondary">{t("adminProducts.hidden")}</Badge>
+                    ) : null}
+                    <Link
+                      href={`/admin/products/${product.id}/edit`}
+                      className={buttonVariants({ size: "icon-sm", variant: "secondary" })}
+                      aria-label={t("adminProducts.edit")}
+                    >
+                      <PencilLine />
+                    </Link>
+                    <Menu>
+                      <MenuTrigger
+                        aria-label={t("adminProducts.more")}
+                        render={<Button size="icon-sm" variant="ghost" />}
+                      >
+                        <EllipsisVertical />
+                      </MenuTrigger>
+                      <MenuPopup align="end">
+                        <MenuLinkItem href={`/admin/products/new?copy=${product.id}`}>
+                          <CopyPlus />
+                          {t("adminProducts.duplicate")}
+                        </MenuLinkItem>
+                        <MenuSeparator />
+                        <MenuItem
+                          onClick={() => setDeleteProduct(product)}
+                          variant="destructive"
+                        >
+                          <Trash2 />
+                          {t("adminProducts.remove")}
+                        </MenuItem>
+                      </MenuPopup>
+                    </Menu>
                   </div>
                 }
               />

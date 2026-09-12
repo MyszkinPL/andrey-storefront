@@ -16,6 +16,7 @@ export const ru = {
     saving: "Сохраняю...",
   },
   nav: {
+    sections: "Разделы",
     catalog: "Каталог",
     orders: "Заказы",
     profile: "Профиль",
@@ -56,7 +57,7 @@ export const ru = {
   receipt: {
     title: "Чек об оплате",
     description: "Приложи PDF-чек — админ проверит оплату быстрее.",
-    upload: "Загрузить PDF-чек",
+    upload: "Загрузить чек (PDF)",
     replace: "Заменить чек",
     uploading: "Загружаю чек...",
     uploaded: "Чек загружен",
@@ -363,6 +364,7 @@ export const ru = {
     edit: "Править товар",
     duplicate: "Скопировать товар",
     remove: "Удалить товар",
+    more: "Ещё действия",
     deleteTitle: "Удалить товар?",
     deleteDescription:
       "Карточка исчезнет из каталога. История заказов сохранит название, цену и уже выданные ключи.",
