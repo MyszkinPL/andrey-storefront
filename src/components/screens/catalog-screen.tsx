@@ -64,7 +64,7 @@ export function CatalogScreen() {
     })
   }, [category, products, search])
 
-  const shopName = meData?.settings.shopName || "snx.sell"
+  const shopName = meData?.settings.shopName || ""
 
   return (
     <Screen>

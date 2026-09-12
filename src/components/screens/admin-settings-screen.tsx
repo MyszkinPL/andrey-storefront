@@ -196,7 +196,7 @@ export function AdminSettingsScreen() {
             <FieldGroup>
               <Field>
                 <FieldLabel htmlFor="shop-name">{t("adminSettings.name")}</FieldLabel>
-                <Input id="shop-name" value={shopName} onChange={(event) => setShopName(event.target.value)} placeholder="snx.sell" />
+                <Input id="shop-name" value={shopName} onChange={(event) => setShopName(event.target.value)} placeholder={t("adminSettings.name")} />
               </Field>
               <Field>
                 <FieldLabel htmlFor="shop-support">{t("adminSettings.support")}</FieldLabel>

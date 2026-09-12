@@ -26,7 +26,7 @@ export function SideNav() {
   const { data: meData } = useQuery({ queryKey: ["me"], queryFn: getMe })
 
   const items = navItemsFor(mode)
-  const shopName = meData?.settings.shopName || "snx.sell"
+  const shopName = meData?.settings.shopName || ""
   const displayName = meData?.user.firstName || ""
   const roleLabel = meData?.user.role === "ADMIN" ? t("mode.admin") : t("mode.buyer")
 

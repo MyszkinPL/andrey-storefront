@@ -290,7 +290,7 @@ export function AdminProductEditorScreen({
               id="product-title"
               value={form.title}
               onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))}
-              placeholder="DRIP LITE LIFETIME"
+              placeholder={t("adminProductEditor.name")}
             />
           </Field>
 
