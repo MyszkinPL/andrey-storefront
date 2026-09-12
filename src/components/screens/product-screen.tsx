@@ -299,7 +299,7 @@ function ProductImage({
   title: string
 }) {
   return (
-    <div className="mx-auto aspect-square w-full max-w-64 overflow-hidden">
+    <div className="mx-auto flex aspect-square w-full max-w-xs items-center justify-center overflow-hidden rounded-2xl bg-muted">
       {imageUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={imageUrl} alt={title} className="size-full object-cover" />

@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query"
 import { PackageSearch } from "lucide-react"
 
 import { Card, CardHeader } from "@/components/ui/card"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   Empty,
   EmptyDescription,
@@ -13,10 +14,8 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty"
-import { Frame, FrameDescription, FramePanel, FrameTitle } from "@/components/ui/frame"
 import { SearchInput } from "@/components/search-input"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ListSkeleton } from "@/components/list-row"
 import { ProfileAvatarLink } from "@/components/profile-avatar-link"
 import { Screen, ScreenBody, ScreenError, ScreenHeader } from "@/components/screen"
 import { ShopLogo } from "@/components/shop-logo"
@@ -77,11 +76,7 @@ export function CatalogScreen() {
 
       <ScreenBody>
         {isLoading ? (
-          <ListSkeleton
-            className="lg:grid lg:grid-cols-2 xl:grid-cols-3"
-            mediaClassName="size-16 sm:size-20"
-            trailing={false}
-          />
+          <CatalogSkeleton />
         ) : isError && !productsData ? (
           <ScreenError
             onRetry={() => refetch()}
@@ -121,55 +116,43 @@ export function CatalogScreen() {
                 description={t("catalog.emptyDescription")}
               />
             ) : (
-              <Frame className="gap-1 lg:grid lg:grid-cols-2 xl:grid-cols-3">
+              /* A shop sells with pictures. The list row gave the cover 64px
+                 and the description most of the width, which on a phone was
+                 three truncated words; the card gives the cover the whole
+                 column and keeps only what decides a tap: name and price. */
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:gap-3 xl:grid-cols-4">
                 {filtered.map((product) => (
                   <Link
-                    className="block rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background"
+                    className="group block rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background"
                     href={`/product/${product.id}`}
                     key={product.id}
                   >
-                    <FramePanel className="flex h-full items-center gap-3 p-3 transition-colors hover:bg-accent/40">
-                      <div className="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-muted font-medium text-muted-foreground sm:size-20">
+                    <Card className="h-full gap-2 overflow-hidden p-2 transition-colors hover:bg-accent/40">
+                      <div className="flex aspect-square w-full items-center justify-center overflow-hidden rounded-xl bg-muted font-semibold text-2xl text-muted-foreground">
                         <ProductThumbnail
                           imageUrl={product.imageUrl}
                           title={product.title}
                         />
                       </div>
 
-                      <div className="flex min-w-0 flex-1 flex-col gap-1">
-                        {/* Price sits on the title line: it is the reason the
-                            row gets read at all, and a muted badge off to the
-                            side made it the weakest thing on the card. */}
-                        <div className="flex items-baseline gap-2">
-                          <FrameTitle className="min-w-0 flex-1 truncate">
-                            {product.title}
-                          </FrameTitle>
-                          <span className="shrink-0 font-semibold text-sm tabular-nums">
-                            {formatPrice(product.priceRub, locale, currency)}
-                          </span>
-                        </div>
-
-                        <FrameDescription className="truncate text-xs">
+                      <div className="flex min-w-0 flex-col gap-0.5 px-1 pb-1">
+                        <p className="truncate font-medium text-sm">{product.title}</p>
+                        <p className="font-semibold text-base tabular-nums">
+                          {formatPrice(product.priceRub, locale, currency)}
+                        </p>
+                        <p className="truncate text-muted-foreground text-xs">
                           {product.category || t("catalog.noCategory")} ·{" "}
                           <span className={stockClassName(product)}>
                             {product.deliveryType === "AUTO_KEY"
                               ? tp("catalog.keys", product.availableKeyCount || 0)
                               : t("catalog.manualDelivery")}
                           </span>
-                        </FrameDescription>
-
-                        {/* Truncated to a few words on a phone the description
-                            says nothing, so it only earns its line from sm up. */}
-                        {product.description ? (
-                          <FrameDescription className="hidden truncate text-xs sm:block">
-                            {product.description}
-                          </FrameDescription>
-                        ) : null}
+                        </p>
                       </div>
-                    </FramePanel>
+                    </Card>
                   </Link>
                 ))}
-              </Frame>
+              </div>
             )}
           </>
         )}
@@ -197,11 +180,33 @@ function ProductThumbnail({
   if (imageUrl) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
-      <img alt={title} className="size-full object-cover" src={imageUrl} />
+      <img
+        alt={title}
+        className="size-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+        src={imageUrl}
+      />
     )
   }
 
-  return <span className="text-lg">{title.slice(0, 2).toUpperCase()}</span>
+  return <span>{title.slice(0, 2).toUpperCase()}</span>
+}
+
+/** Placeholder shaped like the product grid so nothing jumps when it lands. */
+function CatalogSkeleton() {
+  return (
+    <div aria-hidden="true" className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:gap-3 xl:grid-cols-4">
+      {Array.from({ length: 6 }, (_, index) => (
+        <Card className="gap-2 p-2" key={index}>
+          <Skeleton className="aspect-square w-full rounded-xl" />
+          <div className="flex flex-col gap-1.5 px-1 pb-1">
+            <Skeleton className="h-3.5 w-3/4" />
+            <Skeleton className="h-4 w-2/5" />
+            <Skeleton className="h-3 w-1/2" />
+          </div>
+        </Card>
+      ))}
+    </div>
+  )
 }
 
 

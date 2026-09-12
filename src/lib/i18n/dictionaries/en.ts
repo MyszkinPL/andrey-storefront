@@ -168,6 +168,12 @@ export const en: Widen<typeof ru> = {
     fallbackTitle: "product",
     orderFailed: "Could not create the order",
   },
+  orderProgress: {
+    label: "Order steps",
+    payment: "Payment",
+    review: "Review",
+    delivery: "Delivery",
+  },
   orderInstructions: {
     title: "How to pay",
     description: "Read this before placing the order — it takes half a minute.",

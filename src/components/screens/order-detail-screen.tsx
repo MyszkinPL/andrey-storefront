@@ -10,6 +10,7 @@ import { ExternalLink, Timer, Trash2 } from "lucide-react"
 import { AdminOrderPanel } from "@/components/order-detail/admin-panel"
 import { ConfirmDeleteDialog } from "@/components/order-detail/confirm-delete-dialog"
 import { CopyField } from "@/components/order-detail/copy-field"
+import { OrderProgress } from "@/components/order-detail/order-progress"
 import { OrderReceipt } from "@/components/order-detail/order-summary"
 import {
   PaymentMethodSelector,
@@ -343,6 +344,8 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
           </CardHeader>
 
           <CardContent className="flex flex-1 flex-col gap-3">
+            <OrderProgress className="mb-1" order={order} />
+
             {showOrderNotice ? (
               <Field>
                 <FieldTitle>{orderNoticeTitle(order, amountLabel, t)}</FieldTitle>

@@ -161,6 +161,12 @@ export const ru = {
     fallbackTitle: "товар",
     orderFailed: "Не удалось создать заказ",
   },
+  orderProgress: {
+    label: "Этапы заказа",
+    payment: "Оплата",
+    review: "Проверка",
+    delivery: "Выдача",
+  },
   orderInstructions: {
     title: "Как оплатить",
     description: "Прочитай перед оформлением — это займёт полминуты.",
