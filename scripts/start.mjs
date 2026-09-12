@@ -1,8 +1,5 @@
 import { spawn } from "node:child_process"
 import { createHmac } from "node:crypto"
-import { PrismaPg } from "@prisma/adapter-pg"
-import { PrismaClient } from "@prisma/client"
-import pg from "pg"
 
 const port = process.env.PORT || "3000"
 const appUrl = process.env.APP_URL
@@ -23,7 +20,6 @@ await run(prismaCli[0], [...prismaCli[1], ...migrateArgs], {
   ...process.env,
   ...(databaseUrl ? { DATABASE_URL: databaseUrl } : {}),
 })
-await ensureBootstrapData()
 
 if (appUrl && botToken) {
   const webhookUrl = `${appUrl.replace(/\/$/, "")}/api/telegram/webhook`
@@ -113,136 +109,4 @@ function run(command, args, env = process.env) {
       else reject(new Error(`${command} ${args.join(" ")} failed with code ${code}`))
     })
   })
-}
-
-async function ensureBootstrapData() {
-  if (!databaseUrl) return
-
-  const pool = new pg.Pool({ connectionString: databaseUrl })
-  const prisma = new PrismaClient({
-    adapter: new PrismaPg(pool),
-    log: ["error"],
-  })
-
-  const description = `DRIP LITE — это мощный чит-клиент для Minecraft, разработанный для соревновательной игры. Он включает в себя широкий спектр боевых, транспортных и визуальных модулей, оптимизированных как для режима «Хэллоуин против Хэллоуина», так и для честной игры. Клиент регулярно обновляется и поддерживает все основные загрузчики модов.
-
-Характеристики
-+ Support versions 1.8.9 - 1.21.4
-+ Support clients: Fabric, Lunar, Feather, Labymod4, Forge, BLC
-+ Advanced combat modules (KillAura, Velocity, Criticals)
-+ Movement modules (Speed, Flight, Scaffold, Strafe)
-+ Visual modules (ESP, Tracers, Nametags, Chams)
-+ Built-in config system with cloud sync
-+ Anti-cheat bypass (Intave, Vulcan, Grim, Matrix)
-+ Lifetime updates included`
-
-  try {
-    await prisma.shopSettings.upsert({
-      where: { id: 1 },
-      update: {
-        shopName: "snx.sell",
-        cryptoPayFiat: "RUB",
-      },
-      create: {
-        id: 1,
-        shopName: "snx.sell",
-        cryptoPayFiat: "RUB",
-      },
-    })
-
-    const existingMethods = await prisma.paymentMethod.count()
-    if (existingMethods === 0) {
-      await prisma.paymentMethod.createMany({
-        data: [
-          {
-            title: "Ручная оплата",
-            type: "MANUAL",
-            details: "Добавь реквизиты в админке.",
-            isActive: true,
-            sortOrder: 0,
-          },
-        ],
-      })
-    }
-
-    const specs = [
-      ["Support versions", "1.8.9 - 1.21.4"],
-      ["Support clients", "Fabric, Lunar, Feather, Labymod4, Forge, BLC"],
-      ["Combat modules", "KillAura, Velocity, Criticals"],
-      ["Movement modules", "Speed, Flight, Scaffold, Strafe"],
-      ["Visual modules", "ESP, Tracers, Nametags, Chams"],
-      ["Cloud sync", "Built-in config system"],
-      ["Bypass", "Intave, Vulcan, Grim, Matrix"],
-      ["Updates", "Lifetime included"],
-    ]
-
-    const existing = await prisma.product.findFirst({
-      where: { title: "DRIP LITE LIFETIME" },
-      include: {
-        specs: {
-          select: { id: true },
-          take: 1,
-        },
-      },
-    })
-
-    if (existing) {
-      const productUpdate = {}
-
-      if (!existing.category) productUpdate.category = "майнкрафт"
-      if (!existing.description?.trim()) productUpdate.description = description
-      if (!existing.priceRub || existing.priceRub < 0) productUpdate.priceRub = 4990
-
-      const operations = []
-
-      if (Object.keys(productUpdate).length > 0) {
-        operations.push(prisma.product.update({
-          where: { id: existing.id },
-          data: productUpdate,
-        }))
-      }
-
-      if (existing.specs.length === 0) {
-        operations.push(
-          prisma.productSpec.createMany({
-            data: specs.map(([label, value], index) => ({
-              productId: existing.id,
-              label,
-              value,
-              sortOrder: index,
-            })),
-          }),
-        )
-      }
-
-      if (operations.length > 0) {
-        await prisma.$transaction(operations)
-      }
-    } else {
-      await prisma.product.create({
-        data: {
-          slug: `drip-lite-lifetime-${Date.now().toString(36)}`,
-          title: "DRIP LITE LIFETIME",
-          category: "майнкрафт",
-          description,
-          priceRub: 4990,
-          deliveryType: "MANUAL",
-          isActive: true,
-          sortOrder: 0,
-          specs: {
-            createMany: {
-              data: specs.map(([label, value], index) => ({
-                label,
-                value,
-                sortOrder: index,
-              })),
-            },
-          },
-        },
-      })
-    }
-  } finally {
-    await prisma.$disconnect()
-    await pool.end()
-  }
 }
