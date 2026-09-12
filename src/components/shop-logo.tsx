@@ -1,24 +1,28 @@
 import { cn } from "@/lib/utils"
 
 /**
- * The source file draws a 503×285 mark inside a 1080×1080 canvas, so a square
- * `size-8` box rendered it about 15px wide with the rest empty. The viewBox is
- * cropped to the artwork and the height drives the size; the width follows the
- * real 1.76:1 aspect.
+ * The shop mark: four diagonal bars with the ® sign, on a 569×215 canvas
+ * (2.65:1). The height drives the size and the width follows. It draws in
+ * `currentColor`, so it is the white version on the dark theme and the
+ * black one on light, matching the supplied "Белый" and "Чёрный" files.
  */
 export function ShopLogo({ className }: { className?: string }) {
   return (
     <svg
       aria-hidden="true"
-      className={cn("h-7 w-auto shrink-0 text-foreground", className)}
+      className={cn("h-6 w-auto shrink-0 text-foreground", className)}
       fill="currentColor"
       role="img"
-      viewBox="279.3 397.36 503.4 285.34"
+      viewBox="0 0 569 215"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <path d="m615.48 529.98l38.43-68.97-39.5-63.65h-65.78-7.04l34.85 62.55z" />
-      <path d="m322.41 525.4l21.49 38.55h65.72 19.4l35.55-63.8h-83.19l-0.15-0.28 21.58-38.72h114.28l39.31-0.82-35.09-62.97h-155.98l-20.62 36.99-8.03 14.4-6.91 12.4-21.57 38.74 3.15 5.65z" />
-      <path d="m782.68 397.36h-73.03l-130.29 233.81-47.25-84.79-11.07-19.87-14.78-26.55h-6.83-14.54l-1.75 3.25-64.33 115.44h-103.93l-35.56 63.8h176.97l39.3-70.54 39.42 70.73h15.67 14.18 58.85l38.42-68.95 38.42 68.95h73.02l-74.93-134.47z" />
+      <path d="M462.225 215L247.269 0H354.044L569 215H462.225Z" />
+      <path d="M339.995 215L125.039 0H231.815L339.995 108.203V215Z" />
+      <path d="M40.7432 215L116.61 139.118L192.477 215H40.7432Z" />
+      <path d="M214.956 215V108.203L106.775 0L0 1.04232e-05L214.956 215Z" />
+      <path d="M521.935 3.18653e-05L446.068 75.8824L370.201 1.04232e-05L521.935 3.18653e-05Z" />
+      <path d="M546.943 13.2482V18.7529H550.198C552.032 18.7529 553.095 17.7368 553.095 15.9949C553.095 14.2978 551.965 13.2482 550.142 13.2482H546.943ZM546.943 20.9637V27.0266H544.058V10.9146H550.467C553.956 10.9146 556.048 12.8462 556.048 15.928C556.048 18.0606 554.929 19.8359 553.005 20.5282L556.529 27.0266H553.24L550.064 20.9637H546.943Z" />
+      <path d="M566.402 18.9706C566.402 9.92865 559.073 2.59871 550.033 2.59871C540.993 2.59871 533.665 9.92865 533.665 18.9706C533.665 28.0125 540.993 35.3425 550.033 35.3425V37.9412C539.558 37.9412 531.067 29.4478 531.067 18.9706C531.067 8.49342 539.558 0 550.033 0C560.508 0 569 8.49342 569 18.9706C569 29.4478 560.508 37.9412 550.033 37.9412V35.3425C559.073 35.3425 566.402 28.0125 566.402 18.9706Z" />
     </svg>
   )
 }
