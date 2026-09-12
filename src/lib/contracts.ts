@@ -92,6 +92,10 @@ export type OrderSummary = {
   paymentMethodTitle: string | null
   paymentMethodType: PaymentMethodType | null
   manualPaymentRequestedAt: string | null
+  /** Payment deadline while the order is open and unpaid. */
+  expiresAt: string | null
+  /** Set when the deadline, not a person, closed the order. */
+  expiredAt: string | null
 }
 
 export type OrderReceiptInfo = {
@@ -112,6 +116,8 @@ export type OrderDetail = {
   priceRub: number | null
   deliveredKey: string | null
   manualPaymentRequestedAt: string | null
+  expiresAt: string | null
+  expiredAt: string | null
   receipt: OrderReceiptInfo | null
   isAdmin: boolean
   isOwner: boolean

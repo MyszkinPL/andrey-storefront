@@ -160,6 +160,13 @@ model Order {
   /// The buyer removed this from their own history. The order itself stays:
   /// the shop still needs the record, so this only hides the buyer's copy.
   hiddenByBuyerAt          DateTime?
+  /// Payment deadline. An order still OPEN and unpaid past this moment is
+  /// closed automatically; the window restarts when an admin rejects a
+  /// payment mark so the buyer can try again.
+  expiresAt                DateTime?
+  /// Set when the deadline actually closed the order, so the UI can tell a
+  /// timed-out order from one the buyer or admin cancelled.
+  expiredAt                DateTime?
   createdAt                DateTime           @default(now())
   updatedAt                DateTime           @updatedAt
   closedAt                 DateTime?
@@ -174,6 +181,7 @@ model Order {
   @@index([createdById, hiddenByBuyerAt])
   @@index([createdById, status])
   @@index([status, updatedAt])
+  @@index([status, expiresAt])
 }
 
 /// Buyer-uploaded payment receipt. The PDF itself lives in Telegram: we send

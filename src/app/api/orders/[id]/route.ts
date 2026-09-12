@@ -15,7 +15,9 @@ import { resolveUserLocale } from "@/lib/i18n/config"
 import type { OrderResponse } from "@/lib/contracts"
 import { errorResponse, failure } from "@/lib/api-error"
 import { prisma } from "@/lib/prisma"
+import { expireStaleOrders } from "@/lib/order-expiry"
 import { confirmOrderPaymentFlow } from "@/lib/order-payment"
+import { paymentDeadline } from "@/lib/order-timer"
 
 const schema = z.object({
   confirmPayment: z.boolean().optional(),
@@ -131,6 +133,7 @@ export async function GET(
   const { id } = await params
   const settings = await prisma.shopSettings.findUnique({ where: { id: 1 } })
 
+  await expireStaleOrders().catch(() => {})
   await syncCryptoInvoice(id).catch(() => {})
 
   const order = await prisma.order.findUnique({
@@ -162,6 +165,8 @@ export async function GET(
       priceRub: order.product?.priceRub ?? order.priceRubSnapshot ?? null,
       deliveredKey: order.deliveredKey?.value || order.deliveredKeyValue || null,
       manualPaymentRequestedAt: order.manualPaymentRequestedAt?.toISOString() || null,
+      expiresAt: order.expiresAt?.toISOString() || null,
+      expiredAt: order.expiredAt?.toISOString() || null,
       receipt: order.receipt
         ? {
             fileName: order.receipt.fileName,
@@ -216,6 +221,10 @@ export async function PATCH(
     const locale = resolveUserLocale(user)
     const { id } = await params
     const payload = schema.parse(await request.json())
+
+    // A buyer racing the deadline must not be able to act on an order the
+    // timer has already closed.
+    await expireStaleOrders().catch(() => {})
 
     const order = await prisma.order.findUnique({
       where: { id },
@@ -496,6 +505,10 @@ export async function PATCH(
           data: {
             status: OrderStatus.OPEN,
             manualPaymentRequestedAt: null,
+            // The buyer gets a fresh window to fix the payment, not the
+            // remainder of one that most likely ran out during review.
+            expiresAt: paymentDeadline(),
+            expiredAt: null,
           },
         })
       }

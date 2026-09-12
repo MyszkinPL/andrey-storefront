@@ -7,9 +7,11 @@ import type { Locale } from "@/lib/i18n/config"
 import { LOCALE_LABELS, LOCALES } from "@/lib/i18n/config"
 import { estimateCryptoAmount } from "@/lib/crypto-pay"
 import { createOrder, OrderCreateError } from "@/lib/order-create"
+import { expireStaleOrders } from "@/lib/order-expiry"
 import { getShopCurrency } from "@/lib/shop-settings"
 import { notifyManualPaymentRequested, notifyOrderCancelled } from "@/lib/order-notifications"
 import { orderStatusKey } from "@/lib/order-status"
+import { isOrderOnTimer, remainingMinutes, remainingMs } from "@/lib/order-timer"
 import { prisma } from "@/lib/prisma"
 import { recordProductView } from "@/lib/shop-stats"
 import { escapeHtml } from "@/lib/telegram-format"
@@ -26,6 +28,12 @@ export type BotUser = {
   languageCode?: string | null
 }
 
+/** Turns "@support" or "support" into a t.me link; null when unset. */
+export function supportUrl(username: string | null | undefined) {
+  const handle = username?.trim().replace(/^@/, "")
+  return handle ? `https://t.me/${handle}` : null
+}
+
 // ------------------------------------------------------------------- menu
 
 export function shopMenu(
@@ -33,19 +41,26 @@ export function shopMenu(
   shopName: string,
   isAdmin: boolean,
   appUrl: string,
+  supportUsername?: string | null,
 ): View {
   const keyboard = new InlineKeyboard()
     .text(t("shop.menuCatalog"), "sc")
-    .row()
     .text(t("shop.menuOrders"), "so")
+    .row()
     .text(t("shop.menuProfile"), "su")
+
+  const support = supportUrl(supportUsername)
+  if (support) keyboard.url(t("shop.support"), support)
 
   if (isAdmin) keyboard.row().text(t("shop.menuAdmin"), "m")
 
   // The web app lives in the same keyboard instead of a second message.
   keyboard.row().webApp(t("shop.menuOpenApp"), appUrl)
 
-  return { text: t("shop.menuTitle", { shop: escapeHtml(shopName) }), keyboard }
+  return {
+    text: [t("shop.menuTitle", { shop: escapeHtml(shopName) }), "", t("shop.menuIntro")].join("\n"),
+    keyboard,
+  }
 }
 
 // ---------------------------------------------------------------- catalog
@@ -56,25 +71,27 @@ export async function renderCatalog(t: TranslateFn, locale: Locale): Promise<Vie
     where: { isActive: true },
     orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
     take: PAGE_SIZE,
+    include: { _count: { select: { keys: { where: { issuedAt: null } } } } },
   })
 
   const keyboard = new InlineKeyboard()
   for (const product of products) {
+    // Instant delivery gets the lightning bolt so the buyer knows before
+    // opening the card whether they will wait for a person.
+    const mark = product.deliveryType === "AUTO_KEY" ? "⚡" : "\u{1F4E6}"
     keyboard
       .text(
-        `${product.title.slice(0, 26)} · ${formatPrice(product.priceRub, locale, currency)}`,
+        `${mark} ${product.title.slice(0, 26)} · ${formatPrice(product.priceRub, locale, currency)}`,
         `sc:${product.id}`,
       )
       .row()
   }
   keyboard.text(t("bot.back"), "sm")
 
-  return {
-    text: products.length
-      ? t("shop.catalogTitle")
-      : `${t("shop.catalogTitle")}\n${t("shop.catalogEmpty")}`,
-    keyboard,
-  }
+  const lines = [t("shop.catalogTitle")]
+  lines.push(products.length ? t("shop.catalogLegend") : t("shop.catalogEmpty"))
+
+  return { text: lines.join("\n"), keyboard }
 }
 
 export async function renderShopProduct(
@@ -132,11 +149,16 @@ export async function renderShopProduct(
     "",
     t("shop.productMeta", {
       price: formatPrice(product.priceRub, locale, currency),
-      delivery: isAuto ? t("bot.deliveryAuto") : t("bot.deliveryManual"),
+      delivery: isAuto
+        ? t("shop.deliveryAuto", { keys: product._count.keys })
+        : t("shop.deliveryManual"),
     }),
   )
 
   if (isAuto && product._count.keys === 0) lines.push(t("shop.outOfStock"))
+
+  const hasMethods = methods.length > 0 || Boolean(settings?.cryptoPayEnabled && settings.cryptoPayToken)
+  lines.push("", hasMethods ? t("shop.choosePayment") : t("shop.noPayment"))
 
   // Payment methods sit right on the card, each priced in what the buyer
   // would actually pay with it.
@@ -164,11 +186,13 @@ export async function renderShopProduct(
       useTestnet: settings.cryptoPayUseTestnet,
     })
     const label = estimate
-      ? `💳 Crypto Bot · ≈ ${formatCryptoAmount(estimate)} ${asset}`
-      : "💳 Crypto Bot"
+      ? `💎 Crypto Bot · ≈ ${formatCryptoAmount(estimate)} ${asset}`
+      : "💎 Crypto Bot"
     keyboard.text(label, `sq:${product.id}:c`).row()
   }
-  keyboard.text(t("bot.back"), "sc")
+  const support = supportUrl(settings?.supportUsername)
+  if (!hasMethods && support) keyboard.url(t("shop.support"), support).row()
+  keyboard.text(t("shop.backToCatalog"), "sc")
 
   return {
     photo,
@@ -207,6 +231,7 @@ export async function renderMyOrders(
   userId: string,
   t: TranslateFn,
 ): Promise<View> {
+  await expireStaleOrders().catch(() => {})
   const orders = await prisma.order.findMany({
     where: { createdById: userId, hiddenByBuyerAt: null },
     orderBy: { updatedAt: "desc" },
@@ -226,21 +251,30 @@ export async function renderMyOrders(
   }
   keyboard.text(t("bot.back"), "sm")
 
-  return {
-    text: orders.length
-      ? t("shop.ordersTitle")
-      : `${t("shop.ordersTitle")}\n${t("shop.ordersEmpty")}`,
-    keyboard,
+  const lines = [t("shop.ordersTitle")]
+  if (orders.length === 0) {
+    lines.push(t("shop.ordersEmpty"))
+  } else {
+    const waiting = orders.filter(isOrderOnTimer).length
+    if (waiting > 0) lines.push(t("shop.ordersWaiting", { count: waiting }))
+    lines.push("", t("shop.ordersLegend"))
   }
+
+  return { text: lines.join("\n"), keyboard }
 }
 
 /** A glanceable state marker for order cards and list buttons. */
-function orderStatusIcon(order: { status: string; isPaid: boolean }) {
+export function orderStatusIcon(order: {
+  status: string
+  isPaid: boolean
+  expiredAt?: Date | null
+}) {
+  if (order.status === "CANCELLED" && order.expiredAt) return "⌛"
   if (order.status === "CANCELLED") return "\u{1F6AB}"
   if (order.status === "PAYMENT_REVIEW") return "\u{1F50D}"
-  if (order.status === "CLOSED") return order.isPaid ? "\u2705" : "\u26AA"
-  if (order.isPaid) return "\u2705"
-  return "\u23F3"
+  if (order.status === "CLOSED") return order.isPaid ? "✅" : "⚪"
+  if (order.isPaid) return "\u{1F4E6}"
+  return "⏳"
 }
 
 export async function renderMyOrder(
@@ -249,12 +283,14 @@ export async function renderMyOrder(
   t: TranslateFn,
   locale: Locale,
 ): Promise<View> {
-  const [order, currency] = await Promise.all([
+  await expireStaleOrders().catch(() => {})
+  const [order, currency, settings] = await Promise.all([
     prisma.order.findUnique({
       where: { id: orderId },
       include: { product: true, deliveredKey: true },
     }),
     getShopCurrency(),
+    prisma.shopSettings.findUnique({ where: { id: 1 } }),
   ])
 
   if (!order || order.createdById !== user.id) {
@@ -263,7 +299,13 @@ export async function renderMyOrder(
 
   const title = order.product?.title || order.productTitleSnapshot || order.subject
   const amount = order.priceRubSnapshot ?? order.product?.priceRub ?? null
+  const amountLabel = amount === null ? "—" : formatPrice(amount, locale, currency)
   const key = order.deliveredKey?.value || order.deliveredKeyValue || ""
+  const isClosed =
+    order.status === OrderStatus.CLOSED || order.status === OrderStatus.CANCELLED
+  const isManual = order.paymentMethodType === PaymentMethodType.MANUAL
+  const awaitingManual =
+    !order.isPaid && !isClosed && isManual && order.status !== OrderStatus.PAYMENT_REVIEW
 
   const lines = [
     t("shop.orderCard", {
@@ -271,30 +313,44 @@ export async function renderMyOrder(
       number: order.number,
       statusIcon: orderStatusIcon(order),
       status: t(orderStatusKey(order)),
-      amount: amount === null ? "—" : formatPrice(amount, locale, currency),
+      amount: amountLabel,
       method: escapeHtml(order.paymentMethodTitle || "—"),
     }),
   ]
 
-  const isClosed =
-    order.status === OrderStatus.CLOSED || order.status === OrderStatus.CANCELLED
-
-  if (!order.isPaid && order.paymentMethodDetails) {
-    lines.push(t("shop.requisites", { details: escapeHtml(order.paymentMethodDetails) }))
+  // The requisites and the three steps only while a transfer is still the
+  // thing to do; afterwards they are noise under a finished order.
+  if (awaitingManual && order.paymentMethodDetails) {
+    lines.push(
+      t("shop.requisites", { details: escapeHtml(order.paymentMethodDetails) }),
+      "",
+      t("shop.payHow", { amount: amountLabel }),
+    )
   }
+  if (!order.isPaid && !isClosed && order.paymentMethodType === PaymentMethodType.CRYPTO_PAY) {
+    lines.push("", t("shop.payHowCrypto"))
+  }
+  if (order.status === OrderStatus.PAYMENT_REVIEW) {
+    lines.push("", t("shop.reviewHint"))
+  }
+  if (isOrderOnTimer(order) && order.expiresAt) {
+    lines.push(
+      "",
+      t("shop.timeLeft", { minutes: remainingMinutes(remainingMs(order.expiresAt)) }),
+    )
+  }
+  if (order.status === OrderStatus.CANCELLED && order.expiredAt) {
+    lines.push("", t("shop.expiredHint"))
+  }
+  if (order.isPaid && !key) lines.push("", t("shop.paidHint"))
   if (key) lines.push(t("shop.keyIssued", { key: escapeHtml(key) }))
 
   const keyboard = new InlineKeyboard()
 
-  if (order.cryptoInvoiceUrl && !order.isPaid) {
+  if (order.cryptoInvoiceUrl && !order.isPaid && !isClosed) {
     keyboard.url(t("shop.openInvoice"), order.cryptoInvoiceUrl).row()
   }
-  if (
-    !order.isPaid &&
-    !isClosed &&
-    order.paymentMethodType === PaymentMethodType.MANUAL &&
-    order.status !== OrderStatus.PAYMENT_REVIEW
-  ) {
+  if (awaitingManual) {
     keyboard.text(t("shop.markPaid"), `sd:${order.id}`).row()
   }
   if (!order.isPaid && !isClosed) {
@@ -304,14 +360,24 @@ export async function renderMyOrder(
   if (isClosed) {
     keyboard.text(t("shop.hideFromHistory"), `sx:${order.id}`).row()
   }
+  const support = supportUrl(settings?.supportUsername)
+  if (support) keyboard.url(t("shop.support"), support)
   keyboard.text(t("bot.back"), "so")
 
   return { text: lines.join("\n"), keyboard }
 }
 
 export async function markOrderPaid(orderId: string, userId: string) {
+  // The same guard the API has: a timed-out order cannot be marked paid.
+  await expireStaleOrders().catch(() => {})
   const updated = await prisma.order.updateMany({
-    where: { id: orderId, createdById: userId, isPaid: false },
+    where: {
+      id: orderId,
+      createdById: userId,
+      isPaid: false,
+      status: OrderStatus.OPEN,
+      paymentMethodType: PaymentMethodType.MANUAL,
+    },
     data: { status: OrderStatus.PAYMENT_REVIEW, manualPaymentRequestedAt: new Date() },
   })
 
@@ -321,7 +387,12 @@ export async function markOrderPaid(orderId: string, userId: string) {
 
 export async function cancelOwnOrder(orderId: string, userId: string) {
   const updated = await prisma.order.updateMany({
-    where: { id: orderId, createdById: userId, isPaid: false },
+    where: {
+      id: orderId,
+      createdById: userId,
+      isPaid: false,
+      status: { in: [OrderStatus.OPEN, OrderStatus.PAYMENT_REVIEW] },
+    },
     data: { status: OrderStatus.CANCELLED, closedAt: new Date() },
   })
 
@@ -331,7 +402,12 @@ export async function cancelOwnOrder(orderId: string, userId: string) {
 
 // ---------------------------------------------------------------- profile
 
-export function renderProfile(user: BotUser, t: TranslateFn, locale: Locale): View {
+export async function renderProfile(
+  user: BotUser,
+  t: TranslateFn,
+  locale: Locale,
+  appUrl: string,
+): Promise<View> {
   const name = user.username ? `@${user.username}` : user.firstName
   const keyboard = new InlineKeyboard()
 
@@ -339,6 +415,12 @@ export function renderProfile(user: BotUser, t: TranslateFn, locale: Locale): Vi
     if (value === locale) continue
     keyboard.text(t("shop.language", { language: LOCALE_LABELS[value].native }), `sl:${value}`)
   }
+
+  const settings = await prisma.shopSettings.findUnique({ where: { id: 1 } })
+  const support = supportUrl(settings?.supportUsername)
+  if (support) keyboard.row().url(t("shop.support"), support)
+
+  keyboard.row().webApp(t("shop.menuOpenApp"), `${appUrl}/profile`)
   keyboard.row().text(t("bot.back"), "sm")
 
   return {

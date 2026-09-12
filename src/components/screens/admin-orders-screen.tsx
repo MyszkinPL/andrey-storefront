@@ -14,6 +14,7 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty"
 import { ListGroup, ListRow, ListRowMedia, ListSkeleton } from "@/components/list-row"
+import { OrderTimeLeft } from "@/components/order-time-left"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Screen, ScreenBody, ScreenError, ScreenHeader } from "@/components/screen"
 import { useI18n } from "@/components/i18n-provider"
@@ -107,14 +108,14 @@ export function AdminOrdersScreen() {
                   // The badge already names the state and the filter tabs
                   // already group the work, so a sentence saying the same
                   // thing only pushed the order number out of the row.
-                  description={[
-                    `#${order.number}`,
-                    order.productCategory,
-                    order.paymentMethodTitle,
-                    formatRelative(order.updatedAt),
-                  ]
-                    .filter(Boolean)
-                    .join(" · ")}
+                  description={
+                    <>
+                      {`${[`#${order.number}`, order.productCategory, order.paymentMethodTitle]
+                        .filter(Boolean)
+                        .join(" · ")} · `}
+                      <OrderTimeLeft fallback={formatRelative(order.updatedAt)} order={order} />
+                    </>
+                  }
                   href={`/orders/${order.id}`}
                   key={order.id}
                   media={

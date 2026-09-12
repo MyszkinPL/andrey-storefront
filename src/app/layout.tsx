@@ -11,7 +11,8 @@ export const metadata: Metadata = {
   title: "Store",
   description: "Telegram storefront for digital goods",
   icons: {
-    icon: [{ url: "/logo.svg", type: "image/svg+xml" }],
+    icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
+    apple: [{ url: "/icon.svg", type: "image/svg+xml" }],
   },
 }
 
@@ -21,7 +22,8 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: "cover",
-  themeColor: "#17212b",
+  // Matches --background in the dark theme (Tailwind neutral-950).
+  themeColor: "#0a0a0a",
 }
 
 export default function RootLayout({

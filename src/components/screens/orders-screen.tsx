@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { LifeBuoy, Receipt, Trash2 } from "lucide-react"
+import { LifeBuoy, ReceiptText, Trash2 } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button, buttonVariants } from "@/components/ui/button"
@@ -15,6 +15,7 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty"
 import { ListGroup, ListRow, ListRowMedia, ListSkeleton } from "@/components/list-row"
+import { OrderTimeLeft } from "@/components/order-time-left"
 import { ProfileAvatarLink } from "@/components/profile-avatar-link"
 import { ResponsiveDialog } from "@/components/responsive-dialog"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -95,9 +96,9 @@ export function OrdersScreen() {
                 target="_blank"
               >
                 <LifeBuoy data-icon="inline-start" />
-                {/* The label costs more width than it is worth next to the
-                    avatar on a narrow phone. */}
-                <span className="max-sm:hidden">{t("orders.support")}</span>
+                {/* Icon-only on a phone read as "no support button": the
+                    label stays, and the title truncates instead. */}
+                {t("orders.support")}
               </a>
             ) : null}
             <ProfileAvatarLink />
@@ -153,18 +154,25 @@ export function OrdersScreen() {
             <ListGroup className="lg:grid lg:grid-cols-2">
               {visibleOrders.map((order) => (
                 <ListRow
-                  description={`#${order.number}${
-                    order.productCategory ? ` · ${order.productCategory}` : ""
-                  }${
-                    order.paymentMethodTitle && !order.isPaid
-                      ? ` · ${order.paymentMethodTitle}`
-                      : ""
-                  } · ${formatRelative(order.updatedAt)}`}
+                  description={
+                    <>
+                      {`#${order.number}${
+                        order.productCategory ? ` · ${order.productCategory}` : ""
+                      }${
+                        order.paymentMethodTitle && !order.isPaid
+                          ? ` · ${order.paymentMethodTitle}`
+                          : ""
+                      } · `}
+                      {/* The clock matters more than "5 min ago" while the
+                          order is still waiting to be paid. */}
+                      <OrderTimeLeft fallback={formatRelative(order.updatedAt)} order={order} />
+                    </>
+                  }
                   href={`/orders/${order.id}`}
                   key={order.id}
                   media={
                     <ListRowMedia>
-                      <Receipt />
+                      <ReceiptText />
                     </ListRowMedia>
                   }
                   title={order.productTitle || order.subject}
@@ -200,7 +208,7 @@ function OrdersEmpty({ title, description }: { title: string; description: strin
       <CardContent>
         <Empty>
           <EmptyMedia variant="icon">
-            <Receipt />
+            <ReceiptText />
           </EmptyMedia>
           <EmptyHeader>
             <EmptyTitle>{title}</EmptyTitle>

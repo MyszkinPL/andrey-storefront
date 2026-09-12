@@ -10,6 +10,7 @@ import type {
   ProductListResponse,
   StatsResponse,
 } from "@/lib/contracts"
+import { paymentDeadline } from "@/lib/order-timer"
 
 const now = new Date().toISOString()
 const MOCK_STORAGE_KEY = "snx.sell.mock-state:v1"
@@ -227,8 +228,23 @@ export function isLocalMockApiEnabled() {
  */
 const MOCK_LATENCY_MS = 400
 
+/** Mirrors the server sweep so the timer can be watched end to end locally. */
+function expireMockOrders() {
+  const now = Date.now()
+  let changed = false
+  for (const order of orders) {
+    if (order.status !== "OPEN" || order.isPaid || !order.expiresAt) continue
+    if (new Date(order.expiresAt).getTime() > now) continue
+    order.status = "CANCELLED"
+    order.expiredAt = new Date(now).toISOString()
+    changed = true
+  }
+  if (changed) persistMockState()
+}
+
 export async function mockApi<T>(input: RequestInfo, init?: RequestInit): Promise<T> {
   hydrateMockState()
+  expireMockOrders()
   await new Promise((resolve) => window.setTimeout(resolve, MOCK_LATENCY_MS))
 
   const url = typeof input === "string" ? input : input.url
@@ -438,6 +454,7 @@ export async function mockApi<T>(input: RequestInfo, init?: RequestInit): Promis
     }
     if (method === "PATCH") {
       if (body?.markManualPaid) {
+        if (order.status !== "OPEN") throw new Error("Время на оплату истекло, заказ закрыт. Оформи новый.")
         order.status = "PAYMENT_REVIEW"
         order.manualPaymentRequestedAt = new Date().toISOString()
       }
@@ -449,6 +466,8 @@ export async function mockApi<T>(input: RequestInfo, init?: RequestInit): Promis
       if (body?.rejectManualPayment) {
         order.status = "OPEN"
         order.manualPaymentRequestedAt = null
+        order.expiresAt = paymentDeadline().toISOString()
+        order.expiredAt = null
       }
       if (body?.cancelByUser) {
         order.status = "CANCELLED"
@@ -747,6 +766,8 @@ function makeOrder({
     priceRub: product.priceRub,
     deliveredKey: status === "CLOSED" ? "SNX-LITE-TEST-001" : null,
     manualPaymentRequestedAt,
+    expiresAt: status === "OPEN" ? paymentDeadline().toISOString() : (null as string | null),
+    expiredAt: null as string | null,
     receipt: null as {
       fileName: string
       fileSize: number
@@ -793,6 +814,8 @@ function orderListItem(order: (typeof orders)[number]) {
     paymentMethodTitle: order.paymentMethodTitle,
     paymentMethodType: order.paymentMethodType,
     manualPaymentRequestedAt: order.manualPaymentRequestedAt,
+    expiresAt: order.expiresAt ?? null,
+    expiredAt: order.expiredAt ?? null,
     priceRub: order.priceRub || products.find((product) => product.title === order.productTitle)?.priceRub || null,
   }
 }

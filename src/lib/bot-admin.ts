@@ -3,6 +3,8 @@ import { InlineKeyboard } from "grammy"
 
 import { resolveActor } from "@/lib/bot-locale"
 import { clearPending, setPending, takePending } from "@/lib/bot-pending"
+import { orderStatusIcon } from "@/lib/bot-shop"
+import { getServerEnv } from "@/lib/env"
 import { formatPrice } from "@/lib/format"
 import { getShopCurrency } from "@/lib/shop-settings"
 import type { Locale } from "@/lib/i18n/config"
@@ -14,6 +16,12 @@ import {
 } from "@/lib/order-notifications"
 import { confirmOrderPaymentFlow } from "@/lib/order-payment"
 import { orderStatusKey } from "@/lib/order-status"
+import {
+  isOrderOnTimer,
+  paymentDeadline,
+  remainingMinutes,
+  remainingMs,
+} from "@/lib/order-timer"
 import { prisma } from "@/lib/prisma"
 import { escapeHtml } from "@/lib/telegram-format"
 import { replaceMessage, type View } from "@/lib/bot-view"
@@ -181,12 +189,37 @@ function orderStatusLabel(
   return t(orderStatusKey(order))
 }
 
+/**
+ * Ranks orders by how badly they need the admin: a payment waiting for a
+ * verdict first, then paid orders waiting for a key, then everything still
+ * open, then history. Postgres sorts the enum in declaration order, which
+ * put "OPEN" ahead of "PAYMENT_REVIEW" and buried the urgent ones.
+ */
+function adminPriority(order: { status: OrderStatus; isPaid: boolean }) {
+  if (order.status === OrderStatus.PAYMENT_REVIEW) return 0
+  if (order.status === OrderStatus.OPEN && order.isPaid) return 1
+  if (order.status === OrderStatus.OPEN) return 2
+  return 3
+}
+
 export async function renderOrders(t: TranslateFn) {
-  const orders = await prisma.order.findMany({
-    orderBy: [{ status: "asc" }, { updatedAt: "desc" }],
-    take: PAGE_SIZE,
-    include: { product: true },
-  })
+  const [live, history] = await Promise.all([
+    prisma.order.findMany({
+      where: { status: { in: [OrderStatus.OPEN, OrderStatus.PAYMENT_REVIEW] } },
+      orderBy: { updatedAt: "desc" },
+      take: PAGE_SIZE,
+      include: { product: true },
+    }),
+    prisma.order.findMany({
+      where: { status: { in: [OrderStatus.CLOSED, OrderStatus.CANCELLED] } },
+      orderBy: { updatedAt: "desc" },
+      take: PAGE_SIZE,
+      include: { product: true },
+    }),
+  ])
+  const orders = [...live, ...history]
+    .sort((a, b) => adminPriority(a) - adminPriority(b))
+    .slice(0, PAGE_SIZE)
 
   if (orders.length === 0) {
     return {
@@ -200,14 +233,23 @@ export async function renderOrders(t: TranslateFn) {
     const title = order.product?.title || order.productTitleSnapshot || order.subject
     keyboard
       .text(
-        `#${order.number} · ${title.slice(0, 24)} · ${orderStatusLabel(order, t)}`,
+        `${orderStatusIcon(order)} #${order.number} · ${title.slice(0, 26)}`,
         `o:${order.id}`,
       )
       .row()
   }
-  keyboard.text(t("bot.back"), "m")
+  keyboard.text(t("common.refresh"), "o").text(t("bot.back"), "m")
 
-  return { text: t("bot.ordersTitle"), keyboard }
+  const summary = t("bot.ordersSummary", {
+    review: live.filter((order) => order.status === OrderStatus.PAYMENT_REVIEW).length,
+    work: live.filter((order) => order.status === OrderStatus.OPEN && order.isPaid).length,
+    waiting: live.filter((order) => order.status === OrderStatus.OPEN && !order.isPaid).length,
+  })
+
+  return {
+    text: [t("bot.ordersTitle"), summary, "", t("bot.ordersLegend")].join("\n"),
+    keyboard,
+  }
 }
 
 export async function renderOrder(orderId: string, t: TranslateFn, locale: Locale) {
@@ -230,17 +272,31 @@ export async function renderOrder(orderId: string, t: TranslateFn, locale: Local
   const amount =
     order.priceRubSnapshot ?? order.product?.priceRub ?? null
 
-  const text = [
+  const lines = [
     t("bot.orderCard", {
       title: escapeHtml(title),
       number: order.number,
       buyer: escapeHtml(buyer),
+      statusIcon: orderStatusIcon(order),
       status: orderStatusLabel(order, t),
       amount: amount === null ? "—" : formatPrice(amount, locale, currency),
       method: escapeHtml(order.paymentMethodTitle || "—"),
     }),
-    order.receipt ? t("bot.receiptAttached") : t("bot.receiptMissing"),
-  ].join("\n")
+  ]
+  // A receipt is only a thing for manual transfers; Crypto Bot confirms itself.
+  if (order.paymentMethodType !== "CRYPTO_PAY") {
+    lines.push(order.receipt ? t("bot.receiptAttached") : t("bot.receiptMissing"))
+  }
+  if (isOrderOnTimer(order) && order.expiresAt) {
+    lines.push(
+      "",
+      t("shop.timeLeft", { minutes: remainingMinutes(remainingMs(order.expiresAt)) }),
+    )
+  }
+  if (order.deliveredKeyValue) {
+    lines.push(t("shop.keyIssued", { key: escapeHtml(order.deliveredKeyValue) }))
+  }
+  const text = lines.join("\n")
 
   const keyboard = new InlineKeyboard()
   const isClosed =
@@ -258,7 +314,9 @@ export async function renderOrder(orderId: string, t: TranslateFn, locale: Local
   if (!isClosed) {
     keyboard.text(t("bot.actionCancelOrder"), `ox:${order.id}`).row()
   }
-  keyboard.text(t("bot.back"), "o")
+  // The full card, receipt PDF included, lives in the mini app.
+  keyboard.webApp(t("bot.openInApp"), `${getServerEnv().APP_URL}/orders/${order.id}`).row()
+  keyboard.text(t("common.refresh"), `o:${order.id}`).text(t("bot.back"), "o")
 
   return { text, keyboard }
 }
@@ -271,7 +329,14 @@ export async function confirmOrder(orderId: string, adminUserId: string) {
 export async function rejectOrder(orderId: string) {
   await prisma.order.update({
     where: { id: orderId },
-    data: { status: OrderStatus.OPEN, manualPaymentRequestedAt: null },
+    data: {
+      status: OrderStatus.OPEN,
+      manualPaymentRequestedAt: null,
+      // Back on the clock, with a fresh window rather than whatever was
+      // left of the old one.
+      expiresAt: paymentDeadline(),
+      expiredAt: null,
+    },
   })
   await notifyManualPaymentRejected(orderId).catch(() => {})
 }
@@ -310,17 +375,22 @@ export async function deliverKey(
 
 // ---------------------------------------------------------------- products
 
-export async function renderProducts(t: TranslateFn) {
-  const products = await prisma.product.findMany({
-    orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
-    take: PAGE_SIZE,
-  })
+export async function renderProducts(t: TranslateFn, locale: Locale) {
+  const [products, currency] = await Promise.all([
+    prisma.product.findMany({
+      orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
+      take: PAGE_SIZE,
+    }),
+    getShopCurrency(),
+  ])
 
   const keyboard = new InlineKeyboard()
   for (const product of products) {
+    // A hidden product used to be marked with a bullet nobody could read.
+    const mark = product.isActive ? "\u{1F4E6}" : "\u{1F648}"
     keyboard
       .text(
-        `${product.isActive ? "" : "• "}${product.title.slice(0, 30)}`,
+        `${mark} ${product.title.slice(0, 24)} · ${formatPrice(product.priceRub, locale, currency)}`,
         `p:${product.id}`,
       )
       .row()
@@ -328,10 +398,10 @@ export async function renderProducts(t: TranslateFn) {
   keyboard.text(t("bot.actionNewProduct"), "pn").row()
   keyboard.text(t("bot.back"), "m")
 
-  return {
-    text: products.length ? t("bot.productsTitle") : `${t("bot.productsTitle")}\n${t("bot.productsEmpty")}`,
-    keyboard,
-  }
+  const lines = [t("bot.productsTitle")]
+  lines.push(products.length ? t("bot.productsLegend") : t("bot.productsEmpty"))
+
+  return { text: lines.join("\n"), keyboard }
 }
 
 export async function renderProduct(productId: string, t: TranslateFn, locale: Locale) {
@@ -433,17 +503,17 @@ export async function renderUsers(t: TranslateFn) {
   const keyboard = new InlineKeyboard()
   for (const user of users) {
     const name = user.username ? `@${user.username}` : user.firstName
-    const marks = [user.role === Role.ADMIN ? "★" : "", user.isBanned ? "⛔" : ""]
+    const marks = [user.role === Role.ADMIN ? "⭐" : "", user.isBanned ? "⛔" : ""]
       .filter(Boolean)
       .join("")
     keyboard.text(`${marks}${name}`.slice(0, 32), `u:${user.id}`).row()
   }
   keyboard.text(t("bot.back"), "m")
 
-  return {
-    text: users.length ? t("bot.usersTitle") : `${t("bot.usersTitle")}\n${t("bot.usersEmpty")}`,
-    keyboard,
-  }
+  const lines = [t("bot.usersTitle")]
+  lines.push(users.length ? t("bot.usersLegend") : t("bot.usersEmpty"))
+
+  return { text: lines.join("\n"), keyboard }
 }
 
 export async function renderUser(userId: string, t: TranslateFn) {

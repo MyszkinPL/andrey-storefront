@@ -39,6 +39,7 @@ import {
 } from "@/components/ui/input-group"
 import { Screen, ScreenBody, ScreenHeader, ScreenState } from "@/components/screen"
 import { getOrder } from "@/lib/api"
+import { isOrderExpired } from "@/lib/order-timer"
 
 type Order = Awaited<ReturnType<typeof getOrder>>["order"]
 
@@ -175,6 +176,7 @@ export function OrderCompleteScreen({ orderId }: { orderId: string }) {
 }
 
 function titleKey(order: Order): TranslationKey {
+  if (isOrderExpired(order)) return "orderComplete.titleExpired"
   if (order.status === "CANCELLED") return "orderComplete.titleCancelled"
   if (order.deliveredKey) return "orderComplete.titleKeyReady"
   if (order.isPaid) return "orderComplete.titlePaid"
@@ -182,6 +184,7 @@ function titleKey(order: Order): TranslationKey {
 }
 
 function descriptionKey(order: Order): TranslationKey {
+  if (isOrderExpired(order)) return "orderComplete.descriptionExpired"
   if (order.status === "CANCELLED") return "orderComplete.descriptionCancelled"
   if (order.deliveredKey) return "orderComplete.descriptionKeyReady"
   if (order.isPaid) return "orderComplete.descriptionPaid"

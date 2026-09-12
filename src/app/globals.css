@@ -197,6 +197,11 @@ body {
 
 html {
   scrollbar-width: none;
+  /* The page colour lives on <html> as well as <body>: on iOS the area a
+     rubber-band scroll or an opening keyboard reveals is painted by the root
+     element, and a bare root showed the webview's own colour there. */
+  background-color: var(--background);
+  min-height: 100%;
 }
 
 html::-webkit-scrollbar {
@@ -205,6 +210,9 @@ html::-webkit-scrollbar {
 
 body {
   margin: 0;
+  min-height: 100dvh;
+  /* Pinned to the viewport so it never scrolls out from under the content. */
+  background-attachment: fixed;
 }
 
 body,

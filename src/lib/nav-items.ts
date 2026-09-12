@@ -1,8 +1,8 @@
 import {
+  ClipboardList,
   Home,
-  Receipt,
+  ReceiptText,
   Settings,
-  Shield,
   Store,
   Users,
   type LucideIcon,
@@ -20,13 +20,17 @@ export type NavItem = {
 /** Profile is reached from the avatar in the header, not from a tab. */
 export const BUYER_NAV: NavItem[] = [
   { href: "/catalog", icon: Store, labelKey: "nav.catalog" },
-  { href: "/orders", icon: Receipt, labelKey: "nav.orders" },
+  // A plain receipt: the dollar-sign one advertised a currency the shop does
+  // not price in.
+  { href: "/orders", icon: ReceiptText, labelKey: "nav.orders" },
 ]
 
 export const ADMIN_NAV: NavItem[] = [
   { href: "/admin", icon: Home, labelKey: "nav.adminOverview" },
   { href: "/admin/products", icon: Store, labelKey: "nav.adminProducts" },
-  { href: "/admin/orders", icon: Shield, labelKey: "nav.adminOrders" },
+  // The shield already means "admin mode" in the mode switcher; reusing it
+  // for one tab made that tab look like the switch.
+  { href: "/admin/orders", icon: ClipboardList, labelKey: "nav.adminOrders" },
   { href: "/admin/users", icon: Users, labelKey: "nav.adminUsers" },
   { href: "/admin/settings", icon: Settings, labelKey: "nav.adminSettings" },
 ]

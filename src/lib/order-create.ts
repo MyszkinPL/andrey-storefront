@@ -4,6 +4,7 @@ import { ApiFailure, failure } from "@/lib/api-error"
 import { createCryptoInvoice } from "@/lib/crypto-pay"
 import { translate } from "@/lib/i18n"
 import { resolveUserLocale, type Locale } from "@/lib/i18n/config"
+import { paymentDeadline } from "@/lib/order-timer"
 import { prisma } from "@/lib/prisma"
 
 export const ACTIVE_ORDER_LIMIT = 2
@@ -91,6 +92,9 @@ export async function createOrder({
         ? "/crypto-bot-logo.svg"
         : paymentMethod?.iconDataUrl,
       createdById: user.id,
+      // Thirty minutes to pay; a product order that is still unpaid after
+      // that closes itself. Bare subject-only orders have nothing to pay for.
+      expiresAt: product ? paymentDeadline() : null,
     },
   })
 

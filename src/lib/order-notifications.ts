@@ -1,4 +1,5 @@
 import { Role } from "@prisma/client"
+import { InlineKeyboard } from "grammy"
 
 import { getBot } from "@/lib/bot"
 import { createTranslator, type TranslateFn } from "@/lib/i18n"
@@ -56,6 +57,7 @@ async function getOrderContext(orderId: string) {
 async function sendLocalized(
   recipients: Recipient[],
   build: (t: TranslateFn) => string,
+  keyboard?: (t: TranslateFn) => InlineKeyboard,
 ) {
   if (recipients.length === 0) return
   const bot = getBot()
@@ -65,6 +67,7 @@ async function sendLocalized(
       const t = createTranslator(resolveUserLocale(recipient))
       return bot.api.sendMessage(Number(recipient.telegramId), build(t), {
         parse_mode: "HTML",
+        reply_markup: keyboard?.(t),
       })
     }),
   )
@@ -86,16 +89,30 @@ function heading(title: string, number: number) {
   return `<b>${escapeHtml(title)}</b> · #${number}`
 }
 
+/**
+ * One tap from the notification to the order it is about. The buyer lands on
+ * their own card, the admin on the panel with the confirm buttons; before
+ * this every notification ended with the reader digging through /orders.
+ */
+const buyerOrderButton = (orderId: string) => (t: TranslateFn) =>
+  new InlineKeyboard().text(t("notify.myOrder"), `so:${orderId}`)
+
+const adminOrderButton = (orderId: string) => (t: TranslateFn) =>
+  new InlineKeyboard().text(t("notify.openOrder"), `o:${orderId}`)
+
 export async function notifyManualPaymentRequested(orderId: string) {
   const context = await getOrderContext(orderId)
   if (!context) return
 
-  await sendLocalized(context.admins, (t) =>
-    [
-      t("notify.manualRequested"),
-      heading(context.title, context.order.number),
-      escapeHtml(context.buyerName),
-    ].join("\n"),
+  await sendLocalized(
+    context.admins,
+    (t) =>
+      [
+        t("notify.manualRequested"),
+        heading(context.title, context.order.number),
+        escapeHtml(context.buyerName),
+      ].join("\n"),
+    adminOrderButton(orderId),
   )
 }
 
@@ -126,20 +143,24 @@ export async function notifyOrderPaid(orderId: string) {
         : t("notify.paidBuyerPending")
       const [first, second] = template.split("\n")
       return [first, head, second].join("\n")
-    }),
+    }, buyerOrderButton(orderId)),
 
-    sendLocalized(context.admins, (t) => {
-      const lines = [
-        t("notify.paidAdmin"),
-        heading(context.title, context.order.number),
-        t("notify.buyerLabel", { buyer: escapeHtml(context.buyerName) }),
-      ]
+    sendLocalized(
+      context.admins,
+      (t) => {
+        const lines = [
+          t("notify.paidAdmin"),
+          heading(context.title, context.order.number),
+          t("notify.buyerLabel", { buyer: escapeHtml(context.buyerName) }),
+        ]
 
-      if (deliveredKey) lines.push(t("notify.paidAdminAuto"))
-      else if (isAutoKey) lines.push(t("notify.paidAdminNoKeys"))
+        if (deliveredKey) lines.push(t("notify.paidAdminAuto"))
+        else if (isAutoKey) lines.push(t("notify.paidAdminNoKeys"))
 
-      return lines.join("\n")
-    }),
+        return lines.join("\n")
+      },
+      adminOrderButton(orderId),
+    ),
   ])
 }
 
@@ -147,10 +168,37 @@ export async function notifyManualPaymentRejected(orderId: string) {
   const context = await getOrderContext(orderId)
   if (!context) return
 
-  await sendLocalized([context.buyer], (t) => {
-    const [first, second] = t("notify.rejected").split("\n")
-    return [first, heading(context.title, context.order.number), second].join("\n")
-  })
+  await sendLocalized(
+    [context.buyer],
+    (t) => {
+      const [first, second] = t("notify.rejected").split("\n")
+      return [first, heading(context.title, context.order.number), second].join("\n")
+    },
+    buyerOrderButton(orderId),
+  )
+}
+
+/** The payment window ran out and the order closed itself. */
+export async function notifyOrderExpired(orderId: string) {
+  const context = await getOrderContext(orderId)
+  if (!context) return
+
+  await Promise.allSettled([
+    sendLocalized([context.buyer], (t) => {
+      const [first, second] = t("notify.expiredBuyer").split("\n")
+      return [first, heading(context.title, context.order.number), second].join("\n")
+    }),
+    sendLocalized(
+      context.admins,
+      (t) =>
+        [
+          t("notify.expiredAdmin"),
+          heading(context.title, context.order.number),
+          escapeHtml(context.buyerName),
+        ].join("\n"),
+      adminOrderButton(orderId),
+    ),
+  ])
 }
 
 export async function notifyOrderCancelled(orderId: string) {
@@ -164,12 +212,15 @@ export async function notifyOrderCancelled(orderId: string) {
         heading(context.title, context.order.number),
       ].join("\n"),
     ),
-    sendLocalized(context.admins, (t) =>
-      [
-        t("notify.cancelledAdmin"),
-        heading(context.title, context.order.number),
-        escapeHtml(context.buyerName),
-      ].join("\n"),
+    sendLocalized(
+      context.admins,
+      (t) =>
+        [
+          t("notify.cancelledAdmin"),
+          heading(context.title, context.order.number),
+          escapeHtml(context.buyerName),
+        ].join("\n"),
+      adminOrderButton(orderId),
     ),
   ])
 }

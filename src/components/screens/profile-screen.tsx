@@ -1,7 +1,7 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
-import { CreditCard, Languages, LifeBuoy } from "lucide-react"
+import { CreditCard, Languages, UserRound } from "lucide-react"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Card, CardContent } from "@/components/ui/card"
@@ -91,7 +91,8 @@ export function ProfileScreen() {
                 }
                 media={
                   <ListRowMedia>
-                    <LifeBuoy />
+                    {/* A lifebuoy is the support icon everywhere else. */}
+                    <UserRound />
                   </ListRowMedia>
                 }
                 title={t("profile.account")}

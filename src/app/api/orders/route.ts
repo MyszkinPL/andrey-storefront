@@ -4,6 +4,7 @@ import { z } from "zod"
 
 import { requireInteractiveUser, requireUser } from "@/lib/auth"
 import { createOrder, OrderCreateError } from "@/lib/order-create"
+import { expireStaleOrders } from "@/lib/order-expiry"
 import type { OrderListResponse } from "@/lib/contracts"
 import { prisma } from "@/lib/prisma"
 
@@ -36,6 +37,9 @@ export async function GET(request: Request) {
       ? {}
       : { createdById: user.id, hiddenByBuyerAt: null }
 
+  // Never list a live timer on an order the deadline already closed.
+  await expireStaleOrders().catch(() => {})
+
   // One extra row tells the client whether more exist without a count query.
   const rows = await prisma.order.findMany({
     where,
@@ -63,6 +67,8 @@ export async function GET(request: Request) {
       paymentMethodTitle: order.paymentMethodTitle || null,
       paymentMethodType: order.paymentMethodType || null,
       manualPaymentRequestedAt: order.manualPaymentRequestedAt?.toISOString() || null,
+      expiresAt: order.expiresAt?.toISOString() || null,
+      expiredAt: order.expiredAt?.toISOString() || null,
     })),
   } satisfies OrderListResponse)
 }

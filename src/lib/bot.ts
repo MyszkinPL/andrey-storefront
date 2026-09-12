@@ -121,7 +121,13 @@ export function getBot() {
     // Someone who reached the mini app first has no start time yet.
     if (user) await markBotStarted(user.id)
     const settings = await prisma.shopSettings.findUnique({ where: { id: 1 } })
-    const menu = shopMenu(t, settings?.shopName || "Shop", isAdmin, env.APP_URL)
+    const menu = shopMenu(
+      t,
+      settings?.shopName || "Shop",
+      isAdmin,
+      env.APP_URL,
+      settings?.supportUsername,
+    )
 
     await ctx.reply(menu.text, {
       parse_mode: "HTML",
@@ -130,7 +136,14 @@ export function getBot() {
   })
 
   bot.command("orders", async (ctx) => {
-    const { t } = await resolveActor(ctx)
+    const { t, user } = await resolveActor(ctx)
+    // The list itself, not a button to go and find it somewhere else.
+    if (user) {
+      const view = await renderMyOrders(user.id, t)
+      view.keyboard.row().webApp(t("bot.openOrders"), `${env.APP_URL}/orders`)
+      await ctx.reply(view.text, { parse_mode: "HTML", reply_markup: view.keyboard })
+      return
+    }
     await ctx.reply(t("bot.openOrders"), {
       reply_markup: new InlineKeyboard().webApp(
         t("bot.openOrders"),
@@ -141,7 +154,10 @@ export function getBot() {
 
   bot.command("help", async (ctx) => {
     const { t } = await resolveActor(ctx)
-    await ctx.reply(t("bot.help"))
+    await ctx.reply(t("bot.help"), {
+      parse_mode: "HTML",
+      reply_markup: new InlineKeyboard().webApp(t("bot.openShop"), env.APP_URL),
+    })
   })
 
   bot.command("admin", async (ctx) => {
@@ -199,7 +215,13 @@ export function getBot() {
           await ctx.answerCallbackQuery()
           await replaceMessage(
             ctx,
-            shopMenu(t, settings?.shopName || "Shop", isAdmin, env.APP_URL),
+            shopMenu(
+              t,
+              settings?.shopName || "Shop",
+              isAdmin,
+              env.APP_URL,
+              settings?.supportUsername,
+            ),
           )
           return
         }
@@ -238,17 +260,29 @@ export function getBot() {
           )
           return
 
-        case "sd":
-          await markOrderPaid(id, user.id)
-          await ctx.answerCallbackQuery({ text: t("shop.paidNoted") })
+        case "sd": {
+          // A stale card (timer ran out, admin already acted) must say why
+          // nothing happened instead of cheerfully confirming.
+          const marked = await markOrderPaid(id, user.id)
+          await ctx.answerCallbackQuery(
+            marked
+              ? { text: t("shop.paidNoted") }
+              : { show_alert: true, text: t("shop.markPaidFailed") },
+          )
           await replaceMessage(ctx, await renderMyOrder(id, user, t, locale))
           return
+        }
 
-        case "sk":
-          await cancelOwnOrder(id, user.id)
-          await ctx.answerCallbackQuery({ text: t("shop.cancelled") })
+        case "sk": {
+          const cancelled = await cancelOwnOrder(id, user.id)
+          await ctx.answerCallbackQuery(
+            cancelled
+              ? { text: t("shop.cancelled") }
+              : { show_alert: true, text: t("shop.cancelFailed") },
+          )
           await replaceMessage(ctx, await renderMyOrder(id, user, t, locale))
           return
+        }
 
         case "sx": {
           const hidden = await hideOrderFromHistory(id, user.id)
@@ -272,14 +306,20 @@ export function getBot() {
           await ctx.answerCallbackQuery({ text: t("bot.gateJoined") })
           await replaceMessage(
             ctx,
-            shopMenu(t, settings?.shopName || "Shop", isAdmin, env.APP_URL),
+            shopMenu(
+              t,
+              settings?.shopName || "Shop",
+              isAdmin,
+              env.APP_URL,
+              settings?.supportUsername,
+            ),
           )
           return
         }
 
         case "su":
           await ctx.answerCallbackQuery()
-          await replaceMessage(ctx, renderProfile(user, t, locale))
+          await replaceMessage(ctx, await renderProfile(user, t, locale, env.APP_URL))
           return
 
         case "sl": {
@@ -290,7 +330,10 @@ export function getBot() {
           await setUserLanguage(user.id, id)
           const next = await resolveActor(ctx)
           await ctx.answerCallbackQuery({ text: next.t("language.changed") })
-          await replaceMessage(ctx, renderProfile(next.user ?? user, next.t, next.locale))
+          await replaceMessage(
+            ctx,
+            await renderProfile(next.user ?? user, next.t, next.locale, env.APP_URL),
+          )
           return
         }
 
@@ -369,7 +412,7 @@ export function getBot() {
         await ctx.answerCallbackQuery()
         await replaceMessage(
           ctx,
-          id ? await renderProduct(id, t, locale) : await renderProducts(t),
+          id ? await renderProduct(id, t, locale) : await renderProducts(t, locale),
         )
         return
 
@@ -534,8 +577,19 @@ export function getBot() {
     const action = isAdmin && user ? takePending(ctx.from.id) : null
 
     if (!action || !user) {
-      await ctx.reply(t("bot.fallback"), {
-        reply_markup: new InlineKeyboard().webApp(t("bot.openShop"), env.APP_URL),
+      // Any stray text brings the menu back, so a lost buyer is never left
+      // with a bare "open the app" and nothing else to press.
+      const settings = await prisma.shopSettings.findUnique({ where: { id: 1 } })
+      const menu = shopMenu(
+        t,
+        settings?.shopName || "Shop",
+        isAdmin,
+        env.APP_URL,
+        settings?.supportUsername,
+      )
+      await ctx.reply(`${t("bot.fallback")}\n\n${menu.text}`, {
+        parse_mode: "HTML",
+        reply_markup: menu.keyboard,
       })
       return
     }
@@ -622,7 +676,7 @@ export function getBot() {
         }
         const product = await createProduct(action.title, price)
         await ctx.reply(t("bot.productCreated", { title: product.title }))
-        await replaceMessage(ctx, await renderProducts(t))
+        await replaceMessage(ctx, await renderProducts(t, locale))
         return
       }
     }

@@ -3,7 +3,7 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { KeyRound, PackageSearch, ShoppingBag } from "lucide-react"
+import { KeyRound, PackageCheck, PackageSearch, ShoppingBag } from "lucide-react"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -36,6 +36,10 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { BackButton } from "@/components/back-button"
+import {
+  areOrderInstructionsDismissed,
+  OrderInstructionsDialog,
+} from "@/components/order-instructions-dialog"
 import { Screen, ScreenBody, ScreenState } from "@/components/screen"
 import { useHaptic } from "@/hooks/use-telegram"
 import { useI18n, useTranslate } from "@/components/i18n-provider"
@@ -54,6 +58,7 @@ export function ProductScreen({ productId }: { productId: string }) {
   const queryClient = useQueryClient()
   const haptic = useHaptic()
   const [selectedPaymentKey, setSelectedPaymentKey] = useState("")
+  const [instructionsOpen, setInstructionsOpen] = useState(false)
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["product", productId],
@@ -130,8 +135,19 @@ export function ProductScreen({ productId }: { productId: string }) {
       await queryClient.invalidateQueries({ queryKey: ["orders"] })
       router.replace(`/orders/${orderId}`)
     },
+    // The failure reads better on the card than inside a sheet.
+    onError: () => setInstructionsOpen(false),
   })
 
+  // A manual transfer gets the how-to first; the invoice flow explains itself
+  // inside Crypto Bot, and anyone who ticked "do not show again" skips it.
+  function placeOrder() {
+    if (selectedPayment?.type === "MANUAL" && !areOrderInstructionsDismissed()) {
+      setInstructionsOpen(true)
+      return
+    }
+    orderMutation.mutate()
+  }
 
   // A missing product used to sit on "loading" forever with no way back: the
   // branch could not tell a pending request from a deleted or wrong id.
@@ -174,7 +190,13 @@ export function ProductScreen({ productId }: { productId: string }) {
             <CardDescription>{product.description}</CardDescription>
             <Separator />
             <Field orientation="horizontal">
-              <KeyRound className="size-4 text-muted-foreground" />
+              {/* A key icon next to "manual delivery" promised a key that a
+                  manual product may never have. */}
+              {product.deliveryType === "AUTO_KEY" ? (
+                <KeyRound className="size-4 text-muted-foreground" />
+              ) : (
+                <PackageCheck className="size-4 text-muted-foreground" />
+              )}
               <FieldContent>
                 <FieldTitle>{deliveryLabel}</FieldTitle>
               </FieldContent>
@@ -243,7 +265,7 @@ export function ProductScreen({ productId }: { productId: string }) {
               <Button
                 className="w-full"
                 disabled={!selectedPayment || orderMutation.isPending}
-                onClick={() => orderMutation.mutate()}
+                onClick={placeOrder}
               >
                 {orderMutation.isPending ? (
                   t("product.placingOrder")
@@ -258,6 +280,13 @@ export function ProductScreen({ productId }: { productId: string }) {
           </CardFooter>
         </Card>
       </ScreenBody>
+
+      <OrderInstructionsDialog
+        loading={orderMutation.isPending}
+        onOpenChange={setInstructionsOpen}
+        onProceed={() => orderMutation.mutate()}
+        open={instructionsOpen}
+      />
     </Screen>
   )
 }

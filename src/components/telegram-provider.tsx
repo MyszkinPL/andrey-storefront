@@ -15,6 +15,12 @@ type TelegramContextValue = {
   isTelegram: boolean
 }
 
+/** Hex twins of --background in globals.css; Telegram only takes hex. */
+const APP_BACKGROUND = {
+  dark: "#0a0a0a",
+  light: "#ffffff",
+} as const
+
 const TelegramContext = createContext<TelegramContextValue>({
   ready: false,
   isTelegram: false,
@@ -44,6 +50,9 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
         viewport.mount().catch(() => {})
       }
 
+      const isDark = !telegram || themeParams.isDark()
+      document.documentElement.classList.toggle("dark", isDark)
+
       if (telegram) {
         if (miniApp.ready.isAvailable()) {
           miniApp.ready()
@@ -51,18 +60,25 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
         if (viewport.expand.isAvailable()) {
           viewport.expand()
         }
+        // Telegram paints its own header, bottom bar and overscroll areas.
+        // Asking for its "bg_color" gave those areas Telegram's theme colour,
+        // a visibly different grey from the app's --background, so the page
+        // looked like a card floating on a mismatched backdrop. The exact
+        // page colour keeps everything one surface.
+        const pageColor = isDark ? APP_BACKGROUND.dark : APP_BACKGROUND.light
         if (miniApp.setBgColor.isAvailable()) {
-          miniApp.setBgColor("bg_color")
+          miniApp.setBgColor(pageColor)
         }
         if (miniApp.setHeaderColor.isAvailable()) {
-          miniApp.setHeaderColor("bg_color")
+          miniApp.setHeaderColor(pageColor)
+        }
+        if (miniApp.setBottomBarColor.isAvailable()) {
+          miniApp.setBottomBarColor(pageColor)
         }
         if (swipeBehavior.disableVertical.isAvailable()) {
           swipeBehavior.disableVertical()
         }
       }
-
-      document.documentElement.classList.toggle("dark", !telegram || themeParams.isDark())
     } finally {
       setReady(true)
     }

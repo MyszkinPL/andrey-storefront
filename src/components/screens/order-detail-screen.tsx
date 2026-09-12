@@ -2,10 +2,10 @@
 
 import type { PaymentMethodType } from "@prisma/client"
 import Link from "next/link"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { ExternalLink, Trash2 } from "lucide-react"
+import { ExternalLink, Timer, Trash2 } from "lucide-react"
 
 import { AdminOrderPanel } from "@/components/order-detail/admin-panel"
 import { ConfirmDeleteDialog } from "@/components/order-detail/confirm-delete-dialog"
@@ -24,8 +24,14 @@ import type { PaymentOption } from "@/components/order-detail/types"
 import { ReceiptStatus, ReceiptUpload } from "@/components/receipt-upload"
 import { ResponsiveDialog } from "@/components/responsive-dialog"
 import { useI18n } from "@/components/i18n-provider"
+import { useCountdown } from "@/hooks/use-countdown"
 import { useNotify } from "@/hooks/use-notify"
 import { formatDateTime, formatInvoiceAmount, formatPrice } from "@/lib/format"
+import {
+  formatCountdown,
+  isOrderOnTimer,
+  ORDER_PAYMENT_WINDOW_MS,
+} from "@/lib/order-timer"
 import { Badge } from "@/components/ui/badge"
 import { Button, buttonVariants } from "@/components/ui/button"
 import {
@@ -39,6 +45,7 @@ import {
 } from "@/components/ui/card"
 import {
   Field,
+  FieldContent,
   FieldDescription,
   FieldTitle,
 } from "@/components/ui/field"
@@ -81,6 +88,14 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
     queryFn: () => getOrder(orderId),
     refetchInterval: 10_000,
   })
+
+  // The payment clock. Once it hits zero the server has closed the order (or
+  // is about to), so the card refreshes instead of showing 00:00 forever.
+  const timedOrder = data?.order && isOrderOnTimer(data.order) ? data.order : null
+  const remaining = useCountdown(timedOrder?.expiresAt ?? null)
+  useEffect(() => {
+    if (timedOrder && remaining === 0) void refetch()
+  }, [remaining, refetch, timedOrder])
 
   async function invalidate() {
     await queryClient.invalidateQueries({ queryKey: ["order", orderId] })
@@ -331,7 +346,34 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
             {showOrderNotice ? (
               <Field>
                 <FieldTitle>{orderNoticeTitle(order, amountLabel, t)}</FieldTitle>
-                <FieldDescription>{t(orderNoticeDescriptionKey(order))}</FieldDescription>
+                <FieldDescription>
+                  {t(orderNoticeDescriptionKey(order), {
+                    minutes: Math.round(ORDER_PAYMENT_WINDOW_MS / 60_000),
+                  })}
+                </FieldDescription>
+              </Field>
+            ) : null}
+
+            {timedOrder && remaining !== null ? (
+              <Field orientation="horizontal">
+                <Timer className="size-4 text-muted-foreground" />
+                <FieldContent>
+                  <FieldTitle>{t("orderDetail.timerTitle")}</FieldTitle>
+                  <FieldDescription>
+                    {remaining > 0
+                      ? t("orderDetail.timerDescription")
+                      : t("orderDetail.timerExpiring")}
+                  </FieldDescription>
+                </FieldContent>
+                {/* The last five minutes turn amber, the same warning colour
+                    an empty key pool uses in the catalog. */}
+                <Badge
+                  className="tabular-nums"
+                  size="lg"
+                  variant={remaining <= 5 * 60_000 ? "warning" : "secondary"}
+                >
+                  {formatCountdown(remaining)}
+                </Badge>
               </Field>
             ) : null}
 

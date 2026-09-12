@@ -8,6 +8,7 @@ import {
   DialogDescription,
   DialogFooter,
   DialogHeader,
+  DialogPanel,
   DialogPopup,
   DialogTitle,
 } from "@/components/ui/dialog"
@@ -17,6 +18,7 @@ import {
   DrawerDescription,
   DrawerFooter,
   DrawerHeader,
+  DrawerPanel,
   DrawerPopup,
   DrawerTitle,
 } from "@/components/ui/drawer"
@@ -35,6 +37,7 @@ export function ResponsiveDialog({
   description,
   confirmLabel,
   confirmVariant = "default",
+  confirmDisabled = false,
   loading,
   onConfirm,
   children,
@@ -45,6 +48,8 @@ export function ResponsiveDialog({
   description?: string
   confirmLabel: string
   confirmVariant?: "default" | "destructive"
+  /** Keeps the confirm button off until the reader has done their part. */
+  confirmDisabled?: boolean
   loading?: boolean
   onConfirm: () => void
   children?: React.ReactNode
@@ -59,6 +64,7 @@ export function ResponsiveDialog({
   const Description = isDesktop ? DialogDescription : DrawerDescription
   const Footer = isDesktop ? DialogFooter : DrawerFooter
   const Close = isDesktop ? DialogClose : DrawerClose
+  const Panel = isDesktop ? DialogPanel : DrawerPanel
 
   return (
     <Root open={open} onOpenChange={(next) => !loading && onOpenChange(next)}>
@@ -68,13 +74,18 @@ export function ResponsiveDialog({
           {description ? <Description>{description}</Description> : null}
         </Header>
 
-        {children}
+        {children ? <Panel>{children}</Panel> : null}
 
         <Footer>
           <Close disabled={loading} render={<Button variant="outline" />}>
             {t("common.cancel")}
           </Close>
-          <Button disabled={loading} loading={loading} onClick={onConfirm} variant={confirmVariant}>
+          <Button
+            disabled={loading || confirmDisabled}
+            loading={loading}
+            onClick={onConfirm}
+            variant={confirmVariant}
+          >
             {confirmLabel}
           </Button>
         </Footer>
