@@ -95,7 +95,7 @@ export function OrderCompleteScreen({ orderId }: { orderId: string }) {
         trailing={<Badge variant={order.isPaid ? "default" : "secondary"}>{amountLabel}</Badge>}
       />
 
-      <ScreenBody className="mx-auto w-full max-w-2xl">
+      <ScreenBody>
         <Card className="min-h-[calc(100dvh-8rem)]">
           <CardHeader>
             <Empty>

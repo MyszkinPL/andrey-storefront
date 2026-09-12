@@ -21,6 +21,15 @@ import { BackButton } from "@/components/back-button"
 import { useTranslate } from "@/components/i18n-provider"
 import { cn } from "@/lib/utils"
 
+/**
+ * The one horizontal container every phone-layout element shares: screens,
+ * the mode switcher above them and the tab bar below. They used to cap at
+ * three different widths (28rem, 32rem, 64rem), so on anything wider than a
+ * phone the switcher and the tab bar floated as narrow islands in the middle
+ * of a much wider page.
+ */
+export const SCREEN_CONTAINER = "mx-auto w-full max-w-5xl px-3 sm:px-4"
+
 export function Screen({
   children,
   className,
@@ -33,7 +42,8 @@ export function Screen({
   return (
     <main
       className={cn(
-        "mx-auto box-border flex w-full max-w-5xl flex-col overflow-x-hidden px-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] sm:px-4",
+        SCREEN_CONTAINER,
+        "box-border flex flex-col overflow-x-hidden pt-[calc(env(safe-area-inset-top)+0.75rem)]",
         // From `lg` the side rail replaces the tab bar, so the space it
         // reserved at the bottom becomes ordinary page padding.
         "lg:px-8 lg:pt-8 lg:pb-10",

@@ -124,7 +124,7 @@ export function AdminUserDetailScreen({ userId }: { userId: string }) {
         }
       />
 
-      <ScreenBody className="mx-auto w-full max-w-2xl">
+      <ScreenBody>
         <Card>
           <CardHeader>
             <Avatar className="size-10">

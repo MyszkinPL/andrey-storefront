@@ -244,7 +244,7 @@ export function AdminProductEditorScreen({
         }
       />
 
-      <ScreenBody className="mx-auto w-full max-w-2xl">
+      <ScreenBody>
         <FieldGroup>
           {mutation.error ? (
             <Field>

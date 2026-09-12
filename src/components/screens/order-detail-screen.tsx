@@ -307,7 +307,7 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
 
   return (
     <Screen noTabBar className="min-h-[calc(100dvh-3rem)]">
-      <ScreenBody className="mx-auto w-full max-w-2xl flex-1">
+      <ScreenBody className="flex-1">
         <BackButton
           className="-ms-1 self-start"
           href={listHref}

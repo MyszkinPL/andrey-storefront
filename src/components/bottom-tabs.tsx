@@ -3,6 +3,7 @@
 import { usePathname, useRouter } from "next/navigation"
 
 import { useTranslate } from "@/components/i18n-provider"
+import { SCREEN_CONTAINER } from "@/components/screen"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { cn } from "@/lib/utils"
 import { useMode } from "@/components/mode-provider"
@@ -27,7 +28,10 @@ export function BottomTabs() {
 
   return (
     <Tabs
-      className="fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] z-40 mx-auto w-full max-w-md px-3 sm:max-w-lg sm:px-4 lg:hidden"
+      className={cn(
+        SCREEN_CONTAINER,
+        "fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] z-40 lg:hidden",
+      )}
       onValueChange={(href) => {
         haptic.select()
         router.push(href)
