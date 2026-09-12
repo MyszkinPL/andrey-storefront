@@ -6,10 +6,18 @@ import { cn } from "@/lib/utils"
  * `currentColor`, so it is the white version on the dark theme and the
  * black one on light, matching the supplied "Белый" and "Чёрный" files.
  */
-export function ShopLogo({ className }: { className?: string }) {
+export function ShopLogo({
+  className,
+  "aria-label": label,
+}: {
+  className?: string
+  /** Names the mark for screen readers when no text sits next to it. */
+  "aria-label"?: string
+}) {
   return (
     <svg
-      aria-hidden="true"
+      aria-hidden={label ? undefined : "true"}
+      aria-label={label || undefined}
       className={cn("h-6 w-auto shrink-0 text-foreground", className)}
       fill="currentColor"
       role="img"

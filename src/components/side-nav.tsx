@@ -28,16 +28,11 @@ export function SideNav() {
   const items = navItemsFor(mode)
   const shopName = meData?.settings.shopName || ""
   const displayName = meData?.user.firstName || ""
-  const roleLabel = meData?.user.role === "ADMIN" ? t("mode.admin") : t("mode.buyer")
 
   return (
     <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col border-border border-r bg-card/40 lg:flex">
-      <div className="flex items-center gap-2.5 px-4 py-4">
-        <ShopLogo />
-        <div className="min-w-0">
-          <p className="truncate font-medium text-sm">{shopName}</p>
-          <p className="truncate text-muted-foreground text-xs">{roleLabel}</p>
-        </div>
+      <div className="flex items-center px-4 py-4">
+        <ShopLogo aria-label={shopName} className="h-7" />
       </div>
 
       <Separator />

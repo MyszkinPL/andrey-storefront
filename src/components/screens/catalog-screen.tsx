@@ -17,7 +17,7 @@ import {
 import { SearchInput } from "@/components/search-input"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ProfileAvatarLink } from "@/components/profile-avatar-link"
-import { Screen, ScreenBody, ScreenError, ScreenHeader } from "@/components/screen"
+import { Screen, ScreenBody, ScreenError } from "@/components/screen"
 import { ShopLogo } from "@/components/shop-logo"
 import { useI18n } from "@/components/i18n-provider"
 import { getMe, getProducts } from "@/lib/api"
@@ -68,11 +68,11 @@ export function CatalogScreen() {
 
   return (
     <Screen>
-      <ScreenHeader
-        before={<ShopLogo className="lg:h-8" />}
-        title={shopName}
-        trailing={<ProfileAvatarLink />}
-      />
+      {/* The mark alone: the name printed beside it was the wordmark twice. */}
+      <header className="mb-2 flex items-center justify-between gap-3 px-1 lg:mb-4">
+        <ShopLogo aria-label={shopName} className="h-7 lg:h-8" />
+        <ProfileAvatarLink />
+      </header>
 
       <ScreenBody>
         {isLoading ? (
