@@ -142,17 +142,6 @@ export async function renderBroadcastIntro(t: TranslateFn): Promise<View> {
   }
 }
 
-/** The post as the audience will see it, with send/cancel underneath. */
-export function broadcastPreview(text: string, count: number, t: TranslateFn): View {
-  return {
-    text: `${t("bot.broadcastPreview", { count })}\n\n${text}`,
-    keyboard: new InlineKeyboard()
-      .text(t("bot.broadcastSend"), "bs")
-      .row()
-      .text(t("bot.cancelAction"), "b"),
-  }
-}
-
 // ---------------------------------------------------------- channel gate
 
 export async function renderChannelGate(t: TranslateFn): Promise<View> {

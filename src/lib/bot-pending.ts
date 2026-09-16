@@ -5,6 +5,8 @@ export type PendingAction =
   | { kind: "newProductTitle" }
   | { kind: "newProductPrice"; title: string }
   | { kind: "broadcastText" }
+  | { kind: "broadcastPhoto" }
+  | { kind: "broadcastButton" }
   | { kind: "requiredChannel" }
   /** The one buyer-side action: a PDF receipt expected for this order. */
   | { kind: "sendReceipt"; orderId: string }

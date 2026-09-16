@@ -2,7 +2,6 @@ import { Bot, InlineKeyboard, type Context } from "grammy"
 
 import {
   addProductKeys,
-  broadcastPreview,
   cancelOrder,
   cancelRow,
   clearPending,
@@ -28,6 +27,15 @@ import {
   toggleProduct,
   toggleUserRole,
 } from "@/lib/bot-admin"
+import {
+  broadcastTooLongForPhoto,
+  clearBroadcastDraft,
+  getBroadcastDraft,
+  isBroadcastEmpty,
+  parseButtonInput,
+  sendBroadcastPreview,
+  updateBroadcastDraft,
+} from "@/lib/bot-broadcast"
 import { parseBuyToken, parseCallback, parseKeys, parsePrice } from "@/lib/bot-callback"
 import {
   cancelOwnOrder,
@@ -55,6 +63,7 @@ import { getShopCurrency } from "@/lib/shop-settings"
 import { formatPrice } from "@/lib/format"
 import { deliverReceiptToAdmins } from "@/lib/order-receipt"
 import { RECEIPT_MAX_MB, validateReceiptFile } from "@/lib/receipt-constants"
+import { entitiesToHtml } from "@/lib/telegram-format"
 import { prisma } from "@/lib/prisma"
 
 let botInstance: Bot | null = null
@@ -63,23 +72,20 @@ let initPromise: Promise<void> | null = null
 /** Buyer actions a channel subscription can stand in front of. */
 const GATED_ACTIONS = new Set(["sc", "sq"])
 
-/**
- * A composed post waiting for its confirm button. Kept beside the pending
- * actions and for the same reason: cheap to retype, not worth a table.
- */
-const broadcastDrafts = new Map<number, { text: string; at: number }>()
-const BROADCAST_DRAFT_TTL_MS = 30 * 60 * 1000
-
-function putBroadcastDraft(telegramId: number, text: string) {
-  broadcastDrafts.set(telegramId, { text, at: Date.now() })
-}
-
-function takeBroadcastDraft(telegramId: number) {
-  const entry = broadcastDrafts.get(telegramId)
-  if (!entry) return null
-
-  broadcastDrafts.delete(telegramId)
-  return Date.now() - entry.at > BROADCAST_DRAFT_TTL_MS ? null : entry.text
+/** Re-shows the draft after every edit, or asks for text if there is none. */
+async function previewBroadcast(ctx: Context, telegramId: number, t: TranslateFn) {
+  const draft = getBroadcastDraft(telegramId)
+  if (isBroadcastEmpty(draft) || !draft) {
+    setPending(telegramId, { kind: "broadcastText" })
+    await ctx.reply(t("bot.broadcastPrompt"), { reply_markup: cancelRow(t) })
+    return
+  }
+  if (broadcastTooLongForPhoto(draft)) {
+    setPending(telegramId, { kind: "broadcastText" })
+    await ctx.reply(t("bot.broadcastCaptionLimit"), { reply_markup: cancelRow(t) })
+    return
+  }
+  await sendBroadcastPreview(ctx, draft, await countBroadcastAudience(), t)
 }
 
 function channelGateView(channel: string, url: string, t: TranslateFn) {
@@ -518,6 +524,7 @@ export function getBot() {
 
       case "b":
         clearPending(ctx.from.id)
+        clearBroadcastDraft(ctx.from.id)
         await ctx.answerCallbackQuery()
         await replaceMessage(ctx, await renderBroadcastIntro(t))
         return
@@ -531,21 +538,58 @@ export function getBot() {
           })
           return
         }
+        clearBroadcastDraft(ctx.from.id)
         setPending(ctx.from.id, { kind: "broadcastText" })
         await ctx.answerCallbackQuery()
         await ctx.reply(t("bot.broadcastPrompt"), { reply_markup: cancelRow(t) })
         return
       }
 
+      // Edits to the draft: each one asks for the next message, then the
+      // preview is shown again with the change applied.
+      case "bp":
+        setPending(ctx.from.id, { kind: "broadcastPhoto" })
+        await ctx.answerCallbackQuery()
+        await ctx.reply(t("bot.broadcastPhotoPrompt"), { reply_markup: cancelRow(t) })
+        return
+
+      case "bb":
+        setPending(ctx.from.id, { kind: "broadcastButton" })
+        await ctx.answerCallbackQuery()
+        await ctx.reply(t("bot.broadcastButtonPrompt"), {
+          parse_mode: "HTML",
+          reply_markup: cancelRow(t),
+        })
+        return
+
+      case "bt":
+        setPending(ctx.from.id, { kind: "broadcastText" })
+        await ctx.answerCallbackQuery()
+        await ctx.reply(t("bot.broadcastTextPrompt"), { reply_markup: cancelRow(t) })
+        return
+
+      case "bx":
+        updateBroadcastDraft(ctx.from.id, { photoFileId: null })
+        await ctx.answerCallbackQuery({ text: t("bot.broadcastPhotoRemoved") })
+        await previewBroadcast(ctx, ctx.from.id, t)
+        return
+
+      case "bk":
+        updateBroadcastDraft(ctx.from.id, { buttonLabel: null, buttonUrl: null })
+        await ctx.answerCallbackQuery({ text: t("bot.broadcastButtonRemoved") })
+        await previewBroadcast(ctx, ctx.from.id, t)
+        return
+
       case "bs": {
-        const draft = takeBroadcastDraft(ctx.from.id)
-        if (!draft) {
+        const draft = getBroadcastDraft(ctx.from.id)
+        if (!draft || isBroadcastEmpty(draft)) {
           await ctx.answerCallbackQuery({
             show_alert: true,
             text: t("bot.broadcastEmpty"),
           })
           return
         }
+        clearBroadcastDraft(ctx.from.id)
 
         await ctx.answerCallbackQuery({ text: t("bot.broadcastSending") })
         await replaceMessage(ctx, await renderBroadcastIntro(t))
@@ -553,7 +597,15 @@ export function getBot() {
         // Deliberately not awaited: a large audience takes longer than
         // Telegram will wait for the webhook to answer, so the result comes
         // back as its own message instead.
-        void sendBroadcast({ text: draft }, user.id)
+        void sendBroadcast(
+          {
+            text: draft.text,
+            imageDataUrl: draft.photoFileId,
+            buttonLabel: draft.buttonLabel,
+            buttonUrl: draft.buttonUrl,
+          },
+          user.id,
+        )
           .then((result) =>
             notifyAdmins(
               t("bot.broadcastDone", {
@@ -649,6 +701,31 @@ export function getBot() {
     await ctx.reply(view.text, { parse_mode: "HTML", reply_markup: view.keyboard })
   })
 
+  // ------------------------------------------------------ broadcast photos
+
+  bot.on("message:photo", async (ctx) => {
+    const { t, isAdmin, user } = await resolveActor(ctx)
+    if (!user || !isAdmin) return
+
+    const action = takePending(ctx.from.id)
+    if (!action) return
+    if (action.kind !== "broadcastText" && action.kind !== "broadcastPhoto") {
+      setPending(ctx.from.id, action)
+      return
+    }
+
+    // Telegram lists every size; the last one is the largest.
+    const photo = ctx.message.photo[ctx.message.photo.length - 1]
+    const caption = ctx.message.caption
+    updateBroadcastDraft(ctx.from.id, {
+      photoFileId: photo.file_id,
+      // A caption sent along with the photo becomes the text; a bare photo
+      // keeps whatever text the draft already had.
+      ...(caption ? { text: entitiesToHtml(caption, ctx.message.caption_entities) } : {}),
+    })
+    await previewBroadcast(ctx, ctx.from.id, t)
+  })
+
   // ------------------------------------------------- free-text follow-ups
 
   bot.on("message:text", async (ctx) => {
@@ -727,20 +804,43 @@ export function getBot() {
       }
 
       case "broadcastText": {
-        const draft = text.trim()
-        if (!draft) {
+        if (!text.trim()) {
           setPending(ctx.from.id, action)
           await ctx.reply(t("bot.broadcastEmpty"), { reply_markup: cancelRow(t) })
           return
         }
 
-        putBroadcastDraft(ctx.from.id, draft)
-        const audience = await countBroadcastAudience()
-        const preview = broadcastPreview(draft, audience, t)
-        await ctx.reply(preview.text, {
-          parse_mode: "HTML",
-          reply_markup: preview.keyboard,
+        // Formatting applied in Telegram survives as HTML, so the admin
+        // never types a tag by hand.
+        updateBroadcastDraft(ctx.from.id, {
+          text: entitiesToHtml(text, ctx.message.entities),
         })
+        await previewBroadcast(ctx, ctx.from.id, t)
+        return
+      }
+
+      case "broadcastButton": {
+        const button = parseButtonInput(text)
+        if (!button) {
+          setPending(ctx.from.id, action)
+          await ctx.reply(t("bot.broadcastButtonInvalid"), {
+            parse_mode: "HTML",
+            reply_markup: cancelRow(t),
+          })
+          return
+        }
+        updateBroadcastDraft(ctx.from.id, {
+          buttonLabel: button.label,
+          buttonUrl: button.url,
+        })
+        await previewBroadcast(ctx, ctx.from.id, t)
+        return
+      }
+
+      case "broadcastPhoto": {
+        // Text where a photo was expected: keep waiting for the photo.
+        setPending(ctx.from.id, action)
+        await ctx.reply(t("bot.broadcastPhotoPrompt"), { reply_markup: cancelRow(t) })
         return
       }
 

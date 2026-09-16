@@ -14,6 +14,10 @@ const BATCH_PAUSE_MS = 1_100
 
 export type BroadcastDraft = {
   text: string
+  /**
+   * What sendPhoto gets as `photo`: a Telegram file_id (a photo the admin
+   * sent to the bot) or an https URL. The column name is historical.
+   */
   imageDataUrl?: string | null
   buttonLabel?: string | null
   buttonUrl?: string | null
