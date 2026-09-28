@@ -70,7 +70,7 @@ let botInstance: Bot | null = null
 let initPromise: Promise<void> | null = null
 
 /** Buyer actions a channel subscription can stand in front of. */
-const GATED_ACTIONS = new Set(["sc", "sq"])
+const GATED_ACTIONS = new Set(["sc", "scl", "sq"])
 
 /** Re-shows the draft after every edit, or asks for text if there is none. */
 async function previewBroadcast(ctx: Context, telegramId: number, t: TranslateFn) {
@@ -203,6 +203,13 @@ export function getBot() {
 
     const { action, id } = parseCallback(ctx.callbackQuery.data)
 
+    // The "2 / 5" label in a pager is a button only because Telegram has no
+    // other way to put text in a keyboard row.
+    if (action === "noop") {
+      await ctx.answerCallbackQuery()
+      return
+    }
+
     // Shopping sits behind the channel subscription when one is configured.
     // Profile and language stay reachable, so a gated buyer can at least read
     // the reason in their own language.
@@ -242,6 +249,16 @@ export function getBot() {
               ? await renderShopProduct(id, t, locale, user.id)
               : await renderCatalog(t, locale),
           )
+          return
+
+        case "scl":
+          await ctx.answerCallbackQuery()
+          await replaceMessage(ctx, await renderCatalog(t, locale, id))
+          return
+
+        case "sol":
+          await ctx.answerCallbackQuery()
+          await replaceMessage(ctx, await renderMyOrders(user.id, t, id))
           return
 
 
@@ -410,6 +427,21 @@ export function getBot() {
       case "o":
         await ctx.answerCallbackQuery()
         await replaceMessage(ctx, id ? await renderOrder(id, t, locale) : await renderOrders(t))
+        return
+
+      case "ol":
+        await ctx.answerCallbackQuery()
+        await replaceMessage(ctx, await renderOrders(t, id))
+        return
+
+      case "pl":
+        await ctx.answerCallbackQuery()
+        await replaceMessage(ctx, await renderProducts(t, locale, id))
+        return
+
+      case "ul":
+        await ctx.answerCallbackQuery()
+        await replaceMessage(ctx, await renderUsers(t, id))
         return
 
       case "oc":

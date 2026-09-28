@@ -88,3 +88,32 @@ export async function replaceMessage(ctx: Context, view: View) {
     })
   }
 }
+
+/** Items per page in every list the bot renders. */
+export const PAGE_SIZE = 8
+
+/** Clamps a page number typed into callback data to something usable. */
+export function clampPage(raw: string | number, total: number) {
+  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE))
+  const page = Math.trunc(Number(raw))
+  if (!Number.isFinite(page) || page < 1) return { page: 1, pages }
+  return { page: Math.min(page, pages), pages }
+}
+
+/**
+ * "◀️  2 / 5  ▶️" under a list. Only rendered when there is more than one
+ * page; the middle button is a label and answers with nothing.
+ */
+export function pagerRow(
+  keyboard: InlineKeyboard,
+  action: string,
+  page: number,
+  pages: number,
+) {
+  if (pages <= 1) return keyboard
+  keyboard.row()
+  if (page > 1) keyboard.text("◀️", `${action}:${page - 1}`)
+  keyboard.text(`${page} / ${pages}`, "noop")
+  if (page < pages) keyboard.text("▶️", `${action}:${page + 1}`)
+  return keyboard
+}

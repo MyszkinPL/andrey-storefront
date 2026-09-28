@@ -24,12 +24,10 @@ import {
 } from "@/lib/order-timer"
 import { prisma } from "@/lib/prisma"
 import { escapeHtml } from "@/lib/telegram-format"
-import { replaceMessage, type View } from "@/lib/bot-view"
+import { clampPage, PAGE_SIZE, pagerRow, replaceMessage, type View } from "@/lib/bot-view"
 import { countBroadcastAudience } from "@/lib/broadcast"
 import { getRequiredChannel, normalizeChannel } from "@/lib/channel-gate"
 import { getShopStats } from "@/lib/shop-stats"
-
-const PAGE_SIZE = 8
 
 function cancelRow(t: TranslateFn) {
   return new InlineKeyboard().text(t("bot.cancelAction"), "x")
@@ -191,24 +189,36 @@ function adminPriority(order: { status: OrderStatus; isPaid: boolean }) {
   return 3
 }
 
-export async function renderOrders(t: TranslateFn) {
-  const [live, history] = await Promise.all([
+export async function renderOrders(t: TranslateFn, pageInput: string | number = 1) {
+  const liveWhere = { status: { in: [OrderStatus.OPEN, OrderStatus.PAYMENT_REVIEW] } }
+  const historyWhere = { status: { in: [OrderStatus.CLOSED, OrderStatus.CANCELLED] } }
+
+  // Live orders are few and all of them come first, sorted by urgency;
+  // history is the long tail and is paged straight out of the database.
+  const [live, historyTotal] = await Promise.all([
     prisma.order.findMany({
-      where: { status: { in: [OrderStatus.OPEN, OrderStatus.PAYMENT_REVIEW] } },
+      where: liveWhere,
       orderBy: { updatedAt: "desc" },
-      take: PAGE_SIZE,
       include: { product: true },
     }),
-    prisma.order.findMany({
-      where: { status: { in: [OrderStatus.CLOSED, OrderStatus.CANCELLED] } },
-      orderBy: { updatedAt: "desc" },
-      take: PAGE_SIZE,
-      include: { product: true },
-    }),
+    prisma.order.count({ where: historyWhere }),
   ])
-  const orders = [...live, ...history]
-    .sort((a, b) => adminPriority(a) - adminPriority(b))
-    .slice(0, PAGE_SIZE)
+  live.sort((a, b) => adminPriority(a) - adminPriority(b))
+
+  const { page, pages } = clampPage(pageInput, live.length + historyTotal)
+  const start = (page - 1) * PAGE_SIZE
+  const liveSlice = live.slice(start, start + PAGE_SIZE)
+  const history =
+    liveSlice.length < PAGE_SIZE
+      ? await prisma.order.findMany({
+          where: historyWhere,
+          orderBy: { updatedAt: "desc" },
+          skip: Math.max(0, start - live.length),
+          take: PAGE_SIZE - liveSlice.length,
+          include: { product: true },
+        })
+      : []
+  const orders = [...liveSlice, ...history]
 
   if (orders.length === 0) {
     return {
@@ -227,7 +237,8 @@ export async function renderOrders(t: TranslateFn) {
       )
       .row()
   }
-  keyboard.text(t("common.refresh"), "o").text(t("bot.back"), "m")
+  pagerRow(keyboard, "ol", page, pages).row()
+  keyboard.text(t("common.refresh"), `ol:${page}`).text(t("bot.back"), "m")
 
   const summary = t("bot.ordersSummary", {
     review: live.filter((order) => order.status === OrderStatus.PAYMENT_REVIEW).length,
@@ -364,14 +375,18 @@ export async function deliverKey(
 
 // ---------------------------------------------------------------- products
 
-export async function renderProducts(t: TranslateFn, locale: Locale) {
-  const [products, currency] = await Promise.all([
-    prisma.product.findMany({
-      orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
-      take: PAGE_SIZE,
-    }),
-    getShopCurrency(),
-  ])
+export async function renderProducts(
+  t: TranslateFn,
+  locale: Locale,
+  pageInput: string | number = 1,
+) {
+  const [total, currency] = await Promise.all([prisma.product.count(), getShopCurrency()])
+  const { page, pages } = clampPage(pageInput, total)
+  const products = await prisma.product.findMany({
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
+    skip: (page - 1) * PAGE_SIZE,
+    take: PAGE_SIZE,
+  })
 
   const keyboard = new InlineKeyboard()
   for (const product of products) {
@@ -384,6 +399,7 @@ export async function renderProducts(t: TranslateFn, locale: Locale) {
       )
       .row()
   }
+  pagerRow(keyboard, "pl", page, pages).row()
   keyboard.text(t("bot.actionNewProduct"), "pn").row()
   keyboard.text(t("bot.back"), "m")
 
@@ -483,9 +499,12 @@ function hash(value: string) {
 
 // ------------------------------------------------------------------- users
 
-export async function renderUsers(t: TranslateFn) {
+export async function renderUsers(t: TranslateFn, pageInput: string | number = 1) {
+  const total = await prisma.user.count()
+  const { page, pages } = clampPage(pageInput, total)
   const users = await prisma.user.findMany({
     orderBy: { createdAt: "desc" },
+    skip: (page - 1) * PAGE_SIZE,
     take: PAGE_SIZE,
   })
 
@@ -497,6 +516,7 @@ export async function renderUsers(t: TranslateFn) {
       .join("")
     keyboard.text(`${marks}${name}`.slice(0, 32), `u:${user.id}`).row()
   }
+  pagerRow(keyboard, "ul", page, pages).row()
   keyboard.text(t("bot.back"), "m")
 
   const lines = [t("bot.usersTitle")]
@@ -557,6 +577,6 @@ export async function toggleUserRole(userId: string) {
 
 // ------------------------------------------------------------------ shared
 
-export { cancelRow, resolveActor, PAGE_SIZE, replaceMessage }
+export { cancelRow, resolveActor, replaceMessage }
 export { clearPending, setPending, takePending }
 

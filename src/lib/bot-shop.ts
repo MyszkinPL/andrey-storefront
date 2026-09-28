@@ -15,9 +15,15 @@ import { isOrderOnTimer, remainingMinutes, remainingMs } from "@/lib/order-timer
 import { prisma } from "@/lib/prisma"
 import { recordProductView } from "@/lib/shop-stats"
 import { escapeHtml } from "@/lib/telegram-format"
-import { CAPTION_LIMIT, clamp, dataUrlToBuffer, type View } from "@/lib/bot-view"
-
-const PAGE_SIZE = 8
+import {
+  CAPTION_LIMIT,
+  clamp,
+  clampPage,
+  dataUrlToBuffer,
+  PAGE_SIZE,
+  pagerRow,
+  type View,
+} from "@/lib/bot-view"
 
 export type BotUser = {
   id: string
@@ -65,11 +71,21 @@ export function shopMenu(
 
 // ---------------------------------------------------------------- catalog
 
-export async function renderCatalog(t: TranslateFn, locale: Locale): Promise<View> {
-  const currency = await getShopCurrency()
+export async function renderCatalog(
+  t: TranslateFn,
+  locale: Locale,
+  pageInput: string | number = 1,
+): Promise<View> {
+  const where = { isActive: true }
+  const [currency, total] = await Promise.all([
+    getShopCurrency(),
+    prisma.product.count({ where }),
+  ])
+  const { page, pages } = clampPage(pageInput, total)
   const products = await prisma.product.findMany({
-    where: { isActive: true },
+    where,
     orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
+    skip: (page - 1) * PAGE_SIZE,
     take: PAGE_SIZE,
     include: { _count: { select: { keys: { where: { issuedAt: null } } } } },
   })
@@ -86,6 +102,7 @@ export async function renderCatalog(t: TranslateFn, locale: Locale): Promise<Vie
       )
       .row()
   }
+  pagerRow(keyboard, "scl", page, pages).row()
   keyboard.text(t("bot.back"), "sm")
 
   const lines = [t("shop.catalogTitle")]
@@ -230,11 +247,16 @@ export async function placeOrder(
 export async function renderMyOrders(
   userId: string,
   t: TranslateFn,
+  pageInput: string | number = 1,
 ): Promise<View> {
   await expireStaleOrders().catch(() => {})
+  const where = { createdById: userId, hiddenByBuyerAt: null }
+  const total = await prisma.order.count({ where })
+  const { page, pages } = clampPage(pageInput, total)
   const orders = await prisma.order.findMany({
-    where: { createdById: userId, hiddenByBuyerAt: null },
+    where,
     orderBy: { updatedAt: "desc" },
+    skip: (page - 1) * PAGE_SIZE,
     take: PAGE_SIZE,
     include: { product: true },
   })
@@ -249,6 +271,7 @@ export async function renderMyOrders(
       )
       .row()
   }
+  pagerRow(keyboard, "sol", page, pages).row()
   keyboard.text(t("bot.back"), "sm")
 
   const lines = [t("shop.ordersTitle")]
