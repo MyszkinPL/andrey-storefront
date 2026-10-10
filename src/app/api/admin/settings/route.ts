@@ -34,6 +34,15 @@ export async function POST(request: Request) {
     const payload = schema.parse(await request.json())
     // Stored bare, so "@shop", "t.me/shop" and "shop" all mean one channel.
     const requiredChannel = normalizeChannel(payload.requiredChannel)
+    // "usdt, ltc ,USDT" -> "USDT,LTC": what Crypto Pay's accepted_assets wants.
+    const cryptoPayDefaultAssets = Array.from(
+      new Set(
+        (payload.cryptoPayDefaultAssets || "")
+          .split(",")
+          .map((asset) => asset.trim().toUpperCase())
+          .filter(Boolean),
+      ),
+    ).join(",")
     const paymentMethods = payload.paymentMethods.map((method) => ({
       ...method,
       details: method.details.trim(),
@@ -83,7 +92,7 @@ export async function POST(request: Request) {
           cryptoPayToken: payload.cryptoPayToken,
           cryptoPayUseTestnet: payload.cryptoPayUseTestnet,
           cryptoPayFiat: payload.cryptoPayFiat.toUpperCase(),
-          cryptoPayDefaultAssets: payload.cryptoPayDefaultAssets,
+          cryptoPayDefaultAssets,
           requiredChannel,
         },
         update: {
@@ -93,7 +102,7 @@ export async function POST(request: Request) {
           cryptoPayToken: payload.cryptoPayToken,
           cryptoPayUseTestnet: payload.cryptoPayUseTestnet,
           cryptoPayFiat: payload.cryptoPayFiat.toUpperCase(),
-          cryptoPayDefaultAssets: payload.cryptoPayDefaultAssets,
+          cryptoPayDefaultAssets,
           requiredChannel,
         },
       })
