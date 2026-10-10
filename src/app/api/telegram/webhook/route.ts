@@ -14,6 +14,14 @@ function matches(received: string | null, expected: string) {
   return crypto.timingSafeEqual(a, b)
 }
 
+/** The message chain of an error, without the objects hanging off it. */
+function describeError(error: unknown): string {
+  if (!(error instanceof Error)) return String(error)
+  const cause = (error as { error?: unknown }).error ?? error.cause
+  const inner = cause && cause !== error ? ` <- ${describeError(cause)}` : ""
+  return `${error.name}: ${error.message}${inner}`
+}
+
 export async function POST(request: Request) {
   const expected = getWebhookSecret()
 
@@ -36,7 +44,11 @@ export async function POST(request: Request) {
   } catch (error) {
     // Telegram retries on a non-2xx, which would replay the same failing
     // update forever. Log and acknowledge instead.
-    console.error("Telegram update failed", error)
+    //
+    // Only the messages, never the error object: grammY's BotError carries
+    // the whole context, bot token included, and that was ending up in the
+    // deploy logs verbatim.
+    console.error("Telegram update failed", describeError(error))
   }
 
   return NextResponse.json({ ok: true })
