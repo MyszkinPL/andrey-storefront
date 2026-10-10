@@ -44,6 +44,35 @@ export async function POST(request: Request) {
     }))
 
     await prisma.$transaction(async (tx) => {
+      // A different Crypto Pay token means a different app and a different
+      // balance. Invoices already issued by the old app would keep taking
+      // money there, so every open crypto order loses its invoice and gets
+      // a fresh one from the new app the next time it is opened.
+      const current = await tx.shopSettings.findUnique({
+        where: { id: 1 },
+        select: { cryptoPayToken: true },
+      })
+      const tokenChanged =
+        (current?.cryptoPayToken || "") !== (payload.cryptoPayToken || "")
+      if (tokenChanged) {
+        await tx.order.updateMany({
+          where: {
+            paymentMethodType: "CRYPTO_PAY",
+            isPaid: false,
+            status: { in: ["OPEN", "PAYMENT_REVIEW"] },
+            cryptoInvoiceId: { not: null },
+          },
+          data: {
+            cryptoInvoiceId: null,
+            cryptoInvoiceUrl: null,
+            cryptoInvoiceStatus: null,
+            cryptoInvoiceAsset: null,
+            cryptoInvoiceAmount: null,
+            cryptoInvoiceExpiresAt: null,
+          },
+        })
+      }
+
       await tx.shopSettings.upsert({
         where: { id: 1 },
         create: {
