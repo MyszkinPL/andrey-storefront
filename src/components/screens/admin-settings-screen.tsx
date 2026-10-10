@@ -267,8 +267,8 @@ export function AdminSettingsScreen() {
               <Field>
                 <FieldLabel>{t("adminSettings.coins")}</FieldLabel>
                 {assetOptions.length > 0 ? (
-                  {/* `multiple`: without it the group was a radio, so a shop
-                      could never accept more than one coin at a time. */}
+                  // `multiple`: without it the group was a radio, so a shop
+                  // could never accept more than one coin at a time.
                   <ToggleGroup
                     className="flex flex-wrap gap-1.5"
                     multiple
