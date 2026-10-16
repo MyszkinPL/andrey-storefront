@@ -348,20 +348,30 @@
 
 .shop-sticky {
   position: sticky;
-  bottom: calc(env(safe-area-inset-bottom) + var(--shop-dock, 0px));
   z-index: 20;
   display: flex;
   gap: var(--seal-space-2);
   margin-top: var(--seal-space-2);
   margin-inline: calc(var(--shop-gutter) * -1);
-  margin-bottom: calc((env(safe-area-inset-bottom) + var(--seal-space-6)) * -1);
-  padding: var(--seal-space-3) var(--shop-gutter) calc(var(--seal-space-3) + env(safe-area-inset-bottom));
+  padding: var(--seal-space-3) var(--shop-gutter);
   background-color: color-mix(in oklab, var(--seal-background-primary) 88%, transparent);
   backdrop-filter: blur(16px);
 }
 
+/* Without a tab bar the bar sits on the very bottom edge and its own
+   padding covers the home-indicator zone. Lifting it by the safe area as
+   well left a strip under it where the page showed through. */
 .shop-screen[data-no-tab-bar] .shop-sticky {
+  bottom: 0;
   margin-bottom: calc((env(safe-area-inset-bottom) + var(--seal-space-4)) * -1);
+  padding-bottom: calc(var(--seal-space-3) + env(safe-area-inset-bottom));
+}
+
+/* With a tab bar the bar rests on top of it; the tab bar already covers
+   the home-indicator zone. */
+.shop-screen:not([data-no-tab-bar]) .shop-sticky {
+  bottom: calc(var(--shop-tabbar-height) + env(safe-area-inset-bottom));
+  margin-bottom: calc(var(--seal-space-6) * -1);
 }
 
 .shop-sticky > * { flex: 1 1 0; }
