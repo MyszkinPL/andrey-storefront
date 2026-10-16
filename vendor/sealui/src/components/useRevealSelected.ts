@@ -1,14 +1,25 @@
 import { useCallback, useEffect, useRef } from 'react';
 import type { Ref, RefCallback } from 'react';
 
+/** Сколько места оставить у края, когда выбранный пункт подъезжает. */
+const EDGE_GAP = 32;
+
 /**
  * Горизонтальный ряд (Tabs, SegmentedControl), который шире контейнера,
- * прокручивается. Хук держит выбранный элемент в видимой области: при
- * монтировании — сразу, при смене выбора — плавно, по центру ряда.
- * Прокручивается только сам ряд (scrollTo), а не страница, как было бы
- * со scrollIntoView.
+ * прокручивается. Хук делает две вещи:
  *
- * `selector` — как ряд помечает выбранный элемент: Base UI Tabs ставит
+ * 1. Держит выбранный пункт в видимой части ряда. Ряд сдвигается только
+ *    если пункт виден не целиком, и ровно настолько, чтобы он показался с
+ *    отступом от края. Центрирование сдвигало ряд при каждом тапе и
+ *    уводило первую вкладку («Все») за край.
+ * 2. Помечает ряд `data-overflow-start` / `data-overflow-end`, пока за
+ *    левым / правым краем что-то скрыто. CSS гасит этот край градиентом,
+ *    так что видно: ряд можно листать.
+ *
+ * Прокручивается только сам ряд (scrollTo), а не страница, как было бы со
+ * scrollIntoView.
+ *
+ * `selector` — как ряд помечает выбранный пункт: Base UI Tabs ставит
  * `aria-selected="true"`, Toggle в ToggleGroup — `aria-pressed="true"`.
  */
 export function useRevealSelected<T extends HTMLElement>(
@@ -22,21 +33,45 @@ export function useRevealSelected<T extends HTMLElement>(
     const row = nodeRef.current;
     if (!row) return;
 
+    const markEdges = () => {
+      const max = row.scrollWidth - row.clientWidth;
+      row.toggleAttribute('data-overflow-start', max > 1 && row.scrollLeft > 1);
+      row.toggleAttribute('data-overflow-end', max > 1 && row.scrollLeft < max - 1);
+    };
+
     const reveal = (smooth: boolean) => {
       if (row.scrollWidth <= row.clientWidth) return;
       const item = row.querySelector<HTMLElement>(selector);
       if (!item) return;
       const rowBox = row.getBoundingClientRect();
       const itemBox = item.getBoundingClientRect();
-      const itemLeft = itemBox.left - rowBox.left + row.scrollLeft;
-      const left = itemLeft - (row.clientWidth - itemBox.width) / 2;
-      row.scrollTo({ left: Math.max(0, left), behavior: smooth ? 'smooth' : 'auto' });
+      const start = itemBox.left - rowBox.left;
+      const end = itemBox.right - rowBox.left;
+      let delta = 0;
+      if (start < EDGE_GAP) delta = start - EDGE_GAP;
+      else if (end > row.clientWidth - EDGE_GAP) delta = end - (row.clientWidth - EDGE_GAP);
+      if (delta === 0) return;
+      row.scrollTo({ left: row.scrollLeft + delta, behavior: smooth ? 'smooth' : 'auto' });
     };
 
     reveal(false);
-    const observer = new MutationObserver(() => reveal(true));
-    observer.observe(row, { attributes: true, attributeFilter: [attribute], subtree: true });
-    return () => observer.disconnect();
+    markEdges();
+
+    const selection = new MutationObserver(() => reveal(true));
+    selection.observe(row, { attributes: true, attributeFilter: [attribute], subtree: true });
+    // Пункты могут прийти позже (категории грузятся), а ширина — поменяться.
+    const content = new MutationObserver(markEdges);
+    content.observe(row, { childList: true, subtree: true, characterData: true });
+    const size = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(markEdges);
+    size?.observe(row);
+    row.addEventListener('scroll', markEdges, { passive: true });
+
+    return () => {
+      selection.disconnect();
+      content.disconnect();
+      size?.disconnect();
+      row.removeEventListener('scroll', markEdges);
+    };
   }, [selector, attribute]);
 
   return useCallback(
