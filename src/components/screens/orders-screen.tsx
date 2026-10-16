@@ -3,25 +3,22 @@
 import { useMemo, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { LifeBuoy, ReceiptText, Trash2 } from "lucide-react"
-import { Button, Cluster, EmptyState, Pill, Tabs } from "sealui"
+import { Button, Cluster, EmptyState, Tabs } from "sealui"
 
 import { useI18n } from "@/components/i18n-provider"
 import { LinkButton } from "@/components/link-button"
-import { ListGroup, ListRow, ListSkeleton } from "@/components/list-row"
-import { OrderTimeLeft } from "@/components/order-time-left"
+import { ListSkeleton } from "@/components/list-row"
+import { OrderList } from "@/components/order-row"
 import { ProfileAvatarLink } from "@/components/profile-avatar-link"
 import { ResponsiveDialog } from "@/components/responsive-dialog"
 import { Screen, ScreenBody, ScreenError, ScreenHeader } from "@/components/screen"
 import { useNotify } from "@/hooks/use-notify"
-import { useRelativeTime } from "@/hooks/use-relative-time"
 import { clearOrderHistory, getMe, getOrders } from "@/lib/api"
-import { orderPillColor, orderStatusKey } from "@/lib/order-status"
 
 type FilterKey = "all" | "waiting" | "review" | "active" | "closed"
 
 export function OrdersScreen() {
   const { t, tp } = useI18n()
-  const formatRelative = useRelativeTime()
   const { data: ordersData, isLoading, isError, refetch } = useQuery({
     queryKey: ["orders"],
     queryFn: () => getOrders(),
@@ -77,15 +74,17 @@ export function OrdersScreen() {
         ].join(" · ")}
         trailing={
           <>
+            {/* An icon button: the labelled one pushed the counts under it
+                to "0 активных · 0 ждут о…". */}
             {supportLink ? (
               <LinkButton
+                aria-label={t("orders.support")}
                 external
                 href={supportLink}
-                icon={<LifeBuoy size={16} aria-hidden />}
-                size="sm"
+                size="icon"
                 variant="secondary"
               >
-                {t("orders.support")}
+                <LifeBuoy size={16} aria-hidden />
               </LinkButton>
             ) : null}
             <ProfileAvatarLink />
@@ -145,30 +144,7 @@ export function OrdersScreen() {
               title={t("orders.filterEmptyTitle")}
             />
           ) : (
-            <ListGroup>
-                {visibleOrders.map((order) => (
-                  <ListRow
-                    description={
-                      <>
-                        {`#${order.number}${
-                          order.productCategory ? ` · ${order.productCategory}` : ""
-                        }${
-                          order.paymentMethodTitle && !order.isPaid
-                            ? ` · ${order.paymentMethodTitle}`
-                            : ""
-                        } · `}
-                        {/* The clock matters more than "5 min ago" while the
-                            order is still waiting to be paid. */}
-                        <OrderTimeLeft fallback={formatRelative(order.updatedAt)} order={order} />
-                      </>
-                    }
-                    href={`/orders/${order.id}`}
-                    key={order.id}
-                    title={order.productTitle || order.subject}
-                    trailing={<Pill color={orderPillColor(order)}>{t(orderStatusKey(order))}</Pill>}
-                  />
-                ))}
-            </ListGroup>
+            <OrderList orders={visibleOrders} />
           )}
         </ScreenBody>
       )}

@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { ShieldCheck } from "lucide-react"
-import { Avatar, Button, EmptyState, Pill, Tabs } from "sealui"
+import { Avatar, Button, EmptyState, Tabs } from "sealui"
 
 import { useI18n } from "@/components/i18n-provider"
 import { ListGroup, ListRow, ListSkeleton } from "@/components/list-row"
@@ -111,19 +111,20 @@ export function AdminUsersScreen() {
                 <ListRow
                   description={`${
                     user.username ? `@${user.username}` : `tg:${user.telegramId}`
-                  } · ID ${user.telegramId} · ${tp(
-                    "adminUsers.countActive",
-                    user.activeOrderCount,
-                  )}`}
+                  } · ${tp("adminUsers.countActive", user.activeOrderCount)}`}
                   href={`/admin/users/${user.id}`}
                   key={user.id}
                   media={<Avatar name={displayName || user.firstName} src={user.photoUrl} />}
                   title={displayName}
                   trailing={
                     user.isBanned ? (
-                      <Pill color="red">{t("adminUsers.banned")}</Pill>
+                      <span className="shop-item-state" data-color="red">
+                        {t("adminUsers.banned")}
+                      </span>
                     ) : user.role === "ADMIN" ? (
-                      <Pill color="blue">{t("adminUsers.admin")}</Pill>
+                      <span className="shop-item-state" data-color="blue">
+                        {t("adminUsers.admin")}
+                      </span>
                     ) : null
                   }
                 />

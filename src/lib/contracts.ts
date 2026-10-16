@@ -91,6 +91,10 @@ export type OrderSummary = {
   productCategory: string | null
   paymentMethodTitle: string | null
   paymentMethodType: PaymentMethodType | null
+  /** Price at the time of the order, for the list row. */
+  priceRub: number | null
+  /** The product's cover, when the product still exists and has one. */
+  productImageUrl: string | null
   manualPaymentRequestedAt: string | null
   /** Payment deadline while the order is open and unpaid. */
   expiresAt: string | null

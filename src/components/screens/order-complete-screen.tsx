@@ -3,9 +3,10 @@
 import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { CheckCircle2, CircleDashed } from "lucide-react"
-import { DetailRow, EmptyState, Pill } from "sealui"
+import { EmptyState, Pill } from "sealui"
 
 import { useI18n } from "@/components/i18n-provider"
+import { KeyValueList } from "@/components/key-value"
 import { LinkButton } from "@/components/link-button"
 import { CopyField } from "@/components/order-detail/copy-field"
 import {
@@ -92,15 +93,14 @@ export function OrderCompleteScreen({ orderId }: { orderId: string }) {
         ) : null}
 
         <Section title={t("orderDetail.details")}>
-          <div className="shop-lines">
-            <DetailRow label={t("orderComplete.product")} value={order.productTitle || order.subject} />
-            <DetailRow
-              label={t("orderComplete.payment")}
-              value={order.paymentMethodTitle || t("common.notSelected")}
-            />
-            <DetailRow label={t("orderComplete.amount")} value={amountLabel} />
-            <DetailRow label={t("orderComplete.createdAt")} value={createdAtLabel} />
-          </div>
+          <KeyValueList
+            items={[
+              { label: t("orderComplete.product"), value: order.productTitle || order.subject },
+              { label: t("orderComplete.payment"), value: order.paymentMethodTitle || t("common.notSelected") },
+              { label: t("orderComplete.amount"), value: amountLabel },
+              { label: t("orderComplete.createdAt"), value: createdAtLabel },
+            ]}
+          />
         </Section>
 
         <ActionStack>

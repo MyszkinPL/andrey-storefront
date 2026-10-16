@@ -5,11 +5,11 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { ExternalLink, LifeBuoy, RefreshCcw, Trash2 } from "lucide-react"
-import { Avatar, Button, DetailRow, Heading, Pill, Text } from "sealui"
+import { Avatar, Button, Heading, Pill, Text } from "sealui"
 
 import { useI18n } from "@/components/i18n-provider"
+import { KeyValueList } from "@/components/key-value"
 import { LinkButton } from "@/components/link-button"
-import { ListGroup, ListRow } from "@/components/list-row"
 import { useMode } from "@/components/mode-provider"
 import { AdminOrderPanel } from "@/components/order-detail/admin-panel"
 import { ConfirmDeleteDialog } from "@/components/order-detail/confirm-delete-dialog"
@@ -261,8 +261,13 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
     !order.isPaid &&
     !isClosed &&
     order.status !== "PAYMENT_REVIEW"
+  // An expired or closed order kept offering its dead invoice.
   const showCryptoPayment =
-    order.paymentMethodType === "CRYPTO_PAY" && Boolean(order.cryptoInvoiceUrl) && !order.isPaid
+    order.paymentMethodType === "CRYPTO_PAY" &&
+    Boolean(order.cryptoInvoiceUrl) &&
+    !order.isPaid &&
+    !isClosed &&
+    !isOrderExpired(order)
   // Before "I have paid" the receipt is collected inside that sheet; the
   // standalone row only remains while the order is under review, so a
   // buyer can swap in a better scan without bothering support.
@@ -276,12 +281,6 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
     (order.priceRub ? formatPrice(order.priceRub, locale, currency) : null)
   const selectedPaymentKey = draftPaymentKey || currentPaymentKey
   const paymentTitle = order.paymentMethodTitle || t("orderDetail.paymentMethodFallback")
-  const paymentDescription =
-    order.paymentMethodType === "CRYPTO_PAY"
-      ? t("orderDetail.paymentCryptoLabel")
-      : order.paymentMethodType === "MANUAL"
-        ? t("orderDetail.paymentManualLabel")
-        : t("common.notSelected")
   const handlePaymentMethodSelect = (key: string) => {
     if (changePaymentMethodMutation.isPending) return
 
@@ -450,26 +449,24 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
         ) : null}
 
         <Section title={t("orderDetail.details")}>
-          {canSwitchPaymentMethod ? null : (
-            <ListGroup>
-              <ListRow
-                description={
-                  // Requisites are for paying with. Once the order is closed
-                  // or cancelled they are nobody's business, including its
-                  // own buyer's.
-                  (!isClosed && order.status !== "PAYMENT_REVIEW" && order.paymentMethodDetails) ||
-                  paymentDescription
-                }
-                media={<Avatar name={paymentTitle} size="md" src={order.paymentMethodIconDataUrl} />}
-                title={paymentTitle}
-              />
-            </ListGroup>
-          )}
-          <div className="shop-lines">
-            <DetailRow label={t("orderComplete.product")} value={order.productTitle || order.subject} />
-            <DetailRow label={t("orderComplete.amount")} value={amountLabel || undefined} />
-            <DetailRow label={t("orderComplete.createdAt")} value={createdAtLabel} />
-          </div>
+          <KeyValueList
+            items={[
+              { label: t("orderComplete.product"), value: order.productTitle || order.subject },
+              // While the buyer can still switch, the selector above already
+              // names the method.
+              !canSwitchPaymentMethod && {
+                label: t("orderComplete.payment"),
+                value: (
+                  <span className="shop-inline">
+                    <Avatar name={paymentTitle} size="sm" src={order.paymentMethodIconDataUrl} />
+                    {paymentTitle}
+                  </span>
+                ),
+              },
+              { label: t("orderComplete.amount"), value: amountLabel || undefined },
+              { label: t("orderComplete.createdAt"), value: createdAtLabel },
+            ]}
+          />
         </Section>
 
         {hasPrimaryActions ? (

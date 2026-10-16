@@ -2,34 +2,22 @@
 
 import { useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import {
-  CopyPlus,
-  EllipsisVertical,
-  ImagePlus,
-  PackagePlus,
-  PackageSearch,
-  Trash2,
-} from "lucide-react"
-import { Button, EmptyState, Menu, MenuItem, MenuLinkItem, MenuSeparator, Pill } from "sealui"
+import { useQuery } from "@tanstack/react-query"
+import { ImagePlus, PackagePlus, PackageSearch } from "lucide-react"
+import { EmptyState, Text } from "sealui"
 
 import { AccessStateScreen } from "@/components/access-state-screen"
 import { useI18n } from "@/components/i18n-provider"
 import { LinkButton } from "@/components/link-button"
 import { ListGroup, ListRow, ListSkeleton } from "@/components/list-row"
-import { ResponsiveDialog } from "@/components/responsive-dialog"
 import { Screen, ScreenBody, ScreenError, ScreenHeader } from "@/components/screen"
 import { SearchInput } from "@/components/search-input"
-import { deleteAdminProduct, getMe, getProducts } from "@/lib/api"
+import { getMe, getProducts } from "@/lib/api"
 import { formatPrice } from "@/lib/format"
-
-type AdminProduct = Awaited<ReturnType<typeof getProducts>>["products"][number]
 
 export function AdminProductsScreen() {
   const { t, tp, locale, currency } = useI18n()
   const router = useRouter()
-  const queryClient = useQueryClient()
-  const [deleteProduct, setDeleteProduct] = useState<AdminProduct | null>(null)
   const [search, setSearch] = useState("")
   const { data: meData } = useQuery({ queryKey: ["me"], queryFn: getMe })
   const { data, isError, isLoading, refetch } = useQuery({
@@ -46,13 +34,6 @@ export function AdminProductsScreen() {
       `${product.title} ${product.category || ""}`.toLowerCase().includes(query),
     )
   }, [allProducts, search])
-  const deleteMutation = useMutation({
-    mutationFn: (id: string) => deleteAdminProduct(id),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["products"] })
-      setDeleteProduct(null)
-    },
-  })
 
   if (meData && meData.user.role !== "ADMIN") {
     return (
@@ -126,46 +107,26 @@ export function AdminProductsScreen() {
               <ListGroup>
                 {products.map((product) => (
                   <ListRow
-                    description={`${product.category || t("catalog.noCategory")} · ${formatPrice(
-                      product.priceRub,
-                      locale,
-                      currency,
-                    )} · ${
-                      product.deliveryType === "AUTO_KEY"
-                        ? tp("catalog.keys", product.availableKeyCount || 0)
-                        : t("catalog.manualDelivery")
-                    }`}
+                    description={product.category || t("catalog.noCategory")}
                     href={`/admin/products/${product.id}/edit`}
                     key={product.id}
                     mediaBox
                     media={<ProductThumbnail imageUrl={product.imageUrl} title={product.title} />}
                     title={product.title}
                     trailing={
-                      /* Tapping the row edits; the rare actions sit behind a
-                         menu so "delete" is never one thumb-slip from "edit". */
                       <>
-                        {!product.isActive ? (
-                          <Pill color="gray">{t("adminProducts.hidden")}</Pill>
-                        ) : null}
-                        <Menu
-                          align="end"
-                          aria-label={t("adminProducts.more")}
-                          trigger={
-                            <Button aria-label={t("adminProducts.more")} size="icon" variant="ghost">
-                              <EllipsisVertical size={16} aria-hidden />
-                            </Button>
-                          }
-                        >
-                          <MenuLinkItem href={`/admin/products/new?copy=${product.id}`}>
-                            <CopyPlus size={16} aria-hidden />
-                            {t("adminProducts.duplicate")}
-                          </MenuLinkItem>
-                          <MenuSeparator />
-                          <MenuItem destructive onClick={() => setDeleteProduct(product)}>
-                            <Trash2 size={16} aria-hidden />
-                            {t("adminProducts.remove")}
-                          </MenuItem>
-                        </Menu>
+                        <Text as="span" size="sm" tabularNums>
+                          {formatPrice(product.priceRub, locale, currency)}
+                        </Text>
+                        {/* Hidden first: a product no one can see matters more
+                            than its stock. */}
+                        <span className="shop-item-state" data-color={productStateColor(product)}>
+                          {!product.isActive
+                            ? t("adminProducts.hidden")
+                            : product.deliveryType === "AUTO_KEY"
+                              ? tp("catalog.keys", product.availableKeyCount || 0)
+                              : t("catalog.manualDelivery")}
+                        </span>
                       </>
                     }
                   />
@@ -175,23 +136,6 @@ export function AdminProductsScreen() {
           </>
         )}
       </ScreenBody>
-
-      <ResponsiveDialog
-        confirmLabel={
-          deleteMutation.isPending ? t("adminProducts.deleting") : t("common.delete")
-        }
-        confirmVariant="danger"
-        description={t("adminProducts.deleteDescription")}
-        loading={deleteMutation.isPending}
-        onConfirm={() => {
-          if (deleteProduct) deleteMutation.mutate(deleteProduct.id)
-        }}
-        onOpenChange={(open) => {
-          if (!open) setDeleteProduct(null)
-        }}
-        open={Boolean(deleteProduct)}
-        title={t("adminProducts.deleteTitle")}
-      />
     </Screen>
   )
 }
@@ -211,4 +155,14 @@ function ProductThumbnail({
   }
 
   return <ImagePlus />
+}
+
+function productStateColor(product: {
+  isActive: boolean
+  deliveryType: string
+  availableKeyCount?: number | null
+}) {
+  if (!product.isActive) return "gray"
+  if (product.deliveryType !== "AUTO_KEY") return "blue"
+  return (product.availableKeyCount || 0) > 0 ? "green" : "yellow"
 }

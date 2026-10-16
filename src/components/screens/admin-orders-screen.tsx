@@ -3,21 +3,18 @@
 import { useMemo, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { Clock3 } from "lucide-react"
-import { EmptyState, Pill, Tabs } from "sealui"
+import { EmptyState, Tabs } from "sealui"
 
 import { useI18n } from "@/components/i18n-provider"
-import { ListGroup, ListRow, ListSkeleton } from "@/components/list-row"
-import { OrderTimeLeft } from "@/components/order-time-left"
+import { ListSkeleton } from "@/components/list-row"
+import { OrderList } from "@/components/order-row"
 import { Screen, ScreenBody, ScreenError, ScreenHeader } from "@/components/screen"
-import { useRelativeTime } from "@/hooks/use-relative-time"
 import { getMe, getOrders } from "@/lib/api"
-import { orderPillColor, orderStatusKey } from "@/lib/order-status"
 
 type FilterKey = "all" | "waiting" | "review" | "work" | "closed"
 
 export function AdminOrdersScreen() {
   const { t } = useI18n()
-  const formatRelative = useRelativeTime()
   const { data: meData } = useQuery({ queryKey: ["me"], queryFn: getMe })
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["orders", "all"],
@@ -94,29 +91,7 @@ export function AdminOrdersScreen() {
               title={t("orders.filterEmptyTitle")}
             />
           ) : (
-            <ListGroup>
-              {visibleOrders.map((order) => {
-                return (
-                  <ListRow
-                    // The pill already names the state and the filter tabs
-                    // already group the work, so a sentence saying the same
-                    // thing only pushed the order number out of the row.
-                    description={
-                      <>
-                        {`${[`#${order.number}`, order.productCategory, order.paymentMethodTitle]
-                          .filter(Boolean)
-                          .join(" · ")} · `}
-                        <OrderTimeLeft fallback={formatRelative(order.updatedAt)} order={order} />
-                      </>
-                    }
-                    href={`/orders/${order.id}`}
-                    key={order.id}
-                    title={order.productTitle || order.subject}
-                    trailing={<Pill color={orderPillColor(order)}>{t(orderStatusKey(order))}</Pill>}
-                  />
-                )
-              })}
-            </ListGroup>
+            <OrderList orders={visibleOrders} />
           )}
         </ScreenBody>
       )}

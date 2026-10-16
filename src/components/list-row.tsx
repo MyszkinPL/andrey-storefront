@@ -2,16 +2,15 @@
 
 import Link from "next/link"
 import type { ReactNode } from "react"
-import { List, ListItem, Text } from "sealui"
+import { Text } from "sealui"
 
 /**
- * List rows across the app are the same shape: optional media, a title with
- * one line of detail, and something trailing. Built on sealui's List panel
- * at its default size (16/24 padding, 32px radius), so lists read exactly
- * like Polar's.
+ * Every list in the app is the same flat stack of rows with hairlines
+ * between them, straight on the page. A bordered panel around each list
+ * was one frame too many inside a phone screen.
  */
 export function ListGroup({ children }: { children: ReactNode }) {
-  return <List>{children}</List>
+  return <div className="shop-list">{children}</div>
 }
 
 export function ListRow({
@@ -26,7 +25,7 @@ export function ListRow({
   href?: string
   /** An icon, avatar or image at the start of the row. */
   media?: ReactNode
-  /** Wrap the media in a 40px rounded box: for images and rank numbers. */
+  /** Put the media in a 48px rounded tile: covers and rank numbers. */
   mediaBox?: boolean
   title: ReactNode
   description?: ReactNode
@@ -34,15 +33,11 @@ export function ListRow({
   onClick?: () => void
 }) {
   const body = (
-    <div className="shop-row">
+    <>
       {media ? (
-        mediaBox ? (
-          <div className="shop-row-media">{media}</div>
-        ) : (
-          <div className="shop-row-icon">{media}</div>
-        )
+        <span className={mediaBox ? "shop-item-media" : "shop-item-icon"}>{media}</span>
       ) : null}
-      <div className="shop-row-copy">
+      <span className="shop-item-copy">
         <Text as="span" size="sm" truncate>
           {title}
         </Text>
@@ -51,24 +46,32 @@ export function ListRow({
             {description}
           </Text>
         ) : null}
-      </div>
-      {trailing ? <div className="shop-row-trailing">{trailing}</div> : null}
-    </div>
+      </span>
+      {trailing ? <span className="shop-item-side">{trailing}</span> : null}
+    </>
   )
 
   if (href) {
     return (
-      <Link className="shop-link" href={href}>
-        <ListItem onSelect={() => undefined}>{body}</ListItem>
+      <Link className="shop-item" href={href}>
+        {body}
       </Link>
     )
   }
 
   if (onClick) {
-    return <ListItem onSelect={onClick}>{body}</ListItem>
+    return (
+      <button className="shop-item" onClick={onClick} type="button">
+        {body}
+      </button>
+    )
   }
 
-  return <ListItem>{body}</ListItem>
+  return (
+    <div className="shop-item" data-static="">
+      {body}
+    </div>
+  )
 }
 
 /** Rows that stack two per line from `lg`. */
@@ -82,20 +85,16 @@ export function ListColumns({ children }: { children: ReactNode }) {
  */
 export function ListSkeleton({ rows = 4, media = true }: { rows?: number; media?: boolean }) {
   return (
-    <div aria-hidden="true">
-      <List>
-        {Array.from({ length: rows }, (_, index) => (
-          <ListItem key={index}>
-            <div className="shop-row">
-              {media ? <div className="shop-row-media" /> : null}
-              <div className="shop-row-copy">
-                <Text as="span" loading placeholderText="Loading a product name" size="sm" />
-                <Text as="span" loading placeholderText="and a line of detail" size="xs" />
-              </div>
-            </div>
-          </ListItem>
-        ))}
-      </List>
+    <div aria-hidden="true" className="shop-list">
+      {Array.from({ length: rows }, (_, index) => (
+        <div className="shop-item" data-static="" key={index}>
+          {media ? <span className="shop-item-media" /> : null}
+          <span className="shop-item-copy">
+            <Text as="span" loading placeholderText="Loading a product name" size="sm" />
+            <Text as="span" loading placeholderText="and a line of detail" size="xs" />
+          </span>
+        </div>
+      ))}
     </div>
   )
 }

@@ -123,7 +123,6 @@
   align-items: center;
   gap: var(--seal-space-3);
   min-height: 32px;
-  padding-inline: var(--seal-space-1);
 }
 
 .shop-section-head .shop-header-copy > :first-child { font-weight: 500; }
@@ -136,7 +135,6 @@
   justify-content: space-between;
   gap: var(--seal-space-4);
   min-height: 40px;
-  padding-inline: var(--seal-space-1);
 }
 
 .shop-toggle > label { cursor: pointer; }
@@ -150,7 +148,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--seal-space-2);
-  padding: var(--seal-space-2) var(--seal-space-1);
+  padding-block: var(--seal-space-2);
 }
 
 .shop-status-row {
@@ -429,21 +427,9 @@
 
 .shop-product-copy > :first-child { font-weight: 500; }
 
-/* Horizontally scrolling category chips. */
-.shop-scroll-x {
-  margin-inline: calc(var(--shop-gutter) * -1);
-  padding-inline: var(--shop-gutter);
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-
-.shop-scroll-x::-webkit-scrollbar { display: none; }
-.shop-scroll-x > * { width: max-content; min-width: 100%; }
-
-@media (min-width: 1024px) {
-  .shop-scroll-x { margin-inline: 0; padding-inline: 0; }
-  .shop-scroll-x > * { min-width: 0; }
-}
+/* Tabs and segmented rows scroll on their own (sealui); this wrapper is
+   kept only as a hook and takes no part in layout. */
+.shop-scroll-x { display: contents; }
 
 .shop-toolbar { display: flex; flex-direction: column; gap: var(--seal-space-2); }
 
@@ -665,3 +651,156 @@
 
 /* Section hints wrap: a cut-off "Язык приложения и сообщ…" read as a bug. */
 .shop-section-head .shop-header-copy > * { white-space: normal; }
+
+/* ── Order rows ─────────────────────────────────────────────────────── */
+
+.shop-list { display: flex; flex-direction: column; }
+
+.shop-item {
+  display: flex;
+  align-items: center;
+  gap: var(--seal-space-3);
+  min-width: 0;
+  padding-block: var(--seal-space-3);
+  color: inherit;
+  text-decoration: none;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button.shop-item { width: 100%; margin: 0; border: 0; background: none; font: inherit; text-align: left; cursor: pointer; }
+.shop-item + .shop-item { border-top: 1px solid var(--seal-border); }
+.shop-item:not([data-static]):active { opacity: 0.7; }
+
+/* A bare icon or avatar at the start of a row: no tile behind it. */
+.shop-item-icon {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  color: var(--seal-text-secondary);
+}
+
+.shop-item-icon > svg { width: 20px; height: 20px; }
+
+
+.shop-item:focus-visible { border-radius: var(--seal-radius-xl); box-shadow: 0 0 0 2px var(--seal-accent); }
+
+.shop-item-media {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  overflow: hidden;
+  border-radius: var(--seal-radius-xl);
+  background-color: var(--seal-background-card);
+  color: var(--seal-text-tertiary);
+}
+
+.shop-item-media > img { width: 100%; height: 100%; object-fit: cover; }
+.shop-item-media > svg { width: 20px; height: 20px; }
+
+.shop-item-copy { display: flex; flex: 1 1 0; flex-direction: column; gap: 2px; min-width: 0; }
+.shop-item-copy > :first-child { font-weight: 500; }
+
+.shop-item-side { display: flex; flex-shrink: 0; flex-direction: column; align-items: flex-end; gap: 2px; }
+
+/* The state as a coloured dot and a word: quieter than a filled pill in
+   every row, and still readable at a glance. */
+.shop-item-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--seal-text-secondary);
+  font-size: var(--seal-text-xs);
+  line-height: 16px;
+  white-space: nowrap;
+}
+
+.shop-item-state::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: var(--seal-radius-full);
+  background-color: var(--seal-text-tertiary);
+}
+
+.shop-item-state[data-color='green']::before { background-color: var(--seal-green-500); }
+.shop-item-state[data-color='yellow']::before { background-color: var(--seal-yellow-500); }
+.shop-item-state[data-color='blue']::before { background-color: var(--seal-blue-500); }
+.shop-item-state[data-color='red']::before { background-color: var(--seal-red-500); }
+
+/* ── Key pool rows ──────────────────────────────────────────────────── */
+
+.shop-keys { display: flex; flex-direction: column; }
+
+.shop-key {
+  display: flex;
+  align-items: center;
+  gap: var(--seal-space-3);
+  min-height: 44px;
+}
+
+.shop-key + .shop-key { border-top: 1px solid var(--seal-border); }
+.shop-key > svg { flex-shrink: 0; color: var(--seal-text-tertiary); }
+.shop-key[data-removed] .shop-key-value { color: var(--seal-text-tertiary); text-decoration: line-through; }
+
+/* Key input and its button on one line. */
+.shop-key-add { display: flex; gap: var(--seal-space-2); }
+.shop-key-add > :first-child { flex: 1; min-width: 0; }
+
+.shop-key-value {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-family: var(--seal-font-mono, ui-monospace, monospace);
+  font-size: var(--seal-text-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A spec row: name and value side by side, the bin at the end. */
+.shop-spec { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; gap: var(--seal-space-2); align-items: center; }
+
+/* ── Key / value table ──────────────────────────────────────────────── */
+
+.shop-kv { display: flex; flex-direction: column; margin: 0; }
+
+.shop-kv-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--seal-space-4);
+  padding-block: var(--seal-space-3);
+}
+
+.shop-kv-row + .shop-kv-row { border-top: 1px solid var(--seal-border); }
+
+.shop-kv-row > dt {
+  flex-shrink: 0;
+  margin: 0;
+  color: var(--seal-text-secondary);
+  font-size: var(--seal-text-sm);
+}
+
+.shop-kv-row > dd {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  color: var(--seal-text-primary);
+  font-size: var(--seal-text-sm);
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.shop-kv-row > dd[data-mono] { font-family: var(--seal-font-mono, ui-monospace, monospace); }
+
+/* Empty and loading states sit on the page like everything else: the
+   bordered box around them was one more frame on a phone. */
+.seal-empty { border: 0; padding: var(--seal-space-12) var(--seal-space-4); }

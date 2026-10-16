@@ -4,22 +4,23 @@ import type { Dispatch, SetStateAction } from "react"
 import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { ImagePlus, KeyRound, Plus, Trash2 } from "lucide-react"
+import { CopyPlus, ImagePlus, Plus, Trash2 } from "lucide-react"
 import {
   Banner,
   Button,
-  Cluster,
   Field,
   Input,
   SegmentedControl,
-  Stack,
   Text,
   Textarea,
 } from "sealui"
 
 import { AccessStateScreen } from "@/components/access-state-screen"
 import { ImagePicker } from "@/components/image-picker"
+import { KeyPoolEditor, splitKeys } from "@/components/key-pool-editor"
+import { LinkButton } from "@/components/link-button"
 import {
+  ActionStack,
   Screen,
   ScreenBody,
   ScreenHeader,
@@ -77,7 +78,7 @@ export function AdminProductEditorScreen({
   productId?: string
   copyProductId?: string
 }) {
-  const { t, tp } = useI18n()
+  const { t } = useI18n()
   const router = useRouter()
   const queryClient = useQueryClient()
   const [form, setForm] = useState<ProductForm>(emptyForm)
@@ -124,7 +125,6 @@ export function AdminProductEditorScreen({
   }, [copyProductId, productId, productQuery.data?.product])
 
   const editableKeys = productQuery.data?.product.editableKeys ?? []
-  const visibleKeys = editableKeys.filter((key) => !form.removeKeyIds.includes(key.id))
   const canSave =
     form.title.trim().length > 0 &&
     form.description.trim().length > 0 &&
@@ -228,17 +228,6 @@ export function AdminProductEditorScreen({
         subtitle={t("adminProductEditor.subtitle")}
         trailing={
           <div className="shop-desktop-only">
-            {productId ? (
-              <Button
-                disabled={deleteMutation.isPending}
-                icon={<Trash2 size={16} aria-hidden />}
-                onClick={() => setDeleteOpen(true)}
-                size="sm"
-                variant="outline"
-              >
-                {t("common.delete")}
-              </Button>
-            ) : null}
             <Button disabled={!canSave || mutation.isPending} onClick={() => mutation.mutate()} size="sm">
               {saveLabel}
             </Button>
@@ -340,22 +329,36 @@ export function AdminProductEditorScreen({
           />
         </Section>
 
-        <SegmentedControl
-          aria-label={t("adminProductEditor.subtitle")}
-          onValueChange={(value) => {
-            // Base UI lets a toggle group drop its only value; delivery type
-            // must always be one of the two.
-            if (value === "MANUAL" || value === "AUTO_KEY") {
-              setForm((prev) => ({ ...prev, deliveryType: value }))
-            }
-          }}
-          options={[
-            { value: "MANUAL", label: t("adminProductEditor.manualDelivery") },
-            { value: "AUTO_KEY", label: t("adminProductEditor.autoKeys") },
-          ]}
-          value={form.deliveryType}
-          variant="tabs"
-        />
+        {/* How the product is delivered decides whether a key pool exists,
+            so the two sit together. */}
+        <Section title={t("adminProductEditor.delivery")}>
+          <SegmentedControl
+            aria-label={t("adminProductEditor.subtitle")}
+            onValueChange={(value) => {
+              // Base UI lets a toggle group drop its only value; delivery type
+              // must always be one of the two.
+              if (value === "MANUAL" || value === "AUTO_KEY") {
+                setForm((prev) => ({ ...prev, deliveryType: value }))
+              }
+            }}
+            options={[
+              { value: "MANUAL", label: t("adminProductEditor.manualDelivery") },
+              { value: "AUTO_KEY", label: t("adminProductEditor.autoKeys") },
+            ]}
+            value={form.deliveryType}
+            variant="tabs"
+          />
+        </Section>
+
+        {form.deliveryType === "AUTO_KEY" ? (
+          <KeyPoolEditor
+            existing={editableKeys}
+            onPendingChange={(keys) => setForm((prev) => ({ ...prev, keyPoolText: keys.join("\n") }))}
+            onRemovedIdsChange={(ids) => setForm((prev) => ({ ...prev, removeKeyIds: ids }))}
+            pending={splitKeys(form.keyPoolText)}
+            removedIds={form.removeKeyIds}
+          />
+        ) : null}
 
         <Section
           action={
@@ -375,79 +378,42 @@ export function AdminProductEditorScreen({
           }
           title={t("adminProductEditor.specs")}
         >
-              {form.specs.map((spec, index) => (
-                <SpecEditor
-                  key={`${index}-${form.id || "new"}`}
-                  spec={spec}
-                  index={index}
-                  canRemove={form.specs.length > 1}
-                  onChange={setForm}
-                />
-              ))}
+          {form.specs.map((spec, index) => (
+            <SpecEditor
+              key={`${index}-${form.id || "new"}`}
+              spec={spec}
+              index={index}
+              canRemove={form.specs.length > 1}
+              onChange={setForm}
+            />
+          ))}
         </Section>
 
-        {form.deliveryType === "AUTO_KEY" ? (
-          <Section hint={t("adminProductEditor.keyPoolHint")} title={t("adminProductEditor.keyPool")}>
-                {productId ? (
-                  <Stack gap="2">
-                    <Text size="xs" tone="muted" tabularNums>
-                      {tp("adminProductEditor.keysInStockCount", visibleKeys.length)}
-                      {form.removeKeyIds.length > 0
-                        ? t("adminProductEditor.pendingRemoval", {
-                            count: form.removeKeyIds.length,
-                          })
-                        : ""}
-                    </Text>
-                    {visibleKeys.map((key) => (
-                      <Field key={key.id}>
-                        <Input
-                          aria-label={t("adminProductEditor.keyPool")}
-                          postSlot={
-                            <Button
-                              aria-label={t("adminProductEditor.removeKey")}
-                              onClick={() =>
-                                setForm((prev) => ({
-                                  ...prev,
-                                  removeKeyIds: [...prev.removeKeyIds, key.id],
-                                }))
-                              }
-                              size="icon"
-                              variant="ghost"
-                            >
-                              <Trash2 size={16} aria-hidden />
-                            </Button>
-                          }
-                          preSlot={<KeyRound size={16} aria-hidden />}
-                          readOnly
-                          value={key.value}
-                        />
-                      </Field>
-                    ))}
-                  </Stack>
-                ) : null}
-                <Field label={t("adminProductEditor.addNewKeys")}>
-                  <Textarea
-                    id="product-key-pool"
-                    onChange={(event) => setForm((prev) => ({ ...prev, keyPoolText: event.target.value }))}
-                    placeholder={t("adminProductEditor.keyPlaceholder")}
-                    value={form.keyPoolText}
-                  />
-                </Field>
-          </Section>
-        ) : null}
-
-        <StickyActions>
-          {productId ? (
+        {/* Deleting sits at the foot of the page, away from Save. */}
+        {productId ? (
+          <ActionStack>
+            <LinkButton
+              fullWidth
+              href={`/admin/products/new?copy=${productId}`}
+              icon={<CopyPlus size={16} aria-hidden />}
+              variant="secondary"
+            >
+              {t("adminProducts.duplicate")}
+            </LinkButton>
             <Button
               disabled={deleteMutation.isPending}
+              fullWidth
               icon={<Trash2 size={16} aria-hidden />}
               onClick={() => setDeleteOpen(true)}
               variant="outline"
             >
-              {t("common.delete")}
+              {t("adminProducts.remove")}
             </Button>
-          ) : null}
-          <Button disabled={!canSave || mutation.isPending} onClick={() => mutation.mutate()}>
+          </ActionStack>
+        ) : null}
+
+        <StickyActions>
+          <Button disabled={!canSave || mutation.isPending} onClick={() => mutation.mutate()} size="lg">
             {saveLabel}
           </Button>
         </StickyActions>
@@ -480,64 +446,48 @@ function SpecEditor({
 }) {
   const t = useTranslate()
 
+  const update = (field: "label" | "value", value: string) =>
+    onChange((prev) => ({
+      ...prev,
+      specs: prev.specs.map((item, itemIndex) =>
+        itemIndex === index ? { ...item, [field]: value } : item,
+      ),
+    }))
+
+  // Name, value and the bin on one line: a spec is a pair, and a caption
+  // "Характеристика 1" above every pair only made the list twice as tall.
   return (
-    <Stack gap="2">
-      <Cluster justify="between">
-        <Text as="span" size="xs" tone="muted">
-          {t("adminProductEditor.specLabel", { index: index + 1 })}
-        </Text>
-        <Button
-          aria-label={t("adminProductEditor.removeKey")}
-          onClick={() =>
-            onChange((prev) => ({
-              ...prev,
-              specs: canRemove
-                ? prev.specs.filter((_, itemIndex) => itemIndex !== index)
-                : [{ label: "", value: "" }],
-            }))
-          }
-          size="icon"
-          variant="ghost"
-        >
-          <Trash2 size={16} aria-hidden />
-        </Button>
-      </Cluster>
-      {/* Name and value sit side by side once there is room for both. */}
-      <div className="grid gap-2 sm:grid-cols-2">
-        <Field>
-          <Input
-            aria-label={t("adminProductEditor.specName")}
-            id={`product-spec-label-${index}`}
-            onChange={(event) =>
-              onChange((prev) => ({
-                ...prev,
-                specs: prev.specs.map((item, itemIndex) =>
-                  itemIndex === index ? { ...item, label: event.target.value } : item,
-                ),
-              }))
-            }
-            placeholder="Support versions"
-            value={spec.label}
-          />
-        </Field>
-        <Field>
-          <Input
-            aria-label={t("adminProductEditor.specValue")}
-            id={`product-spec-value-${index}`}
-            onChange={(event) =>
-              onChange((prev) => ({
-                ...prev,
-                specs: prev.specs.map((item, itemIndex) =>
-                  itemIndex === index ? { ...item, value: event.target.value } : item,
-                ),
-              }))
-            }
-            placeholder="1.8.9 - 1.21.4"
-            value={spec.value}
-          />
-        </Field>
-      </div>
-    </Stack>
+    <div className="shop-spec">
+      <Input
+        aria-label={t("adminProductEditor.specName")}
+        id={`product-spec-label-${index}`}
+        onChange={(event) => update("label", event.target.value)}
+        placeholder={t("adminProductEditor.specNamePlaceholder")}
+        value={spec.label}
+      />
+      <Input
+        aria-label={t("adminProductEditor.specValue")}
+        id={`product-spec-value-${index}`}
+        onChange={(event) => update("value", event.target.value)}
+        placeholder={t("adminProductEditor.specValuePlaceholder")}
+        value={spec.value}
+      />
+      <Button
+        aria-label={t("adminProductEditor.removeSpec")}
+        onClick={() =>
+          onChange((prev) => ({
+            ...prev,
+            specs: canRemove
+              ? prev.specs.filter((_, itemIndex) => itemIndex !== index)
+              : [{ label: "", value: "" }],
+          }))
+        }
+        size="icon"
+        variant="ghost"
+      >
+        <Trash2 size={16} aria-hidden />
+      </Button>
+    </div>
   )
 }
 

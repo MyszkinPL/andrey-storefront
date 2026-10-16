@@ -3,9 +3,10 @@
 import type { CSSProperties } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { ArrowRight } from "lucide-react"
-import { DetailRow, Pill, StatisticCard, Text } from "sealui"
+import { StatisticCard, Text } from "sealui"
 
 import { useI18n } from "@/components/i18n-provider"
+import { KeyValueList } from "@/components/key-value"
 import { LinkButton } from "@/components/link-button"
 import { ListGroup, ListRow, ListSkeleton } from "@/components/list-row"
 import { Screen, ScreenBody, ScreenError, ScreenHeader, Section } from "@/components/screen"
@@ -18,7 +19,7 @@ import {
   getShopStats,
 } from "@/lib/api"
 import { formatPrice } from "@/lib/format"
-import { orderPillColor, orderStatusKey } from "@/lib/order-status"
+import { OrderList } from "@/components/order-row"
 
 /**
  * The admin's home: what needs doing today, four numbers, and the lists
@@ -146,19 +147,7 @@ export function AdminOverviewScreen() {
               title={t("admin.attentionTitle")}
             >
               {attention.length > 0 ? (
-                <ListGroup>
-                  {attention.slice(0, 5).map((order) => (
-                    <ListRow
-                      description={[`#${order.number}`, order.paymentMethodTitle]
-                        .filter(Boolean)
-                        .join(" · ")}
-                      href={`/orders/${order.id}`}
-                      key={order.id}
-                      title={order.productTitle || order.subject}
-                      trailing={<Pill color={orderPillColor(order)}>{t(orderStatusKey(order))}</Pill>}
-                    />
-                  ))}
-                </ListGroup>
+                <OrderList orders={attention.slice(0, 5)} />
               ) : (
                 <Text as="p" size="sm" tone="muted">
                   {t("admin.attentionEmpty")} · {t("admin.attentionEmptyHint")}
@@ -208,20 +197,16 @@ export function AdminOverviewScreen() {
             ) : null}
 
             <Section hint={t("admin.audienceHint")} title={t("admin.audienceTitle")}>
-              <div className="shop-lines">
-                <DetailRow label={t("admin.statBotStarted")} value={String(stats?.users.botStarted ?? 0)} />
-                <DetailRow label={t("admin.statNewUsers")} value={String(stats?.users.newLast7Days ?? 0)} />
-                <DetailRow label={t("admin.statActiveUsers")} value={String(stats?.users.activeLast7Days ?? 0)} />
-                <DetailRow label={t("admin.statBans")} value={String(usersData?.summary.banned || 0)} />
-                <DetailRow
-                  label={t("admin.statActiveProducts")}
-                  value={String(products.filter((item) => item.isActive).length)}
-                />
-                <DetailRow
-                  label={t("admin.statPaymentMethods")}
-                  value={String(paymentData?.paymentMethods.length || 0)}
-                />
-              </div>
+              <KeyValueList
+                items={[
+                  { label: t("admin.statBotStarted"), value: String(stats?.users.botStarted ?? 0) },
+                  { label: t("admin.statNewUsers"), value: String(stats?.users.newLast7Days ?? 0) },
+                  { label: t("admin.statActiveUsers"), value: String(stats?.users.activeLast7Days ?? 0) },
+                  { label: t("admin.statBans"), value: String(usersData?.summary.banned || 0) },
+                  { label: t("admin.statActiveProducts"), value: String(products.filter((item) => item.isActive).length) },
+                  { label: t("admin.statPaymentMethods"), value: String(paymentData?.paymentMethods.length || 0) },
+                ]}
+              />
             </Section>
           </>
         )}

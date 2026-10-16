@@ -6,6 +6,7 @@ import { requireInteractiveUser, requireUser } from "@/lib/auth"
 import { createOrder, OrderCreateError } from "@/lib/order-create"
 import { expireStaleOrders } from "@/lib/order-expiry"
 import type { OrderListResponse } from "@/lib/contracts"
+import { mediaUrl } from "@/lib/media"
 import { prisma } from "@/lib/prisma"
 
 const schema = z.object({
@@ -66,6 +67,10 @@ export async function GET(request: Request) {
       productCategory: order.product?.category || order.productCategorySnapshot || null,
       paymentMethodTitle: order.paymentMethodTitle || null,
       paymentMethodType: order.paymentMethodType || null,
+      priceRub: order.product?.priceRub ?? order.priceRubSnapshot ?? null,
+      productImageUrl: order.product
+        ? mediaUrl("product", order.product.id, order.product.imageUpdatedAt)
+        : null,
       manualPaymentRequestedAt: order.manualPaymentRequestedAt?.toISOString() || null,
       expiresAt: order.expiresAt?.toISOString() || null,
       expiredAt: order.expiredAt?.toISOString() || null,

@@ -3,10 +3,11 @@
 import { useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Ban, ShieldCheck, ShieldX } from "lucide-react"
-import { Avatar, Button, DetailRow, Pill, Text } from "sealui"
+import { Avatar, Button, Pill, Text } from "sealui"
 
 import { AccessStateScreen } from "@/components/access-state-screen"
 import { useI18n } from "@/components/i18n-provider"
+import { KeyValueList } from "@/components/key-value"
 import { ListGroup, ListRow } from "@/components/list-row"
 import { ResponsiveDialog } from "@/components/responsive-dialog"
 import {
@@ -111,15 +112,14 @@ export function AdminUserDetailScreen({ userId }: { userId: string }) {
           </div>
         ) : null}
 
-        <div className="shop-lines">
-          <DetailRow label="Telegram ID" mono value={String(user.telegramId)} />
-          <DetailRow
-            label="Username"
-            value={user.username ? `@${user.username}` : t("adminUserDetail.none")}
-          />
-          <DetailRow label={t("adminUserDetail.role")} value={roleLabel} />
-          <DetailRow label={t("adminUserDetail.activeOrders")} value={String(user.activeOrderCount)} />
-        </div>
+        <KeyValueList
+          items={[
+            { label: "Telegram ID", value: String(user.telegramId), mono: true },
+            { label: "Username", value: user.username ? `@${user.username}` : t("adminUserDetail.none") },
+            { label: t("adminUserDetail.role"), value: roleLabel },
+            { label: t("adminUserDetail.activeOrders"), value: String(user.activeOrderCount) },
+          ]}
+        />
 
         <Section
           hint={tp("adminUserDetail.orderHistoryRecent", user.orders.length)}
@@ -130,8 +130,8 @@ export function AdminUserDetailScreen({ userId }: { userId: string }) {
               {user.orders.map((order) => (
                 <ListRow
                   description={`#${order.number}${
-                    order.productCategory ? ` · ${order.productCategory}` : ""
-                  }${order.priceRub ? ` · ${formatPrice(order.priceRub, locale, currency)}` : ""}`}
+                    order.priceRub ? ` · ${formatPrice(order.priceRub, locale, currency)}` : ""
+                  }`}
                   href={`/orders/${order.id}`}
                   key={order.id}
                   title={
@@ -139,9 +139,9 @@ export function AdminUserDetailScreen({ userId }: { userId: string }) {
                     t("adminUserDetail.orderFallback", { number: order.number })
                   }
                   trailing={
-                    <Pill color={historyPillColor(order.status, order.isPaid)}>
+                    <span className="shop-item-state" data-color={historyPillColor(order.status, order.isPaid)}>
                       {t(historyStatusKey(order.status, order.isPaid))}
-                    </Pill>
+                    </span>
                   }
                 />
               ))}

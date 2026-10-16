@@ -393,7 +393,7 @@ export async function mockApi<T>(input: RequestInfo, init?: RequestInit): Promis
       scope === "all"
         ? orders
         : orders.filter((order) => order.isOwner && !order.hiddenByBuyer)
-    return { hasMore: false, orders: visible } satisfies OrderListResponse as T
+    return { hasMore: false, orders: visible.map(orderListItem) } satisfies OrderListResponse as T
   }
 
   if (path === "/api/orders" && method === "POST") {
@@ -817,6 +817,7 @@ function orderListItem(order: (typeof orders)[number]) {
     expiresAt: order.expiresAt ?? null,
     expiredAt: order.expiredAt ?? null,
     priceRub: order.priceRub || products.find((product) => product.title === order.productTitle)?.priceRub || null,
+    productImageUrl: products.find((product) => product.title === order.productTitle)?.imageUrl || null,
   }
 }
 
