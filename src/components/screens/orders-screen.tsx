@@ -164,7 +164,6 @@ export function OrdersScreen() {
                     }
                     href={`/orders/${order.id}`}
                     key={order.id}
-                    media={<ReceiptText />}
                     title={order.productTitle || order.subject}
                     trailing={<Pill color={orderPillColor(order)}>{t(orderStatusKey(order))}</Pill>}
                   />

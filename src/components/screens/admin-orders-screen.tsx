@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
-import { Clock3, ReceiptText } from "lucide-react"
+import { Clock3 } from "lucide-react"
 import { EmptyState, Pill, Tabs } from "sealui"
 
 import { useI18n } from "@/components/i18n-provider"
@@ -96,11 +96,6 @@ export function AdminOrdersScreen() {
           ) : (
             <ListGroup>
               {visibleOrders.map((order) => {
-                // A clock while somebody is still waiting on a payment, a
-                // receipt once the money question is settled either way.
-                const isPending =
-                  !order.isPaid && !["CLOSED", "CANCELLED"].includes(order.status)
-
                 return (
                   <ListRow
                     // The pill already names the state and the filter tabs
@@ -116,7 +111,6 @@ export function AdminOrdersScreen() {
                     }
                     href={`/orders/${order.id}`}
                     key={order.id}
-                    media={isPending ? <Clock3 /> : <ReceiptText />}
                     title={order.productTitle || order.subject}
                     trailing={<Pill color={orderPillColor(order)}>{t(orderStatusKey(order))}</Pill>}
                   />

@@ -137,6 +137,7 @@ export function AdminProductsScreen() {
                         : t("catalog.manualDelivery")
                     }`}
                     key={product.id}
+                    mediaBox
                     media={<ProductThumbnail imageUrl={product.imageUrl} title={product.title} />}
                     title={product.title}
                     trailing={

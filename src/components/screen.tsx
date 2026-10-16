@@ -51,7 +51,9 @@ export function ScreenHeader({
       {back ? <BackButton href={typeof back === "string" ? back : undefined} /> : null}
       {before ? <div className="shop-header-side">{before}</div> : null}
       <div className="shop-header-copy">
-        <Heading as="h1" size="sm" truncate>
+        {/* A top-level screen opens with Polar's page heading; a detail
+            screen that already has a back arrow keeps the compact one. */}
+        <Heading as="h1" size={back ? "sm" : "md"} truncate>
           {title}
         </Heading>
         {subtitle ? (

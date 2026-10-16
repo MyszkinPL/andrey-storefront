@@ -24,15 +24,30 @@
 
 :root {
   --shop-max-width: 64rem;
-  --shop-gutter: 12px;
+  --shop-gutter: 16px;
   --shop-tabbar-height: 56px;
   --shop-dock: 0px;
   --shop-ease: cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 @media (min-width: 640px) {
-  :root { --shop-gutter: 16px; }
+  :root { --shop-gutter: 24px; }
 }
+
+/* ── sealui surfaces, tuned for a phone ─────────────────────────────────
+   Polar's Well is a borderless gray block on a desktop page with lots of
+   room. On a phone, stacked edge to edge, it needs an outline to read as a
+   card, and 32px of padding eats a third of the width. */
+.seal-well {
+  box-shadow: 0 0 0 1px var(--seal-border);
+}
+
+@media (max-width: 639px) {
+  .seal-well { padding: var(--seal-space-5); }
+}
+
+/* Row titles carry the Polar list weight (font-medium). */
+.shop-row-copy > :first-child { font-weight: 500; }
 
 /* ── Layout ─────────────────────────────────────────────────────────── */
 
@@ -46,7 +61,7 @@
 .shop-screen {
   display: flex;
   flex-direction: column;
-  gap: var(--seal-space-3);
+  gap: var(--seal-space-4);
   box-sizing: border-box;
   width: 100%;
   max-width: var(--shop-max-width);
@@ -91,7 +106,7 @@
 .shop-header-copy > * { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .shop-header-side { display: flex; flex-shrink: 0; align-items: center; gap: var(--seal-space-2); }
 
-.shop-body { display: flex; flex-direction: column; gap: var(--seal-space-3); }
+.shop-body { display: flex; flex-direction: column; gap: var(--seal-space-4); }
 .shop-body[data-grow] { flex: 1; }
 
 @media (min-width: 1024px) {
@@ -129,6 +144,18 @@
 }
 
 .shop-row-media[data-size='lg'] { width: 64px; height: 64px; border-radius: var(--seal-radius-2xl); }
+
+/* A bare icon at the start of a row: no box, just the muted glyph. */
+.shop-row-icon {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  color: var(--seal-text-secondary);
+}
+
+.shop-row-icon > svg { width: 20px; height: 20px; }
 .shop-row-media > svg { width: 18px; height: 18px; }
 .shop-row-media > img { width: 100%; height: 100%; object-fit: cover; }
 
@@ -288,7 +315,7 @@
   flex-direction: column;
   gap: var(--seal-space-2);
   padding: var(--seal-space-2);
-  border-radius: var(--seal-radius-2xl);
+  border-radius: var(--seal-radius-3xl);
   background-color: var(--seal-surface-raised);
   box-shadow: 0 0 0 1px var(--seal-border);
   color: inherit;
@@ -307,7 +334,7 @@
   aspect-ratio: 1;
   width: 100%;
   overflow: hidden;
-  border-radius: var(--seal-radius-xl);
+  border-radius: var(--seal-radius-2xl);
   background-color: var(--seal-background-card);
   color: var(--seal-text-tertiary);
   font-size: var(--seal-text-2xl);
@@ -328,8 +355,10 @@
   flex-direction: column;
   gap: 2px;
   min-width: 0;
-  padding: 0 var(--seal-space-1) var(--seal-space-1);
+  padding: var(--seal-space-1) var(--seal-space-2) var(--seal-space-2);
 }
+
+.shop-product-copy > :first-child { font-weight: 500; }
 
 /* Horizontally scrolling category chips. */
 .shop-scroll-x {

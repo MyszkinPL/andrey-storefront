@@ -177,6 +177,7 @@ export function AdminOverviewScreen() {
                     ].join(" \u00B7 ")}
                     href={`/admin/products/${product.id}/edit`}
                     key={product.id}
+                    mediaBox
                     media={
                       <Text as="span" size="sm" tabularNums tone="secondary">
                         {index + 1}
@@ -218,7 +219,7 @@ function StatTiles({
       style={{ "--shop-stats-cols": String(items.length) } as CSSProperties}
     >
       {items.map((item) => (
-        <StatisticCard key={item.label} title={item.label}>
+        <StatisticCard key={item.label} size="lg" title={item.label}>
           <Text as="span" loading={loading} placeholderText="0000" size="xl" tabularNums>
             {item.value}
           </Text>
