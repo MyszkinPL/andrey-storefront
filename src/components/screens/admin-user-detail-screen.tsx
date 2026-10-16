@@ -100,7 +100,7 @@ export function AdminUserDetailScreen({ userId }: { userId: string }) {
   const roleLabel = user.role === "ADMIN" ? t("adminUsers.admin") : t("profile.buyer")
 
   return (
-    <Screen noTabBar>
+    <Screen narrow noTabBar>
       <ScreenHeader
         back="/admin/users"
         title={displayName}

@@ -190,13 +190,13 @@ export function AdminPaymentMethodEditorScreen({
   const saveLabel = mutation.isPending ? t("common.saving") : t("common.save")
 
   return (
-    <Screen noTabBar>
+    <Screen narrow noTabBar>
       <ScreenHeader
         back="/admin/settings"
         title={methodId ? t("adminPaymentEditor.title") : t("adminPaymentEditor.newTitle")}
         subtitle={t("adminPaymentEditor.subtitle")}
         trailing={
-          <div className="max-sm:hidden">
+          <div className="shop-desktop-only">
             <Button disabled={!canSave} onClick={() => mutation.mutate("save")} size="sm">
               {saveLabel}
             </Button>

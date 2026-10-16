@@ -23,7 +23,7 @@ export const viewport: Viewport = {
   userScalable: false,
   viewportFit: "cover",
   // Matches sealui's dark page background (polar-800).
-  themeColor: "#181818",
+  themeColor: "#090909",
 }
 
 export default function RootLayout({
@@ -36,7 +36,7 @@ export default function RootLayout({
       <body className="min-h-dvh bg-background text-foreground">
         {/* Paints the root before any script runs, so the first frame and
             any overscroll area are already the app's dark colour. */}
-        <style>{`html{background-color:#181818;color-scheme:dark}`}</style>
+        <style>{`html{background-color:#090909;color-scheme:dark}`}</style>
         <Script
           src="https://telegram.org/js/telegram-web-app.js"
           strategy="beforeInteractive"

@@ -213,7 +213,7 @@ export function AdminProductEditorScreen({
   const selectedCategory = form.category.trim()
 
   return (
-    <Screen noTabBar>
+    <Screen narrow noTabBar>
       <ScreenHeader
         back="/admin/products"
         title={
@@ -225,7 +225,7 @@ export function AdminProductEditorScreen({
         }
         subtitle={t("adminProductEditor.subtitle")}
         trailing={
-          <div className="shop-inline max-sm:hidden">
+          <div className="shop-desktop-only">
             {productId ? (
               <Button
                 disabled={deleteMutation.isPending}

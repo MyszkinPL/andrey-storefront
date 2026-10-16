@@ -17,7 +17,7 @@ type TelegramContextValue = {
 
 /** Hex twins of sealui's page background (polar-800 / gray-50); Telegram only takes hex. */
 const APP_BACKGROUND = {
-  dark: "#181818",
+  dark: "#090909",
   light: "#f9fafb",
 } as const
 

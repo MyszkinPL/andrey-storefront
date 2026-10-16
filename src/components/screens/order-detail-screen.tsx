@@ -294,7 +294,7 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
   }
 
   return (
-    <Screen noTabBar>
+    <Screen narrow noTabBar>
       <ScreenHeader
         back={listHref}
         subtitle={t("orderDetail.orderNumber", { number: order.number })}

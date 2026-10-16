@@ -63,8 +63,12 @@ export function Field({ label, description, error, nativeLabel, children, ref, .
 
 /** Подпись поля (Base UI Field.Label). */
 export function FieldLabel({ children, ref, ...props }: FieldLabelProps) {
+  // Base UI: with `nativeLabel={false}` the label must not be a <label>
+  // (a <label> would forward clicks into a <button> control such as
+  // Select.Trigger), so the part is rendered as a <span> in that case.
+  const render = props.nativeLabel === false ? <span /> : undefined;
   return (
-    <BaseField.Label ref={ref} className="seal-field-label" {...props}>
+    <BaseField.Label ref={ref} className="seal-field-label" render={render} {...props}>
       {children}
     </BaseField.Label>
   );

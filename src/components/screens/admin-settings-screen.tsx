@@ -162,7 +162,7 @@ export function AdminSettingsScreen() {
         title={t("adminSettings.title")}
         subtitle={t("adminSettings.subtitle")}
         trailing={
-          <div className="max-sm:hidden">
+          <div className="shop-desktop-only">
             <Button disabled={mutation.isPending} onClick={() => mutation.mutate()} size="sm">
               {saveLabel}
             </Button>

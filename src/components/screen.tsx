@@ -14,12 +14,19 @@ import { useTranslate } from "@/components/i18n-provider"
 export function Screen({
   children,
   noTabBar = false,
+  narrow = false,
 }: {
   children: ReactNode
   noTabBar?: boolean
+  /** One phone-width column even on desktop: detail screens and editors. */
+  narrow?: boolean
 }) {
   return (
-    <main className="shop-screen" data-no-tab-bar={noTabBar ? "" : undefined}>
+    <main
+      className="shop-screen"
+      data-narrow={narrow ? "" : undefined}
+      data-no-tab-bar={noTabBar ? "" : undefined}
+    >
       {children}
     </main>
   )
@@ -141,7 +148,7 @@ export function ScreenState({
   title: string
 }) {
   return (
-    <Screen noTabBar>
+    <Screen narrow noTabBar>
       {back ? (
         <div className="shop-header">
           <BackButton href={typeof back === "string" ? back : undefined} />

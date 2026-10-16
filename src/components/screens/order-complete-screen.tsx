@@ -59,7 +59,7 @@ export function OrderCompleteScreen({ orderId }: { orderId: string }) {
     (order.priceRub ? formatPrice(order.priceRub, locale, currency) : "—")
 
   return (
-    <Screen noTabBar>
+    <Screen narrow noTabBar>
       <ScreenHeader
         back={`/orders/${orderId}`}
         subtitle={order.productTitle || order.subject}

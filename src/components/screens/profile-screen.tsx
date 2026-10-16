@@ -43,7 +43,7 @@ export function ProfileScreen() {
     meData?.user.role === "ADMIN" ? t("profile.administrator") : t("profile.buyer")
 
   return (
-    <Screen>
+    <Screen narrow>
       <ScreenHeader
         back="/catalog"
         subtitle={meData?.user.username ? `@${meData.user.username}` : roleLabel}

@@ -13,8 +13,7 @@ import {
   SelectParts,
   Separator,
   Text,
-  Well,
-} from "sealui"
+  Well, Heading } from "sealui"
 
 import { useI18n, useTranslate } from "@/components/i18n-provider"
 import { LinkButton } from "@/components/link-button"
@@ -195,23 +194,26 @@ export function ProductScreen({ productId }: { productId: string }) {
   const hasActions = paymentOptions.length > 0 || Boolean(supportLink)
 
   return (
-    <Screen noTabBar>
-      <ScreenHeader
-        back="/catalog"
-        subtitle={category}
-        title={product.title}
-        trailing={<Pill color="gray">{formatPrice(product.priceRub, locale, currency)}</Pill>}
-      />
+    <Screen narrow noTabBar>
+      <ScreenHeader back="/catalog" title={category} />
 
       <ScreenBody grow>
         <Well>
-          <div className="shop-cover">
+          <div className="shop-cover" data-size="hero">
             {product.imageUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img alt={product.title} src={product.imageUrl} />
             ) : (
               <PackageSearch aria-hidden />
             )}
+          </div>
+
+          {/* The two facts a buyer decides on, side by side under the cover. */}
+          <div className="shop-hero">
+            <Heading as="h1" size="sm">
+              {product.title}
+            </Heading>
+            <span className="shop-price">{formatPrice(product.priceRub, locale, currency)}</span>
           </div>
 
           {product.description ? (

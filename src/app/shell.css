@@ -8,6 +8,20 @@
    Every value is a --seal-* token, so the two never drift apart.
    ────────────────────────────────────────────────────────────────────────── */
 
+/* Surfaces must read as layers on a phone: sealui's dark page and card are
+   both polar-800, so wells, tiles and lists vanished into the background.
+   The page drops two steps darker and the bar/rail sit one step above it;
+   cards keep their polar-800 and now float. */
+[data-theme='dark'] {
+  --seal-background-primary: var(--seal-polar-950);
+  --seal-background-secondary: var(--seal-polar-900);
+  --seal-surface-raised: var(--seal-polar-900);
+  --seal-background-card: var(--seal-polar-800);
+  --seal-statistic-bg: var(--seal-polar-800);
+  --seal-segmented-bg: var(--seal-polar-900);
+  --seal-segmented-tabs-bg: var(--seal-polar-900);
+}
+
 :root {
   --shop-max-width: 64rem;
   --shop-gutter: 12px;
@@ -42,6 +56,9 @@
     calc(env(safe-area-inset-bottom) + var(--shop-tabbar-height) + var(--seal-space-6));
   overflow-x: clip;
 }
+
+/* Detail screens read like a phone screen on desktop too: one column. */
+.shop-screen[data-narrow] { max-width: 40rem; }
 
 .shop-screen[data-no-tab-bar] {
   --shop-dock: 0px;
@@ -356,6 +373,21 @@
 .shop-cover > img { width: 100%; height: 100%; object-fit: cover; }
 .shop-cover > svg { width: 48px; height: 48px; }
 .shop-cover[data-size='sm'] { max-width: 12rem; border-radius: var(--seal-radius-2xl); }
+.shop-cover[data-size='hero'] { max-width: none; border-radius: var(--seal-radius-2xl); }
+
+/* Title and price under the hero cover. */
+.shop-hero { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--seal-space-3); }
+.shop-hero > :first-child { min-width: 0; flex: 1; }
+.shop-price {
+  flex-shrink: 0;
+  color: var(--seal-text-primary);
+  font-size: var(--seal-text-2xl);
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  white-space: nowrap;
+}
 
 .shop-specs {
   display: grid;
@@ -517,10 +549,22 @@
 .shop-inline { display: inline-flex; align-items: center; gap: var(--seal-space-2); min-width: 0; }
 .shop-fill { width: 100%; }
 .shop-fill > * { width: 100%; }
+/* Responsive visibility that cannot be out-cascaded by other shop-* rules. */
+.shop-desktop-only { display: contents; }
+.shop-phone-only { display: contents; }
+
+@media (max-width: 639px) {
+  .shop-desktop-only { display: none !important; }
+}
+
+@media (min-width: 640px) {
+  .shop-phone-only { display: none !important; }
+}
+
 .shop-hide-desktop-actions { display: contents; }
 
 @media (max-width: 639px) {
-  .shop-hide-desktop-actions { display: none; }
+  .shop-hide-desktop-actions { display: none !important; }
 }
 
 .shop-visually-hidden {
