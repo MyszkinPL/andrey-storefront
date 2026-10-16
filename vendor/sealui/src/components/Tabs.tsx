@@ -1,5 +1,6 @@
 import type { ComponentProps, ReactNode, Ref } from 'react';
 import { Tabs as BaseTabs } from '@base-ui/react/tabs';
+import { useRevealSelected } from './useRevealSelected';
 
 export type TabsOrientation = 'horizontal' | 'vertical';
 
@@ -122,9 +123,14 @@ export function TabsRoot({ ref, ...props }: TabsRootProps) {
   return <BaseTabs.Root {...props} ref={ref} />;
 }
 
+/**
+ * Горизонтальный список шире контейнера прокручивается (свайпом, без
+ * полосы прокрутки), а выбранная вкладка подъезжает в видимую часть.
+ */
 export function TabsList({ children, ref, ...props }: TabsListProps) {
+  const listRef = useRevealSelected<HTMLDivElement>('[aria-selected="true"]', 'aria-selected', ref);
   return (
-    <BaseTabs.List {...props} ref={ref} className="seal-tabs-list">
+    <BaseTabs.List {...props} ref={listRef} className="seal-tabs-list">
       {children}
     </BaseTabs.List>
   );

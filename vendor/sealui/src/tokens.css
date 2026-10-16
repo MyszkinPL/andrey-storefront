@@ -1402,6 +1402,7 @@ body {
   position: relative;
   display: flex;
   width: fit-content;
+  max-width: 100%;
   height: fit-content;
   padding: var(--seal-space-1);
   align-items: flex-start;
@@ -1409,6 +1410,18 @@ body {
   border-radius: var(--seal-radius-2xl);
   background-color: transparent;
 }
+
+/* Вкладок больше, чем места: ряд прокручивается свайпом, без полосы
+   прокрутки, а вкладки не сжимаются и не переносятся. */
+.seal-tabs-list[data-orientation='horizontal'] {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.seal-tabs-list[data-orientation='horizontal']::-webkit-scrollbar { display: none; }
+.seal-tabs-list[data-orientation='horizontal'] > .seal-tabs-tab { flex-shrink: 0; }
 
 @media (min-width: 768px) {
   .seal-tabs-list {
@@ -2487,12 +2500,24 @@ body {
 
 .seal-segmented {
   display: inline-flex;
+  max-width: 100%;
   align-items: center;
   gap: var(--seal-space-1);
   padding: var(--seal-space-1);
   border-radius: var(--seal-radius-full);
   background-color: var(--seal-segmented-bg);
 }
+
+/* Пунктов больше, чем места: ряд прокручивается свайпом, пункты не сжимаются. */
+.seal-segmented[data-orientation='horizontal'] {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.seal-segmented[data-orientation='horizontal']::-webkit-scrollbar { display: none; }
+.seal-segmented[data-orientation='horizontal'] > .seal-segmented-item { flex-shrink: 0; }
 
 .seal-segmented[data-variant='tabs'] {
   display: flex;

@@ -1,5 +1,6 @@
 import { ToggleGroup as BaseToggleGroup } from '@base-ui/react/toggle-group';
 import { Toggle as BaseToggle } from '@base-ui/react/toggle';
+import { useRevealSelected } from './useRevealSelected';
 
 export type SegmentedSize = 'sm' | 'md' | 'lg';
 export type SegmentedVariant = 'default' | 'tabs';
@@ -84,8 +85,11 @@ export function SegmentedControl(props: SegmentedControlProps) {
 
   const controlledValue = toArray(props.value);
   const uncontrolledValue = props.value === undefined ? toArray(props.defaultValue) : undefined;
+  // Ряд шире экрана прокручивается; нажатый пункт подъезжает в видимую часть.
+  const rowRef = useRevealSelected<HTMLDivElement>('[aria-pressed="true"]', 'aria-pressed');
   return (
     <BaseToggleGroup
+      ref={rowRef}
       className="seal-segmented"
       data-size={size}
       data-variant={variant}
