@@ -3,21 +3,19 @@
 import { useQuery } from "@tanstack/react-query"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { Avatar, Text } from "sealui"
 
 import { useTranslate } from "@/components/i18n-provider"
 import { LanguageSwitcher } from "@/components/language-switcher"
 import { useMode } from "@/components/mode-provider"
 import { ModeSwitcher } from "@/components/mode-switcher"
 import { ShopLogo } from "@/components/shop-logo"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Separator } from "@/components/ui/separator"
 import { getMe } from "@/lib/api"
 import { isNavItemActive, navItemsFor } from "@/lib/nav-items"
-import { cn } from "@/lib/utils"
 
 /**
- * Desktop navigation rail. Hidden below `lg`, where the bottom tab bar takes
- * over — both render, and CSS picks one, so there is no hydration flash.
+ * Desktop navigation rail. Hidden below `lg`, where the bottom tab bar
+ * takes over; both render and CSS picks one, so there is no hydration flash.
  */
 export function SideNav() {
   const pathname = usePathname()
@@ -30,77 +28,55 @@ export function SideNav() {
   const displayName = meData?.user.firstName || ""
 
   return (
-    <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col border-border border-r bg-card/40 lg:flex">
-      <div className="flex items-center px-4 py-4">
+    <aside className="shop-rail">
+      <div className="shop-rail-head">
         <ShopLogo aria-label={shopName} className="h-7" />
       </div>
 
-      <Separator />
-
-      {/* The mode decides which sections the nav below even lists, so it
-          belongs above the nav, not among the account controls at the foot. */}
       {canSwitch ? (
-        <div className="px-3 pt-3">
+        <div className="shop-rail-section">
           <ModeSwitcher variant="rail" />
         </div>
       ) : null}
 
-      <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-3">
-        {items.map((item) => {
-          const Icon = item.icon
-          const active = isNavItemActive(item, pathname)
+      <div className="shop-rail-section" data-grow="">
+        <nav className="shop-rail-nav">
+          {items.map((item) => {
+            const Icon = item.icon
+            const active = isNavItemActive(item, pathname)
 
-          return (
-            <Link
-              aria-current={active ? "page" : undefined}
-              className={cn(
-                "flex items-center gap-2.5 rounded-lg px-3 py-2 font-medium text-sm transition-colors",
-                "outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background",
-                active
-                  ? "bg-accent text-accent-foreground"
-                  : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
-              )}
-              href={item.href}
-              key={item.href}
-            >
-              <Icon aria-hidden="true" className="size-4 shrink-0" />
-              <span className="truncate">{t(item.labelKey)}</span>
-            </Link>
-          )
-        })}
-      </nav>
+            return (
+              <Link
+                aria-current={active ? "page" : undefined}
+                className="shop-rail-link"
+                href={item.href}
+                key={item.href}
+              >
+                <Icon aria-hidden="true" />
+                <span>{t(item.labelKey)}</span>
+              </Link>
+            )
+          })}
+        </nav>
+      </div>
 
-      <Separator />
+      <div className="shop-rail-section" data-stack="">
+        <LanguageSwitcher />
 
-      <div className="flex flex-col gap-3 p-3">
-        <LanguageSwitcher className="w-full" />
-
-        {/* The same account entry point the phone header has on the avatar. */}
         {displayName ? (
           <Link
             aria-current={pathname === "/profile" ? "page" : undefined}
-            className={cn(
-              "flex items-center gap-2.5 rounded-lg px-1 py-1 transition-colors",
-              "outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background",
-              pathname === "/profile"
-                ? "bg-accent text-accent-foreground"
-                : "hover:bg-accent/50",
-            )}
+            className="shop-rail-link"
             href="/profile"
           >
-            <Avatar className="size-8">
-              {meData?.user.photoUrl ? (
-                <AvatarImage alt={displayName} src={meData.user.photoUrl} />
-              ) : null}
-              <AvatarFallback>{displayName.slice(0, 1)}</AvatarFallback>
-            </Avatar>
-            <div className="min-w-0">
-              <p className="truncate font-medium text-sm">{displayName}</p>
-              <p className="truncate text-muted-foreground text-xs">
-                {meData?.user.username
-                  ? `@${meData.user.username}`
-                  : t("auth.noUsername")}
-              </p>
+            <Avatar name={displayName} size="md" src={meData?.user.photoUrl} />
+            <div className="shop-row-copy">
+              <Text as="span" size="sm" truncate>
+                {displayName}
+              </Text>
+              <Text as="span" size="xs" tone="muted" truncate>
+                {meData?.user.username ? `@${meData.user.username}` : t("auth.noUsername")}
+              </Text>
             </div>
           </Link>
         ) : null}

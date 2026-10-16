@@ -1,0 +1,537 @@
+/* ──────────────────────────────────────────────────────────────────────────
+   Shop chrome on top of sealui.
+
+   sealui components are sealed (no className), so everything that *is* a
+   component comes from sealui and these classes only lay components out:
+   the screen container, the phone tab bar, the desktop rail, list rows,
+   the product grid, and a few shop-specific widgets (countdown, stepper).
+   Every value is a --seal-* token, so the two never drift apart.
+   ────────────────────────────────────────────────────────────────────────── */
+
+:root {
+  --shop-max-width: 64rem;
+  --shop-gutter: 12px;
+  --shop-tabbar-height: 56px;
+  --shop-dock: 0px;
+  --shop-ease: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@media (min-width: 640px) {
+  :root { --shop-gutter: 16px; }
+}
+
+/* ── Layout ─────────────────────────────────────────────────────────── */
+
+.shop-layout { display: block; }
+.shop-main { display: flex; min-width: 0; flex: 1; flex-direction: column; }
+
+@media (min-width: 1024px) {
+  .shop-layout { display: flex; min-height: 100dvh; }
+}
+
+.shop-screen {
+  display: flex;
+  flex-direction: column;
+  gap: var(--seal-space-3);
+  box-sizing: border-box;
+  width: 100%;
+  max-width: var(--shop-max-width);
+  min-height: 100dvh;
+  margin-inline: auto;
+  padding: calc(env(safe-area-inset-top) + var(--seal-space-3)) var(--shop-gutter)
+    calc(env(safe-area-inset-bottom) + var(--shop-tabbar-height) + var(--seal-space-6));
+  overflow-x: clip;
+}
+
+.shop-screen[data-no-tab-bar] {
+  --shop-dock: 0px;
+  padding-bottom: calc(env(safe-area-inset-bottom) + var(--seal-space-4));
+}
+
+.shop-screen:not([data-no-tab-bar]) {
+  --shop-dock: var(--shop-tabbar-height);
+}
+
+@media (min-width: 1024px) {
+  .shop-screen {
+    --shop-dock: 0px;
+    gap: var(--seal-space-4);
+    min-height: 0;
+    padding: var(--seal-space-8) var(--seal-space-8) var(--seal-space-12);
+  }
+}
+
+/* Page header: title + subtitle left, controls right. */
+.shop-header {
+  display: flex;
+  align-items: center;
+  gap: var(--seal-space-3);
+  min-height: 40px;
+  padding-inline: var(--seal-space-1);
+}
+
+.shop-header-copy { flex: 1 1 0; min-width: 0; }
+.shop-header-copy > * { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.shop-header-side { display: flex; flex-shrink: 0; align-items: center; gap: var(--seal-space-2); }
+
+.shop-body { display: flex; flex-direction: column; gap: var(--seal-space-3); }
+.shop-body[data-grow] { flex: 1; }
+
+@media (min-width: 1024px) {
+  .shop-body { gap: var(--seal-space-4); }
+}
+
+/* Two-column lists from lg: the same list, just wider. */
+.shop-two-col { display: flex; flex-direction: column; gap: var(--seal-space-2); }
+
+@media (min-width: 1024px) {
+  .shop-two-col { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--seal-space-3); }
+}
+
+/* ── Rows (media · copy · trailing) ─────────────────────────────────── */
+
+.shop-row {
+  display: flex;
+  align-items: center;
+  gap: var(--seal-space-3);
+  width: 100%;
+  min-width: 0;
+}
+
+.shop-row-media {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  overflow: hidden;
+  border-radius: var(--seal-radius-xl);
+  background-color: var(--seal-surface-raised);
+  color: var(--seal-text-secondary);
+}
+
+.shop-row-media[data-size='lg'] { width: 64px; height: 64px; border-radius: var(--seal-radius-2xl); }
+.shop-row-media > svg { width: 18px; height: 18px; }
+.shop-row-media > img { width: 100%; height: 100%; object-fit: cover; }
+
+.shop-row-copy {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.shop-row-trailing { display: flex; flex-shrink: 0; align-items: center; gap: var(--seal-space-1); }
+
+/* A whole list row as a link, keeping sealui's hover/selected look. */
+.shop-link {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+  outline: none;
+}
+
+.shop-link:focus-visible { box-shadow: inset 0 0 0 2px var(--seal-accent); }
+
+.shop-link[data-rounded] { border-radius: var(--seal-radius-2xl); }
+
+/* ── Phone tab bar ──────────────────────────────────────────────────── */
+
+.shop-tabbar {
+  position: fixed;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 40;
+  padding-bottom: env(safe-area-inset-bottom);
+  border-top: 1px solid var(--seal-border);
+  background-color: var(--seal-background-secondary);
+}
+
+@media (min-width: 1024px) {
+  .shop-tabbar { display: none; }
+}
+
+.shop-tabbar-list {
+  display: flex;
+  align-items: stretch;
+  max-width: var(--shop-max-width);
+  margin: 0 auto;
+  padding: 0;
+  list-style: none;
+}
+
+.shop-tabbar-item { flex: 1 1 0; min-width: 0; }
+
+.shop-tabbar-link {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--seal-space-1);
+  height: var(--shop-tabbar-height);
+  padding-inline: var(--seal-space-1);
+  color: var(--seal-text-secondary);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+  text-decoration: none;
+  outline: none;
+  transition: color 120ms var(--shop-ease);
+}
+
+.shop-tabbar-link > svg { width: 24px; height: 24px; flex-shrink: 0; }
+.shop-tabbar-link > span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.shop-tabbar-link[aria-current='page'] { color: var(--seal-text-primary); font-weight: 600; }
+.shop-tabbar-link:focus-visible { background-color: var(--seal-background-card); }
+
+/* ── Desktop rail ───────────────────────────────────────────────────── */
+
+.shop-rail {
+  position: sticky;
+  top: 0;
+  display: none;
+  flex-direction: column;
+  flex-shrink: 0;
+  width: 16rem;
+  height: 100dvh;
+  border-right: 1px solid var(--seal-border);
+  background-color: var(--seal-background-secondary);
+}
+
+@media (min-width: 1024px) {
+  .shop-rail { display: flex; }
+}
+
+.shop-rail-head { display: flex; align-items: center; padding: var(--seal-space-4); }
+.shop-rail-section { padding: var(--seal-space-3); }
+.shop-rail-section[data-grow] { flex: 1; overflow-y: auto; }
+.shop-rail-section[data-stack] { display: flex; flex-direction: column; gap: var(--seal-space-3); }
+.shop-rail-section + .shop-rail-section { border-top: 1px solid var(--seal-border); }
+
+.shop-rail-nav { display: flex; flex-direction: column; gap: var(--seal-space-1); }
+
+.shop-rail-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: var(--seal-space-2) var(--seal-space-3);
+  border-radius: var(--seal-radius-xl);
+  color: var(--seal-text-secondary);
+  font-size: var(--seal-text-sm);
+  font-weight: 500;
+  text-decoration: none;
+  outline: none;
+  transition: color 120ms var(--shop-ease), background-color 120ms var(--shop-ease);
+}
+
+.shop-rail-link > svg { width: 16px; height: 16px; flex-shrink: 0; }
+.shop-rail-link:hover { color: var(--seal-text-primary); background-color: var(--seal-background-card); }
+.shop-rail-link[aria-current='page'] { color: var(--seal-text-primary); background-color: var(--seal-background-card); }
+.shop-rail-link:focus-visible { box-shadow: 0 0 0 2px var(--seal-accent); }
+
+/* ── Pinned actions above the tab bar on phones ─────────────────────── */
+
+.shop-sticky {
+  position: sticky;
+  bottom: calc(env(safe-area-inset-bottom) + var(--shop-dock, 0px) + var(--seal-space-3));
+  z-index: 20;
+  display: flex;
+  gap: var(--seal-space-2);
+  margin-top: var(--seal-space-2);
+  padding: var(--seal-space-2);
+  border: 1px solid var(--seal-border);
+  border-radius: var(--seal-radius-2xl);
+  background-color: color-mix(in oklab, var(--seal-background-secondary) 92%, transparent);
+  box-shadow: var(--seal-shadow-lg);
+  backdrop-filter: blur(12px);
+}
+
+.shop-sticky > * { flex: 1 1 0; }
+
+@media (min-width: 640px) {
+  .shop-sticky { display: none; }
+}
+
+/* ── Catalog ────────────────────────────────────────────────────────── */
+
+.shop-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--seal-space-2);
+}
+
+@media (min-width: 640px) { .shop-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 1024px) { .shop-grid { gap: var(--seal-space-3); } }
+@media (min-width: 1280px) { .shop-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+
+.shop-product {
+  display: flex;
+  flex-direction: column;
+  gap: var(--seal-space-2);
+  padding: var(--seal-space-2);
+  border-radius: var(--seal-radius-2xl);
+  background-color: var(--seal-surface-raised);
+  box-shadow: 0 0 0 1px var(--seal-border);
+  color: inherit;
+  text-decoration: none;
+  outline: none;
+  transition: background-color 120ms var(--shop-ease), box-shadow 120ms var(--shop-ease);
+}
+
+.shop-product:hover { background-color: var(--seal-background-card); }
+.shop-product:focus-visible { box-shadow: 0 0 0 2px var(--seal-accent); }
+
+.shop-product-cover {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1;
+  width: 100%;
+  overflow: hidden;
+  border-radius: var(--seal-radius-xl);
+  background-color: var(--seal-background-card);
+  color: var(--seal-text-tertiary);
+  font-size: var(--seal-text-2xl);
+  font-weight: 600;
+}
+
+.shop-product-cover > img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 300ms var(--shop-ease);
+}
+
+.shop-product:hover .shop-product-cover > img { transform: scale(1.03); }
+
+.shop-product-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding: 0 var(--seal-space-1) var(--seal-space-1);
+}
+
+/* Horizontally scrolling category chips. */
+.shop-scroll-x {
+  margin-inline: calc(var(--shop-gutter) * -1);
+  padding-inline: var(--shop-gutter);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.shop-scroll-x::-webkit-scrollbar { display: none; }
+.shop-scroll-x > * { width: max-content; min-width: 100%; }
+
+@media (min-width: 1024px) {
+  .shop-scroll-x { margin-inline: 0; padding-inline: 0; }
+  .shop-scroll-x > * { min-width: 0; }
+}
+
+.shop-toolbar { display: flex; flex-direction: column; gap: var(--seal-space-2); }
+
+@media (min-width: 1024px) {
+  .shop-toolbar { flex-direction: row; align-items: center; gap: var(--seal-space-3); }
+  .shop-toolbar > :first-child { max-width: 20rem; flex: 1; }
+}
+
+/* ── Product page ───────────────────────────────────────────────────── */
+
+.shop-cover {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1;
+  width: 100%;
+  max-width: 20rem;
+  margin-inline: auto;
+  overflow: hidden;
+  border-radius: var(--seal-radius-3xl);
+  background-color: var(--seal-background-card);
+  color: var(--seal-text-tertiary);
+}
+
+.shop-cover > img { width: 100%; height: 100%; object-fit: cover; }
+.shop-cover > svg { width: 48px; height: 48px; }
+.shop-cover[data-size='sm'] { max-width: 12rem; border-radius: var(--seal-radius-2xl); }
+
+.shop-specs {
+  display: grid;
+  grid-template-columns: minmax(6rem, 8rem) 1fr;
+  column-gap: var(--seal-space-4);
+  row-gap: var(--seal-space-2);
+  margin: 0;
+}
+
+.shop-specs > dt { margin: 0; color: var(--seal-text-secondary); font-size: var(--seal-text-xs); line-height: 20px; }
+.shop-specs > dd { margin: 0; font-size: var(--seal-text-sm); line-height: 20px; }
+
+@media (min-width: 640px) {
+  .shop-specs { grid-template-columns: minmax(8rem, 10rem) 1fr; }
+}
+
+/* Card foot pinned to the bottom edge while the card scrolls. */
+.shop-card-foot {
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: var(--seal-space-2);
+  margin-top: auto;
+  padding-top: var(--seal-space-4);
+  border-top: 1px solid var(--seal-border);
+  background-color: color-mix(in oklab, var(--seal-background-card) 94%, transparent);
+  backdrop-filter: blur(12px);
+}
+
+.shop-card-foot[data-static] { position: static; backdrop-filter: none; background-color: transparent; }
+
+/* ── Order widgets ──────────────────────────────────────────────────── */
+
+.shop-countdown {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--seal-space-1);
+  padding: 2px 8px;
+  border-radius: var(--seal-radius-full);
+  background-color: var(--seal-surface-raised);
+  color: var(--seal-text-primary);
+  font-size: var(--seal-text-sm);
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+
+.shop-countdown[data-urgent] { background-color: var(--seal-background-warning); color: var(--seal-text-warning); }
+
+.shop-stepper {
+  display: flex;
+  align-items: flex-start;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.shop-stepper-line { flex: 1; height: 2px; margin-top: 14px; border-radius: var(--seal-radius-full); background-color: var(--seal-border); }
+.shop-stepper-line[data-done] { background-color: var(--seal-text-primary); }
+
+.shop-stepper-step {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 6px;
+  width: 4rem;
+  text-align: center;
+}
+
+.shop-stepper-dot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 2px solid var(--seal-border);
+  border-radius: var(--seal-radius-full);
+  background-color: var(--seal-surface-raised);
+  color: var(--seal-text-secondary);
+  font-size: var(--seal-text-xs);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  transition: background-color 200ms var(--shop-ease), border-color 200ms var(--shop-ease);
+}
+
+.shop-stepper-dot > svg { width: 14px; height: 14px; }
+.shop-stepper-step[data-state='done'] .shop-stepper-dot { border-color: var(--seal-text-primary); background-color: var(--seal-text-primary); color: var(--seal-background-primary); }
+.shop-stepper-step[data-state='active'] .shop-stepper-dot { border-color: var(--seal-text-primary); color: var(--seal-text-primary); }
+.shop-stepper-label { color: var(--seal-text-secondary); font-size: var(--seal-text-xs); line-height: 1.3; }
+.shop-stepper-step:not([data-state='upcoming']) .shop-stepper-label { color: var(--seal-text-primary); font-weight: 500; }
+
+/* Receipt-style key/value lines. */
+.shop-lines { display: flex; flex-direction: column; gap: var(--seal-space-2); }
+.shop-line { display: flex; align-items: baseline; justify-content: space-between; gap: var(--seal-space-4); min-width: 0; }
+.shop-line > :last-child { min-width: 0; overflow: hidden; text-align: right; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Instruction steps in the how-to-pay sheet. */
+.shop-steps { display: flex; flex-direction: column; gap: var(--seal-space-3); margin: 0; padding: 0; list-style: none; }
+.shop-steps > li { display: flex; align-items: flex-start; gap: var(--seal-space-3); }
+.shop-steps-num {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--seal-radius-full);
+  background-color: var(--seal-background-inverse);
+  color: var(--seal-text-inverse);
+  font-size: var(--seal-text-xs);
+  font-weight: 600;
+}
+
+.shop-note {
+  padding: var(--seal-space-2) var(--seal-space-3);
+  border-radius: var(--seal-radius-lg);
+  background-color: var(--seal-surface-raised);
+}
+
+/* A tinted box for a file slot, used by the receipt pickers. */
+.shop-slot {
+  display: flex;
+  flex-direction: column;
+  gap: var(--seal-space-3);
+  padding: var(--seal-space-3);
+  border: 1px solid var(--seal-border);
+  border-radius: var(--seal-radius-xl);
+  background-color: var(--seal-surface-raised);
+}
+
+/* ── Stat tiles ─────────────────────────────────────────────────────── */
+
+.shop-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--seal-space-3); }
+
+@media (min-width: 1024px) {
+  .shop-stats { grid-template-columns: repeat(var(--shop-stats-cols, 4), minmax(0, 1fr)); }
+}
+
+/* ── Centered full-screen states (auth, channel gate) ───────────────── */
+
+.shop-gate {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  max-width: 28rem;
+  min-height: 100dvh;
+  margin-inline: auto;
+  padding: var(--seal-space-6) var(--seal-space-4);
+}
+
+.shop-gate > * { width: 100%; }
+.shop-center { display: flex; align-items: center; justify-content: center; min-height: 100dvh; }
+
+/* ── Misc ───────────────────────────────────────────────────────────── */
+
+.shop-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.shop-inline { display: inline-flex; align-items: center; gap: var(--seal-space-2); min-width: 0; }
+.shop-fill { width: 100%; }
+.shop-fill > * { width: 100%; }
+.shop-hide-desktop-actions { display: contents; }
+
+@media (max-width: 639px) {
+  .shop-hide-desktop-actions { display: none; }
+}
+
+.shop-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* sealui lists have 24px side padding by default; rows in this app carry
+   their own media box, so the small size (8/16) reads better everywhere. */
+.shop-list-reset { display: contents; }

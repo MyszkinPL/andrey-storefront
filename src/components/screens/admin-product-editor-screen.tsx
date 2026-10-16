@@ -5,32 +5,27 @@ import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { ImagePlus, KeyRound, Plus, Trash2 } from "lucide-react"
+import {
+  Banner,
+  Button,
+  Card,
+  Cluster,
+  Field,
+  Input,
+  SegmentedControl,
+  Setting,
+  Stack,
+  Switch,
+  Text,
+  Textarea,
+  Well,
+  WellContent,
+  WellHeader,
+} from "sealui"
 
 import { AccessStateScreen } from "@/components/access-state-screen"
-import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@/components/ui/empty"
-import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel, FieldTitle } from "@/components/ui/field"
 import { ImagePicker } from "@/components/image-picker"
-import { Input } from "@/components/ui/input"
-import { Switch } from "@/components/ui/switch"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Textarea } from "@/components/ui/textarea"
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
-import { Screen, ScreenBody, ScreenHeader, StickyActions } from "@/components/screen"
+import { Screen, ScreenBody, ScreenHeader, ScreenState, StickyActions } from "@/components/screen"
 import { useI18n, useTranslate } from "@/components/i18n-provider"
 import { ResponsiveDialog } from "@/components/responsive-dialog"
 import { deleteAdminProduct, getMe, getProduct, getProducts, saveAdminProduct, updateAdminProduct } from "@/lib/api"
@@ -173,7 +168,6 @@ export function AdminProductEditorScreen({
     },
   })
 
-  
   async function handleImageChange(file: File | null) {
     if (!file) return
     setUploading(true)
@@ -196,21 +190,27 @@ export function AdminProductEditorScreen({
 
   if (sourceProductId && productQuery.isLoading) {
     return (
-      <ProductEditorState
-        title={t("adminProductEditor.loadingTitle")}
+      <ScreenState
+        back="/admin/products"
         description={t("adminProductEditor.loadingDescription")}
+        title={t("adminProductEditor.loadingTitle")}
       />
     )
   }
 
   if (sourceProductId && productQuery.isError) {
     return (
-      <ProductEditorState
-        title={t("adminProductEditor.errorTitle")}
+      <ScreenState
+        back="/admin/products"
         description={t("adminProductEditor.errorDescription")}
+        onRetry={() => productQuery.refetch()}
+        title={t("adminProductEditor.errorTitle")}
       />
     )
   }
+
+  const saveLabel = mutation.isPending ? t("common.saving") : t("common.save")
+  const selectedCategory = form.category.trim()
 
   return (
     <Screen noTabBar>
@@ -225,167 +225,169 @@ export function AdminProductEditorScreen({
         }
         subtitle={t("adminProductEditor.subtitle")}
         trailing={
-          <div className="flex items-center gap-2 max-sm:hidden">
+          <div className="shop-inline max-sm:hidden">
             {productId ? (
               <Button
-                size="sm"
-                variant="destructive-outline"
                 disabled={deleteMutation.isPending}
+                icon={<Trash2 size={16} aria-hidden />}
                 onClick={() => setDeleteOpen(true)}
+                size="sm"
+                variant="outline"
               >
-                <Trash2 data-icon="inline-start" />
                 {t("common.delete")}
               </Button>
             ) : null}
-            <Button size="sm" disabled={!canSave || mutation.isPending} onClick={() => mutation.mutate()}>
-              {mutation.isPending ? t("common.saving") : t("common.save")}
+            <Button disabled={!canSave || mutation.isPending} onClick={() => mutation.mutate()} size="sm">
+              {saveLabel}
             </Button>
           </div>
         }
       />
 
       <ScreenBody>
-        <FieldGroup>
-          {mutation.error ? (
-            <Field>
-              <FieldError>
-                {mutation.error instanceof Error ? mutation.error.message : t("adminProductEditor.saveFailed")}
-              </FieldError>
-            </Field>
-          ) : null}
-          {deleteMutation.error ? (
-            <Field>
-              <FieldError>
-                {deleteMutation.error instanceof Error ? deleteMutation.error.message : t("adminProducts.deleteFailed")}
-              </FieldError>
-            </Field>
-          ) : null}
+        {mutation.error ? (
+          <Banner
+            title={mutation.error instanceof Error ? mutation.error.message : t("adminProductEditor.saveFailed")}
+            variant="danger"
+          />
+        ) : null}
+        {deleteMutation.error ? (
+          <Banner
+            title={
+              deleteMutation.error instanceof Error ? deleteMutation.error.message : t("adminProducts.deleteFailed")
+            }
+            variant="danger"
+          />
+        ) : null}
 
-          <Card>
-            <CardHeader>
-              <ProductCoverPreview imageUrl={form.imageUrl} title={form.title || t("adminProductEditor.productFallback")} />
-              <CardTitle>{t("adminProductEditor.cover")}</CardTitle>
-              <CardDescription>
-                {uploading
-                  ? t("adminProductEditor.processingImage")
-                  : t("adminProductEditor.coverHint")}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
+        <Well>
+          <WellHeader
+            description={uploading ? t("adminProductEditor.processingImage") : t("adminProductEditor.coverHint")}
+            title={t("adminProductEditor.cover")}
+          />
+          <WellContent>
+            <ProductCoverPreview imageUrl={form.imageUrl} title={form.title || t("adminProductEditor.productFallback")} />
+            <Cluster justify="center">
               <ImagePicker
                 disabled={uploading}
                 hasImage={Boolean(form.imageUrl)}
                 id="product-cover"
-                onClear={() =>
-                  setForm((prev) => ({ ...prev, imageDataUrl: null, imageUrl: null }))
-                }
+                onClear={() => setForm((prev) => ({ ...prev, imageDataUrl: null, imageUrl: null }))}
                 onSelect={handleImageChange}
               />
-            </CardContent>
-          </Card>
+            </Cluster>
+          </WellContent>
+        </Well>
 
-          <Field>
-            <FieldLabel htmlFor="product-title">{t("adminProductEditor.name")}</FieldLabel>
-            <Input
-              id="product-title"
-              value={form.title}
-              onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))}
-              placeholder={t("adminProductEditor.name")}
-            />
-          </Field>
+        <Well>
+          <WellContent>
+            <Stack gap="4">
+              <Field label={t("adminProductEditor.name")}>
+                <Input
+                  id="product-title"
+                  onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))}
+                  placeholder={t("adminProductEditor.name")}
+                  value={form.title}
+                />
+              </Field>
 
-          <Field>
-            <FieldLabel htmlFor="product-category">{t("adminProductEditor.category")}</FieldLabel>
-            <Input
-              id="product-category"
-              value={form.category}
-              onChange={(event) => setForm((prev) => ({ ...prev, category: event.target.value }))}
-              placeholder={t("adminProductEditor.categoryPlaceholder")}
-            />
-            {categoryOptions.length > 0 ? (
-              <ToggleGroup
-                className="flex flex-wrap gap-1.5"
-                onValueChange={(value) =>
-                  setForm((prev) => ({ ...prev, category: value[0] || "" }))
-                }
-                size="sm"
-                value={form.category.trim() ? [form.category.trim()] : []}
-                variant="default"
-              >
-                {categoryOptions.map((category) => (
-                  <ToggleGroupItem
-                    className="shrink-0 rounded-full px-3"
-                    key={category}
-                    value={category}
-                    variant="outline"
-                  >
-                    {category}
-                  </ToggleGroupItem>
-                ))}
-              </ToggleGroup>
-            ) : null}
-          </Field>
+              <Field label={t("adminProductEditor.category")}>
+                <Input
+                  id="product-category"
+                  onChange={(event) => setForm((prev) => ({ ...prev, category: event.target.value }))}
+                  placeholder={t("adminProductEditor.categoryPlaceholder")}
+                  value={form.category}
+                />
+                {categoryOptions.length > 0 ? (
+                  // Existing categories as a scrolling capsule: tapping one fills
+                  // the input, tapping it again frees the input for a new name.
+                  <div className="shop-scroll-x">
+                    <SegmentedControl
+                      aria-label={t("adminProductEditor.category")}
+                      onValueChange={(value) => setForm((prev) => ({ ...prev, category: value || "" }))}
+                      options={categoryOptions.map((category) => ({ value: category, label: category }))}
+                      size="sm"
+                      value={categoryOptions.includes(selectedCategory) ? selectedCategory : ""}
+                    />
+                  </div>
+                ) : null}
+              </Field>
 
-          <Field>
-            <FieldLabel htmlFor="product-price">{t("adminProductEditor.price")}</FieldLabel>
-            <Input
-              id="product-price"
-              value={form.priceRub}
-              type="number"
-              onChange={(event) => setForm((prev) => ({ ...prev, priceRub: event.target.value }))}
-              placeholder="4990"
-            />
-          </Field>
+              <Field label={t("adminProductEditor.price")}>
+                <Input
+                  id="product-price"
+                  inputMode="decimal"
+                  min={0}
+                  onChange={(event) => setForm((prev) => ({ ...prev, priceRub: event.target.value }))}
+                  placeholder="4990"
+                  type="number"
+                  value={form.priceRub}
+                />
+              </Field>
 
-          <Field>
-            <FieldLabel htmlFor="product-description">{t("adminProductEditor.description")}</FieldLabel>
-            <Textarea
-              id="product-description"
-              value={form.description}
-              onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
-              placeholder={t("adminProductEditor.descriptionPlaceholder")}
-            />
-          </Field>
+              <Field label={t("adminProductEditor.description")}>
+                <Textarea
+                  id="product-description"
+                  onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
+                  placeholder={t("adminProductEditor.descriptionPlaceholder")}
+                  value={form.description}
+                />
+              </Field>
+            </Stack>
+          </WellContent>
+        </Well>
 
-          <Field orientation="horizontal">
-            <FieldLabel htmlFor="product-active">{t("adminProductEditor.showInShop")}</FieldLabel>
+        <Card>
+          <Setting
+            layout="inline"
+            title={<label htmlFor="product-active">{t("adminProductEditor.showInShop")}</label>}
+          >
             <Switch
-              id="product-active"
               checked={form.isActive}
+              id="product-active"
               onCheckedChange={(checked) => setForm((prev) => ({ ...prev, isActive: checked }))}
             />
-          </Field>
+          </Setting>
+        </Card>
 
-          <Tabs
-            value={form.deliveryType}
-            onValueChange={(value) => setForm((prev) => ({ ...prev, deliveryType: value as ProductForm["deliveryType"] }))}
-          >
-            <TabsList className="w-full">
-              <TabsTrigger value="MANUAL">{t("adminProductEditor.manualDelivery")}</TabsTrigger>
-              <TabsTrigger value="AUTO_KEY">{t("adminProductEditor.autoKeys")}</TabsTrigger>
-            </TabsList>
-          </Tabs>
+        <SegmentedControl
+          aria-label={t("adminProductEditor.subtitle")}
+          onValueChange={(value) => {
+            // Base UI lets a toggle group drop its only value; delivery type
+            // must always be one of the two.
+            if (value === "MANUAL" || value === "AUTO_KEY") {
+              setForm((prev) => ({ ...prev, deliveryType: value }))
+            }
+          }}
+          options={[
+            { value: "MANUAL", label: t("adminProductEditor.manualDelivery") },
+            { value: "AUTO_KEY", label: t("adminProductEditor.autoKeys") },
+          ]}
+          value={form.deliveryType}
+          variant="tabs"
+        />
 
-          <Card>
-            <CardHeader>
-              <CardTitle>{t("adminProductEditor.specs")}</CardTitle>
-              <CardAction>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  onClick={() =>
-                    setForm((prev) => ({
-                      ...prev,
-                      specs: [...prev.specs, { label: "", value: "" }],
-                    }))
-                  }
-                >
-                  <Plus data-icon="inline-start" />
-                  {t("adminProductEditor.add")}
-                </Button>
-              </CardAction>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-3">
+        <Well>
+          <WellHeader
+            action={
+              <Button
+                icon={<Plus size={16} aria-hidden />}
+                onClick={() =>
+                  setForm((prev) => ({
+                    ...prev,
+                    specs: [...prev.specs, { label: "", value: "" }],
+                  }))
+                }
+                size="sm"
+                variant="secondary"
+              >
+                {t("adminProductEditor.add")}
+              </Button>
+            }
+            title={t("adminProductEditor.specs")}
+          />
+          <WellContent>
+            <Stack gap="4">
               {form.specs.map((spec, index) => (
                 <SpecEditor
                   key={`${index}-${form.id || "new"}`}
@@ -395,85 +397,88 @@ export function AdminProductEditorScreen({
                   onChange={setForm}
                 />
               ))}
-            </CardContent>
-          </Card>
+            </Stack>
+          </WellContent>
+        </Well>
 
-          {form.deliveryType === "AUTO_KEY" ? (
-            <Card>
-              <CardHeader>
-                <CardTitle>{t("adminProductEditor.keyPool")}</CardTitle>
-                <CardDescription>{t("adminProductEditor.keyPoolHint")}</CardDescription>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-3">
+        {form.deliveryType === "AUTO_KEY" ? (
+          <Well>
+            <WellHeader
+              description={t("adminProductEditor.keyPoolHint")}
+              title={t("adminProductEditor.keyPool")}
+            />
+            <WellContent>
+              <Stack gap="4">
                 {productId ? (
-                  <>
-                    {/* Base UI field parts need a Field.Root ancestor. */}
-                    <Field>
-                      <FieldDescription>
-                        {tp("adminProductEditor.keysInStockCount", visibleKeys.length)}
-                        {form.removeKeyIds.length > 0
-                          ? t("adminProductEditor.pendingRemoval", {
-                              count: form.removeKeyIds.length,
-                            })
-                          : ""}
-                      </FieldDescription>
-                    </Field>
+                  <Stack gap="2">
+                    <Text size="xs" tone="muted" tabularNums>
+                      {tp("adminProductEditor.keysInStockCount", visibleKeys.length)}
+                      {form.removeKeyIds.length > 0
+                        ? t("adminProductEditor.pendingRemoval", {
+                            count: form.removeKeyIds.length,
+                          })
+                        : ""}
+                    </Text>
                     {visibleKeys.map((key) => (
-                      <Field key={key.id} orientation="horizontal">
-                        <KeyRound />
-                        <Input readOnly value={key.value} />
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() =>
-                            setForm((prev) => ({
-                              ...prev,
-                              removeKeyIds: [...prev.removeKeyIds, key.id],
-                            }))
+                      <Field key={key.id}>
+                        <Input
+                          aria-label={t("adminProductEditor.keyPool")}
+                          postSlot={
+                            <Button
+                              aria-label={t("adminProductEditor.removeKey")}
+                              onClick={() =>
+                                setForm((prev) => ({
+                                  ...prev,
+                                  removeKeyIds: [...prev.removeKeyIds, key.id],
+                                }))
+                              }
+                              size="icon"
+                              variant="ghost"
+                            >
+                              <Trash2 size={16} aria-hidden />
+                            </Button>
                           }
-                        >
-                          {t("adminProductEditor.removeKey")}
-                        </Button>
+                          preSlot={<KeyRound size={16} aria-hidden />}
+                          readOnly
+                          value={key.value}
+                        />
                       </Field>
                     ))}
-                  </>
+                  </Stack>
                 ) : null}
-                <Field>
-                  <FieldLabel htmlFor="product-key-pool">{t("adminProductEditor.addNewKeys")}</FieldLabel>
+                <Field label={t("adminProductEditor.addNewKeys")}>
                   <Textarea
                     id="product-key-pool"
-                    value={form.keyPoolText}
                     onChange={(event) => setForm((prev) => ({ ...prev, keyPoolText: event.target.value }))}
                     placeholder={t("adminProductEditor.keyPlaceholder")}
+                    value={form.keyPoolText}
                   />
                 </Field>
-              </CardContent>
-            </Card>
-          ) : null}
-        </FieldGroup>
+              </Stack>
+            </WellContent>
+          </Well>
+        ) : null}
 
         <StickyActions>
           {productId ? (
             <Button
-              variant="destructive-outline"
               disabled={deleteMutation.isPending}
+              icon={<Trash2 size={16} aria-hidden />}
               onClick={() => setDeleteOpen(true)}
+              variant="outline"
             >
-              <Trash2 data-icon="inline-start" />
               {t("common.delete")}
             </Button>
           ) : null}
           <Button disabled={!canSave || mutation.isPending} onClick={() => mutation.mutate()}>
-            {mutation.isPending ? t("common.saving") : t("common.save")}
+            {saveLabel}
           </Button>
         </StickyActions>
       </ScreenBody>
 
       <ResponsiveDialog
-        confirmLabel={
-          deleteMutation.isPending ? t("adminProducts.deleting") : t("common.delete")
-        }
-        confirmVariant="destructive"
+        confirmLabel={deleteMutation.isPending ? t("adminProducts.deleting") : t("common.delete")}
+        confirmVariant="danger"
         description={t("adminProducts.deleteDescription")}
         loading={deleteMutation.isPending}
         onConfirm={() => deleteMutation.mutate()}
@@ -499,12 +504,13 @@ function SpecEditor({
   const t = useTranslate()
 
   return (
-    <FieldGroup>
-      <Field orientation="horizontal">
-        <FieldTitle>{t("adminProductEditor.specLabel", { index: index + 1 })}</FieldTitle>
+    <Stack gap="2">
+      <Cluster justify="between">
+        <Text as="span" size="xs" tone="muted">
+          {t("adminProductEditor.specLabel", { index: index + 1 })}
+        </Text>
         <Button
-          size="sm"
-          variant="ghost"
+          aria-label={t("adminProductEditor.removeKey")}
           onClick={() =>
             onChange((prev) => ({
               ...prev,
@@ -513,44 +519,48 @@ function SpecEditor({
                 : [{ label: "", value: "" }],
             }))
           }
+          size="icon"
+          variant="ghost"
         >
-          <Trash2 data-icon="inline-start" />
-          {t("adminProductEditor.removeKey")}
+          <Trash2 size={16} aria-hidden />
         </Button>
-      </Field>
-      <Field>
-        <Input
-          aria-label={t("adminProductEditor.specName")}
-          id={`product-spec-label-${index}`}
-          value={spec.label}
-          onChange={(event) =>
-            onChange((prev) => ({
-              ...prev,
-              specs: prev.specs.map((item, itemIndex) =>
-                itemIndex === index ? { ...item, label: event.target.value } : item,
-              ),
-            }))
-          }
-          placeholder="Support versions"
-        />
-      </Field>
-      <Field>
-        <Input
-          aria-label={t("adminProductEditor.specValue")}
-          id={`product-spec-value-${index}`}
-          value={spec.value}
-          onChange={(event) =>
-            onChange((prev) => ({
-              ...prev,
-              specs: prev.specs.map((item, itemIndex) =>
-                itemIndex === index ? { ...item, value: event.target.value } : item,
-              ),
-            }))
-          }
-          placeholder="1.8.9 - 1.21.4"
-        />
-      </Field>
-    </FieldGroup>
+      </Cluster>
+      {/* Name and value sit side by side once there is room for both. */}
+      <div className="grid gap-2 sm:grid-cols-2">
+        <Field>
+          <Input
+            aria-label={t("adminProductEditor.specName")}
+            id={`product-spec-label-${index}`}
+            onChange={(event) =>
+              onChange((prev) => ({
+                ...prev,
+                specs: prev.specs.map((item, itemIndex) =>
+                  itemIndex === index ? { ...item, label: event.target.value } : item,
+                ),
+              }))
+            }
+            placeholder="Support versions"
+            value={spec.label}
+          />
+        </Field>
+        <Field>
+          <Input
+            aria-label={t("adminProductEditor.specValue")}
+            id={`product-spec-value-${index}`}
+            onChange={(event) =>
+              onChange((prev) => ({
+                ...prev,
+                specs: prev.specs.map((item, itemIndex) =>
+                  itemIndex === index ? { ...item, value: event.target.value } : item,
+                ),
+              }))
+            }
+            placeholder="1.8.9 - 1.21.4"
+            value={spec.value}
+          />
+        </Field>
+      </div>
+    </Stack>
   )
 }
 
@@ -562,34 +572,13 @@ function ProductCoverPreview({
   title: string
 }) {
   return (
-    <div className="mx-auto aspect-square w-full max-w-48 overflow-hidden">
+    <div className="shop-cover" data-size="sm">
       {imageUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={imageUrl} alt={title} className="size-full object-cover" />
+        <img src={imageUrl} alt={title} />
       ) : (
-        <Empty>
-          <EmptyMedia variant="icon">
-            <ImagePlus />
-          </EmptyMedia>
-        </Empty>
+        <ImagePlus aria-hidden />
       )}
     </div>
-  )
-}
-
-function ProductEditorState({ title, description }: { title: string; description: string }) {
-  return (
-    <Screen noTabBar>
-      <Card>
-        <CardContent>
-          <Empty>
-            <EmptyHeader>
-              <EmptyTitle>{title}</EmptyTitle>
-              <EmptyDescription>{description}</EmptyDescription>
-            </EmptyHeader>
-          </Empty>
-        </CardContent>
-      </Card>
-    </Screen>
   )
 }

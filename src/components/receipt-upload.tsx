@@ -3,18 +3,13 @@
 import { useMutation } from "@tanstack/react-query"
 import { FileCheck2, FileUp, Paperclip } from "lucide-react"
 import { useRef, useState } from "react"
+import { Button, Text } from "sealui"
 
 import { useI18n } from "@/components/i18n-provider"
-import { Button } from "@/components/ui/button"
-import {
-  Field,
-  FieldContent,
-  FieldDescription,
-  FieldTitle,
-} from "@/components/ui/field"
 import { useNotify } from "@/hooks/use-notify"
 import { uploadOrderReceipt } from "@/lib/api"
 import { RECEIPT_MAX_MB, validateReceiptFile } from "@/lib/receipt-constants"
+import { formatBytes } from "@/lib/telegram-format"
 
 export type OrderReceipt = {
   fileName: string
@@ -22,10 +17,12 @@ export type OrderReceipt = {
   uploadedAt: string
 }
 
-function formatSize(bytes: number) {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+function ReceiptIcon({ attached }: { attached: boolean }) {
+  return attached ? (
+    <FileCheck2 size={18} aria-hidden style={{ color: "var(--seal-text-success)" }} />
+  ) : (
+    <Paperclip size={18} aria-hidden style={{ color: "var(--seal-text-secondary)" }} />
+  )
 }
 
 /**
@@ -36,39 +33,34 @@ export function ReceiptStatus({ receipt }: { receipt: OrderReceipt | null }) {
   const { t, locale } = useI18n()
 
   const uploadedAtLabel = receipt
-    ? new Intl.DateTimeFormat(locale, {
-        dateStyle: "medium",
-        timeStyle: "short",
-      }).format(new Date(receipt.uploadedAt))
+    ? new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }).format(
+        new Date(receipt.uploadedAt),
+      )
     : ""
 
   return (
-    <Field orientation="horizontal">
-      {receipt ? (
-        <FileCheck2 className="size-4 text-muted-foreground" />
-      ) : (
-        <Paperclip className="size-4 text-muted-foreground" />
-      )}
-      <FieldContent>
-        <FieldTitle>{t("receipt.title")}</FieldTitle>
-        <FieldDescription className="truncate">
+    <div className="shop-row">
+      <ReceiptIcon attached={Boolean(receipt)} />
+      <div className="shop-row-copy">
+        <Text as="span" size="sm">
+          {t("receipt.title")}
+        </Text>
+        <Text as="span" size="xs" tone="muted" truncate>
           {receipt
-            ? `${t("receipt.fileInfo", {
-                name: receipt.fileName,
-                size: formatSize(receipt.fileSize),
-              })} · ${uploadedAtLabel}`
+            ? `${t("receipt.fileInfo", { name: receipt.fileName, size: formatBytes(receipt.fileSize) })} · ${uploadedAtLabel}`
             : t("receipt.pending")}
-        </FieldDescription>
+        </Text>
         {receipt ? (
-          <FieldDescription className="truncate">
+          <Text as="span" size="xs" tone="muted" truncate>
             {t("receipt.adminHint")}
-          </FieldDescription>
+          </Text>
         ) : null}
-      </FieldContent>
-    </Field>
+      </div>
+    </div>
   )
 }
 
+/** Buyer-side: replace the receipt while the order is under review. */
 export function ReceiptUpload({
   orderId,
   receipt,
@@ -96,11 +88,7 @@ export function ReceiptUpload({
   })
 
   const handleFile = (file: File) => {
-    const validationError = validateReceiptFile({
-      name: file.name,
-      size: file.size,
-      type: file.type,
-    })
+    const validationError = validateReceiptFile({ name: file.name, size: file.size, type: file.type })
 
     if (validationError === "size") {
       setError(t("receipt.errorSize", { limit: RECEIPT_MAX_MB }))
@@ -120,38 +108,32 @@ export function ReceiptUpload({
   }
 
   const uploadedAtLabel = receipt
-    ? new Intl.DateTimeFormat(locale, {
-        dateStyle: "medium",
-        timeStyle: "short",
-      }).format(new Date(receipt.uploadedAt))
+    ? new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }).format(
+        new Date(receipt.uploadedAt),
+      )
     : ""
 
   return (
-    // On a phone the button drops under the text instead of squeezing the
-    // title into two words beside it.
-    <Field className="max-sm:flex-col max-sm:items-stretch" orientation="horizontal">
-      <div className="flex min-w-0 flex-1 items-center gap-2">
-        {receipt ? (
-          <FileCheck2 className="size-4 shrink-0 text-muted-foreground" />
-        ) : (
-          <Paperclip className="size-4 shrink-0 text-muted-foreground" />
-        )}
-
-        <FieldContent>
-          <FieldTitle>{t("receipt.title")}</FieldTitle>
-          <FieldDescription className={error ? "text-destructive-foreground" : undefined}>
+    <div className="shop-slot">
+      <div className="shop-row">
+        <ReceiptIcon attached={Boolean(receipt)} />
+        <div className="shop-row-copy">
+          <Text as="span" size="sm">
+            {t("receipt.title")}
+          </Text>
+          <Text as="span" size="xs" tone={error ? "danger" : "muted"}>
             {error
               ? error
               : receipt
                 ? t("receipt.uploadedAt", { date: uploadedAtLabel })
                 : t("receipt.description")}
-          </FieldDescription>
-        </FieldContent>
+          </Text>
+        </div>
       </div>
 
       <input
         accept="application/pdf,.pdf"
-        className="hidden"
+        className="shop-visually-hidden"
         onChange={(event) => {
           const file = event.target.files?.[0]
           // Reset so picking the same file twice still fires a change event.
@@ -163,16 +145,16 @@ export function ReceiptUpload({
       />
 
       <Button
-        className="max-sm:w-full"
         disabled={mutation.isPending}
+        fullWidth
+        icon={<FileUp size={16} aria-hidden />}
         loading={mutation.isPending}
         onClick={() => inputRef.current?.click()}
         size="sm"
         variant={receipt ? "outline" : "secondary"}
       >
-        <FileUp data-icon="inline-start" />
         {receipt ? t("receipt.replace") : t("receipt.upload")}
       </Button>
-    </Field>
+    </div>
   )
 }

@@ -1,7 +1,7 @@
 "use client"
 
-import Link from "next/link"
 import { useMemo, useState } from "react"
+import { useRouter } from "next/navigation"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   CopyPlus,
@@ -12,31 +12,15 @@ import {
   PencilLine,
   Trash2,
 } from "lucide-react"
+import { Button, EmptyState, Menu, MenuItem, MenuLinkItem, MenuSeparator, Pill } from "sealui"
 
 import { AccessStateScreen } from "@/components/access-state-screen"
-import { Badge } from "@/components/ui/badge"
-import { Button, buttonVariants } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@/components/ui/empty"
-import { ListGroup, ListRow, ListRowMedia, ListSkeleton } from "@/components/list-row"
-import {
-  Menu,
-  MenuItem,
-  MenuLinkItem,
-  MenuPopup,
-  MenuSeparator,
-  MenuTrigger,
-} from "@/components/ui/menu"
-import { SearchInput } from "@/components/search-input"
-import { Screen, ScreenBody, ScreenEmpty, ScreenError, ScreenHeader } from "@/components/screen"
 import { useI18n } from "@/components/i18n-provider"
+import { LinkButton } from "@/components/link-button"
+import { ListGroup, ListRow, ListSkeleton } from "@/components/list-row"
 import { ResponsiveDialog } from "@/components/responsive-dialog"
+import { Screen, ScreenBody, ScreenError, ScreenHeader } from "@/components/screen"
+import { SearchInput } from "@/components/search-input"
 import { deleteAdminProduct, getMe, getProducts } from "@/lib/api"
 import { formatPrice } from "@/lib/format"
 
@@ -44,6 +28,7 @@ type AdminProduct = Awaited<ReturnType<typeof getProducts>>["products"][number]
 
 export function AdminProductsScreen() {
   const { t, tp, locale, currency } = useI18n()
+  const router = useRouter()
   const queryClient = useQueryClient()
   const [deleteProduct, setDeleteProduct] = useState<AdminProduct | null>(null)
   const [search, setSearch] = useState("")
@@ -85,10 +70,13 @@ export function AdminProductsScreen() {
         title={t("adminProducts.title")}
         subtitle={t("adminProducts.subtitle", { count: allProducts.length })}
         trailing={
-          <Link href="/admin/products/new" className={buttonVariants({ size: "sm" })}>
-            <PackagePlus data-icon="inline-start" />
+          <LinkButton
+            href="/admin/products/new"
+            icon={<PackagePlus size={16} aria-hidden />}
+            size="sm"
+          >
             {t("adminProducts.new")}
-          </Link>
+          </LinkButton>
         }
       />
 
@@ -97,7 +85,7 @@ export function AdminProductsScreen() {
             the "no products yet" card, which told the admin their catalog was
             empty when it was only unread. */}
         {isLoading ? (
-          <ListSkeleton className="lg:grid lg:grid-cols-2" />
+          <ListSkeleton />
         ) : isError && !data ? (
           <ScreenError
             onRetry={() => refetch()}
@@ -105,105 +93,93 @@ export function AdminProductsScreen() {
             title={t("adminProducts.errorTitle")}
           />
         ) : allProducts.length === 0 ? (
-          <Card>
-            <CardContent>
-              <Empty>
-                <EmptyMedia variant="icon">
-                  <PackagePlus />
-                </EmptyMedia>
-                <EmptyHeader>
-                  <EmptyTitle>{t("adminProducts.emptyTitle")}</EmptyTitle>
-                  <EmptyDescription>{t("adminProducts.emptyDescription")}</EmptyDescription>
-                </EmptyHeader>
-                <Link href="/admin/products/new" className={buttonVariants()}>
-                  {t("adminProducts.create")}
-                </Link>
-              </Empty>
-            </CardContent>
-          </Card>
+          <EmptyState
+            actions={[
+              {
+                label: t("adminProducts.create"),
+                icon: <PackagePlus size={16} aria-hidden />,
+                onClick: () => router.push("/admin/products/new"),
+              },
+            ]}
+            description={t("adminProducts.emptyDescription")}
+            icon={<PackagePlus />}
+            title={t("adminProducts.emptyTitle")}
+          />
         ) : (
           <>
             {allProducts.length > 4 ? (
-              <SearchInput
-                className="lg:max-w-xs"
-                onValueChange={setSearch}
-                placeholder={t("adminProducts.searchPlaceholder")}
-                value={search}
-              />
+              <div className="shop-toolbar">
+                <SearchInput
+                  onValueChange={setSearch}
+                  placeholder={t("adminProducts.searchPlaceholder")}
+                  value={search}
+                />
+              </div>
             ) : null}
 
             {products.length === 0 ? (
-              <ScreenEmpty
+              <EmptyState
+                description={t("adminProducts.noMatchDescription")}
                 icon={<PackageSearch />}
-                subtitle={t("adminProducts.noMatchDescription")}
                 title={t("adminProducts.noMatchTitle")}
               />
             ) : (
-          <ListGroup className="lg:grid lg:grid-cols-2">
-            {products.map((product) => (
-              <ListRow
-                description={`${product.category || t("catalog.noCategory")} · ${formatPrice(
-                  product.priceRub,
-                  locale,
-                  currency,
-                )} · ${
-                  product.deliveryType === "AUTO_KEY"
-                    ? tp("catalog.keys", product.availableKeyCount || 0)
-                    : t("catalog.manualDelivery")
-                }`}
-                key={product.id}
-                media={
-                  <ListRowMedia>
-                    <ProductThumbnail
-                      imageUrl={product.imageUrl}
-                      title={product.title}
-                    />
-                  </ListRowMedia>
-                }
-                title={product.title}
-                trailing={
-                  /* Three icon buttons per row, one of them red, crowded the
-                     title off a phone and put "delete" one thumb-slip from
-                     "edit". Edit is the obvious tap and stays; the rest sit
-                     behind a menu. */
-                  <div className="flex items-center gap-1">
-                    {!product.isActive ? (
-                      <Badge variant="secondary">{t("adminProducts.hidden")}</Badge>
-                    ) : null}
-                    <Link
-                      href={`/admin/products/${product.id}/edit`}
-                      className={buttonVariants({ size: "icon-sm", variant: "secondary" })}
-                      aria-label={t("adminProducts.edit")}
-                    >
-                      <PencilLine />
-                    </Link>
-                    <Menu>
-                      <MenuTrigger
-                        aria-label={t("adminProducts.more")}
-                        render={<Button size="icon-sm" variant="ghost" />}
-                      >
-                        <EllipsisVertical />
-                      </MenuTrigger>
-                      <MenuPopup align="end">
-                        <MenuLinkItem href={`/admin/products/new?copy=${product.id}`}>
-                          <CopyPlus />
-                          {t("adminProducts.duplicate")}
-                        </MenuLinkItem>
-                        <MenuSeparator />
-                        <MenuItem
-                          onClick={() => setDeleteProduct(product)}
-                          variant="destructive"
+              <ListGroup>
+                {products.map((product) => (
+                  <ListRow
+                    description={`${product.category || t("catalog.noCategory")} · ${formatPrice(
+                      product.priceRub,
+                      locale,
+                      currency,
+                    )} · ${
+                      product.deliveryType === "AUTO_KEY"
+                        ? tp("catalog.keys", product.availableKeyCount || 0)
+                        : t("catalog.manualDelivery")
+                    }`}
+                    key={product.id}
+                    media={<ProductThumbnail imageUrl={product.imageUrl} title={product.title} />}
+                    title={product.title}
+                    trailing={
+                      /* Three icon buttons per row, one of them red, crowded the
+                         title off a phone and put "delete" one thumb-slip from
+                         "edit". Edit is the obvious tap and stays; the rest sit
+                         behind a menu. */
+                      <>
+                        {!product.isActive ? (
+                          <Pill color="gray">{t("adminProducts.hidden")}</Pill>
+                        ) : null}
+                        <LinkButton
+                          aria-label={t("adminProducts.edit")}
+                          href={`/admin/products/${product.id}/edit`}
+                          size="icon"
+                          variant="secondary"
                         >
-                          <Trash2 />
-                          {t("adminProducts.remove")}
-                        </MenuItem>
-                      </MenuPopup>
-                    </Menu>
-                  </div>
-                }
-              />
-            ))}
-          </ListGroup>
+                          <PencilLine size={16} aria-hidden />
+                        </LinkButton>
+                        <Menu
+                          align="end"
+                          aria-label={t("adminProducts.more")}
+                          trigger={
+                            <Button aria-label={t("adminProducts.more")} size="icon" variant="ghost">
+                              <EllipsisVertical size={16} aria-hidden />
+                            </Button>
+                          }
+                        >
+                          <MenuLinkItem href={`/admin/products/new?copy=${product.id}`}>
+                            <CopyPlus size={16} aria-hidden />
+                            {t("adminProducts.duplicate")}
+                          </MenuLinkItem>
+                          <MenuSeparator />
+                          <MenuItem destructive onClick={() => setDeleteProduct(product)}>
+                            <Trash2 size={16} aria-hidden />
+                            {t("adminProducts.remove")}
+                          </MenuItem>
+                        </Menu>
+                      </>
+                    }
+                  />
+                ))}
+              </ListGroup>
             )}
           </>
         )}
@@ -213,7 +189,7 @@ export function AdminProductsScreen() {
         confirmLabel={
           deleteMutation.isPending ? t("adminProducts.deleting") : t("common.delete")
         }
-        confirmVariant="destructive"
+        confirmVariant="danger"
         description={t("adminProducts.deleteDescription")}
         loading={deleteMutation.isPending}
         onConfirm={() => {
@@ -245,4 +221,3 @@ function ProductThumbnail({
 
   return <ImagePlus />
 }
-

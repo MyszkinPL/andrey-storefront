@@ -1,207 +1,46 @@
 @import "tailwindcss";
-@import "tw-animate-css";
-@import "shadcn/tailwind.css";
 
-@custom-variant dark (&:is(.dark *));
+/* sealui: design tokens, component styles and the dark theme (vendored git
+   subtree, see vendor/sealui). Components come from there; the app only
+   lays them out. */
+@import "../../vendor/sealui/src/tokens.css";
 
-:root {
-  color-scheme: light dark;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  /* Darkened from shadcn's 0.556: secondary text on a muted surface only
-     reached 4.35:1 there, under the 4.5 that 14px text needs. 0.52 clears it
-     at 5.04 and still reads as clearly secondary next to --foreground. */
-  --muted-foreground: oklch(0.52 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
-  --destructive-foreground: var(--color-red-700);
-  --info: var(--color-blue-500);
-  --info-foreground: var(--color-blue-700);
-  --success: var(--color-emerald-500);
-  --success-foreground: var(--color-emerald-700);
-  --warning: var(--color-amber-500);
-  --warning-foreground: var(--color-amber-700);
-}
+/* Shop chrome: screen container, tab bar, rail, product grid, widgets. */
+@import "./shell.css";
 
+/* Tailwind utilities are kept for one-off layout (hidden lg:block and the
+   like). Any colour they name resolves to a sealui token, so a stray
+   utility can never paint a colour the design system does not have. */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-muted: var(--muted);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-destructive: var(--destructive);
-  --font-heading: var(--font-sans);
-  --font-sans: var(--font-sans);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
-  --color-ring: var(--ring);
-  --color-input: var(--input);
-  --color-border: var(--border);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary: var(--secondary);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
-  --animate-skeleton: skeleton 2s -1s infinite linear;
-  --animate-caret-blink: 1s ease-out infinite caret-blink;
-  --animate-toast-success-odd: toast-success-odd 0.32s cubic-bezier(0.5, 1, 0.89, 1);
-  --animate-toast-success-even: toast-success-even 0.32s cubic-bezier(0.5, 1, 0.89, 1);
-  --animate-toast-error-odd: toast-error-odd 0.28s cubic-bezier(0.5, 1, 0.89, 1);
-  --animate-toast-error-even: toast-error-even 0.28s cubic-bezier(0.5, 1, 0.89, 1);
-  --color-warning-foreground: var(--warning-foreground);
-  --color-warning: var(--warning);
-  --color-success-foreground: var(--success-foreground);
-  --color-success: var(--success);
-  --color-info-foreground: var(--info-foreground);
-  --color-info: var(--info);
-  --color-destructive-foreground: var(--destructive-foreground);
-  @keyframes skeleton {
-  to {
-    background-position: -200% 0;
-    }
-  }
-  @keyframes caret-blink {
-  0%, 70%, to {
-    opacity: 1;
-    }
-  20%, 50% {
-    opacity: 0;
-    }
-  }
-  @keyframes toast-success-odd {
-  0% {
-    scale: 1;
-    }
-  30% {
-    scale: 1.025;
-    }
-  60% {
-    scale: 0.99;
-    }
-  100% {
-    scale: 1;
-    }
-  }
-  @keyframes toast-error-odd {
-  0% {
-    translate: 0 0;
-    }
-  25% {
-    translate: -3px 0;
-    }
-  50% {
-    translate: 3px 0;
-    }
-  75% {
-    translate: -3px 0;
-    }
-  100% {
-    translate: 0 0;
-    }
-  }
-  @keyframes toast-success-even {
-  0% {
-    scale: 1;
-    }
-  30% {
-    scale: 1.025;
-    }
-  60% {
-    scale: 0.99;
-    }
-  100% {
-    scale: 1;
-    }
-  }
-  @keyframes toast-error-even {
-  0% {
-    translate: 0 0;
-    }
-  25% {
-    translate: -3px 0;
-    }
-  50% {
-    translate: 3px 0;
-    }
-  75% {
-    translate: -3px 0;
-    }
-  100% {
-    translate: 0 0;
-    }
-  }
+  --color-background: var(--seal-bg);
+  --color-foreground: var(--seal-text);
+  --color-card: var(--seal-background-card);
+  --color-card-foreground: var(--seal-text);
+  --color-muted: var(--seal-surface-raised);
+  --color-muted-foreground: var(--seal-text-secondary);
+  --color-border: var(--seal-border);
+  --color-accent: var(--seal-background-card);
+  --color-accent-foreground: var(--seal-text);
+  --color-primary: var(--seal-background-inverse);
+  --color-primary-foreground: var(--seal-text-inverse);
+  --color-destructive: var(--seal-text-danger);
+  --color-ring: var(--seal-accent);
+  --font-sans: var(--seal-font-sans);
 }
 
 html,
 body {
   overscroll-behavior: none;
   -webkit-tap-highlight-color: transparent;
-  font-family:
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    Roboto,
-    "Helvetica Neue",
-    Arial,
-    sans-serif;
 }
 
 html {
-  scrollbar-width: none;
   /* The page colour lives on <html> as well as <body>: on iOS the area a
-     rubber-band scroll or an opening keyboard reveals is painted by the root
-     element, and a bare root showed the webview's own colour there. */
-  background-color: var(--background);
+     rubber-band scroll or an opening keyboard reveals is painted by the
+     root element. */
+  background-color: var(--seal-bg);
   min-height: 100%;
+  scrollbar-width: none;
 }
 
 html::-webkit-scrollbar {
@@ -209,9 +48,7 @@ html::-webkit-scrollbar {
 }
 
 body {
-  margin: 0;
   min-height: 100dvh;
-  /* Pinned to the viewport so it never scrolls out from under the content. */
   background-attachment: fixed;
 }
 
@@ -231,60 +68,10 @@ textarea,
   user-select: text;
 }
 
-.dark {
-  color-scheme: dark;
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  /* Darkened from shadcn's 0.704: a solid destructive button is white on this
-     colour, and at 0.704 that reads at 2.89:1 — the delete action was the
-     least legible label in the app. 0.577 matches the light theme and clears
-     4.5 at 4.7. */
-  --destructive: oklch(0.577 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
-  --destructive-foreground: var(--color-red-400);
-  --info: var(--color-blue-500);
-  --info-foreground: var(--color-blue-400);
-  --success: var(--color-emerald-500);
-  --success-foreground: var(--color-emerald-400);
-  --warning: var(--color-amber-500);
-  --warning-foreground: var(--color-amber-400);
-}
-
-@layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
-  html {
-    @apply font-sans;
-  }
+/* Lucide icons default to 24px; inside sealui buttons they are sized by
+   the size prop, everywhere else 20px reads right next to 14px text. */
+.shop-row-media > svg,
+.seal-empty-icon > svg {
+  width: 24px;
+  height: 24px;
 }

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { LoaderCircle } from "lucide-react"
+import { Spinner } from "sealui"
 
 import { AccessStateScreen } from "@/components/access-state-screen"
 import { useTranslate } from "@/components/i18n-provider"
@@ -87,8 +88,8 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
 
   if (state === "loading") {
     return (
-      <div className="flex min-h-dvh items-center justify-center">
-        <LoaderCircle className="size-7 animate-spin text-muted-foreground" />
+      <div className="shop-center">
+        <Spinner label={t("common.loading")} size="lg" />
       </div>
     )
   }

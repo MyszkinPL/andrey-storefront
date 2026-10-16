@@ -1,12 +1,16 @@
 "use client"
 
 import type { PaymentMethodType } from "@prisma/client"
-import Link from "next/link"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { ExternalLink, LifeBuoy, Timer, Trash2 } from "lucide-react"
+import type { BannerVariant } from "sealui"
+import { Banner, Button, Pill, Text, Well, WellFooter, WellHeader } from "sealui"
 
+import { useI18n } from "@/components/i18n-provider"
+import { LinkButton } from "@/components/link-button"
+import { useMode } from "@/components/mode-provider"
 import { AdminOrderPanel } from "@/components/order-detail/admin-panel"
 import { ConfirmDeleteDialog } from "@/components/order-detail/confirm-delete-dialog"
 import { ConfirmPaymentDialog } from "@/components/order-detail/confirm-payment-dialog"
@@ -22,38 +26,12 @@ import {
   orderNoticeTitle,
   paymentStateKey,
 } from "@/components/order-detail/status"
-import type { PaymentOption } from "@/components/order-detail/types"
+import type { Order, PaymentOption } from "@/components/order-detail/types"
 import { ReceiptStatus, ReceiptUpload } from "@/components/receipt-upload"
 import { ResponsiveDialog } from "@/components/responsive-dialog"
-import { useI18n } from "@/components/i18n-provider"
+import { Screen, ScreenBody, ScreenHeader, ScreenState } from "@/components/screen"
 import { useCountdown } from "@/hooks/use-countdown"
 import { useNotify } from "@/hooks/use-notify"
-import { formatDateTime, formatInvoiceAmount, formatPrice } from "@/lib/format"
-import {
-  formatCountdown,
-  isOrderOnTimer,
-  ORDER_PAYMENT_WINDOW_MS,
-} from "@/lib/order-timer"
-import { Badge } from "@/components/ui/badge"
-import { Button, buttonVariants } from "@/components/ui/button"
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import {
-  Field,
-  FieldContent,
-  FieldDescription,
-  FieldTitle,
-} from "@/components/ui/field"
-import { BackButton } from "@/components/back-button"
-import { Screen, ScreenBody, ScreenState } from "@/components/screen"
-import { useMode } from "@/components/mode-provider"
 import {
   cancelOwnOrder,
   changeOrderPaymentMethod,
@@ -66,7 +44,22 @@ import {
   refreshCryptoInvoice,
   rejectManualOrderPayment,
 } from "@/lib/api"
-import { cn } from "@/lib/utils"
+import { formatDateTime, formatInvoiceAmount, formatPrice } from "@/lib/format"
+import {
+  formatCountdown,
+  isOrderExpired,
+  isOrderOnTimer,
+  ORDER_PAYMENT_WINDOW_MS,
+} from "@/lib/order-timer"
+
+/** The notice tint follows the same precedence as its title. */
+function noticeVariant(order: Order): BannerVariant {
+  if (order.deliveredKey) return "success"
+  if (order.status === "PAYMENT_REVIEW") return "info"
+  if (isOrderExpired(order) || order.status === "CANCELLED") return "danger"
+  if (order.isPaid) return "success"
+  return "warning"
+}
 
 export function OrderDetailScreen({ orderId }: { orderId: string }) {
   const router = useRouter()
@@ -301,12 +294,14 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
   }
 
   return (
-    <Screen noTabBar className="min-h-[calc(100dvh-3rem)]">
-      <ScreenBody className="flex-1">
-        <BackButton
-          className="-ms-1 self-start"
-          href={listHref}
-        />
+    <Screen noTabBar>
+      <ScreenHeader
+        back={listHref}
+        subtitle={t("orderDetail.orderNumber", { number: order.number })}
+        title={order.productTitle || order.subject}
+      />
+
+      <ScreenBody grow>
         {adminToolsVisible ? (
           <AdminOrderPanel
             order={order}
@@ -323,182 +318,174 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
           />
         ) : null}
 
-        <Card className="flex-1">
-          <CardHeader>
-            <CardTitle>{t(paymentStateKey(order))}</CardTitle>
-            <CardDescription>
-              {t("orderDetail.summaryLine", {
-                number: order.number,
-                title: order.productTitle || order.subject,
-                date: createdAtLabel,
+        <Well>
+          <WellHeader
+            action={amountLabel ? <Pill color="gray">{amountLabel}</Pill> : undefined}
+            description={t("orderDetail.summaryLine", {
+              number: order.number,
+              title: order.productTitle || order.subject,
+              date: createdAtLabel,
+            })}
+            title={t(paymentStateKey(order))}
+          />
+
+          <OrderProgress order={order} />
+
+          {showOrderNotice ? (
+            <Banner
+              description={t(orderNoticeDescriptionKey(order), {
+                minutes: Math.round(ORDER_PAYMENT_WINDOW_MS / 60_000),
               })}
-            </CardDescription>
-            <CardAction>
-              {amountLabel ? <Badge variant="secondary">{amountLabel}</Badge> : null}
-            </CardAction>
-          </CardHeader>
+              title={orderNoticeTitle(order, amountLabel, t)}
+              variant={noticeVariant(order)}
+            />
+          ) : null}
 
-          <CardContent className="flex flex-1 flex-col gap-3">
-            <OrderProgress className="mb-1" order={order} />
-
-            {showOrderNotice ? (
-              <Field>
-                <FieldTitle>{orderNoticeTitle(order, amountLabel, t)}</FieldTitle>
-                <FieldDescription>
-                  {t(orderNoticeDescriptionKey(order), {
-                    minutes: Math.round(ORDER_PAYMENT_WINDOW_MS / 60_000),
-                  })}
-                </FieldDescription>
-              </Field>
-            ) : null}
-
-            {timedOrder && remaining !== null ? (
-              <Field orientation="horizontal">
-                <Timer className="size-4 text-muted-foreground" />
-                <FieldContent>
-                  <FieldTitle>{t("orderDetail.timerTitle")}</FieldTitle>
-                  <FieldDescription>
-                    {remaining > 0
-                      ? t("orderDetail.timerDescription")
-                      : t("orderDetail.timerExpiring")}
-                  </FieldDescription>
-                </FieldContent>
+          {timedOrder && remaining !== null ? (
+            <div className="shop-row">
+              <div className="shop-row-media">
+                <Timer aria-hidden />
+              </div>
+              <div className="shop-row-copy">
+                <Text as="span" size="sm">
+                  {t("orderDetail.timerTitle")}
+                </Text>
+                <Text as="span" size="xs" tone="muted">
+                  {remaining > 0
+                    ? t("orderDetail.timerDescription")
+                    : t("orderDetail.timerExpiring")}
+                </Text>
+              </div>
+              <div className="shop-row-trailing">
                 {/* The last five minutes turn amber, the same warning colour
                     an empty key pool uses in the catalog. */}
-                <Badge
-                  className="tabular-nums"
-                  size="lg"
-                  variant={remaining <= 5 * 60_000 ? "warning" : "secondary"}
+                <span
+                  className="shop-countdown"
+                  data-urgent={remaining <= 5 * 60_000 ? "" : undefined}
                 >
                   {formatCountdown(remaining)}
-                </Badge>
-              </Field>
-            ) : null}
+                </span>
+              </div>
+            </div>
+          ) : null}
 
-            {/* On a finished order this row only repeated the "Оплата" line of
-                the summary below it, so it stops at the point it stops being
-                something you can act on. */}
-            {isClosed ? null : canSwitchPaymentMethod ? (
-              <PaymentMethodSelector
-                options={paymentOptions}
-                selectedKey={selectedPaymentKey}
-                loading={changePaymentMethodMutation.isPending}
-                onSelect={handlePaymentMethodSelect}
-              />
-            ) : (
-              <PaymentMethodSummary
-                title={order.paymentMethodTitle || t("orderDetail.paymentMethodFallback")}
-                description={
-                  // Requisites are for paying with. Once the order is closed or
-                  // cancelled they are nobody's business, including its own
-                  // buyer's — the summary below still names the method.
-                  (!isClosed && order.paymentMethodDetails) ||
-                  (order.paymentMethodType === "CRYPTO_PAY"
-                    ? t("orderDetail.paymentCryptoLabel")
-                    : order.paymentMethodType === "MANUAL"
-                      ? t("orderDetail.paymentManualLabel")
-                      : t("common.notSelected"))
-                }
-                iconUrl={order.paymentMethodIconDataUrl}
-              />
-            )}
-
-            {showManualPayment ? (
-              <CopyField
-                title={t("orderDetail.requisites")}
-                value={order.paymentMethodDetails || ""}
-                copied={copiedField === "payment"}
-                onCopy={() => copyValue(order.paymentMethodDetails || "", "payment")}
-              />
-            ) : null}
-
-            {showCryptoPayment ? (
-              <a
-                href={order.cryptoInvoiceUrl || undefined}
-                target="_blank"
-                rel="noreferrer"
-                className={cn(buttonVariants({ size: "lg" }), "w-full")}
-              >
-                {t("orderDetail.openInvoice")}
-                <ExternalLink data-icon="inline-end" />
-              </a>
-            ) : null}
-
-            {isRealBuyerView && showManualPayment && !isClosed ? (
-              <Button onClick={() => setIsConfirmPaymentOpen(true)}>
-                {t("orderDetail.markPaid")}
-              </Button>
-            ) : null}
-
-            {canAttachReceipt ? (
-              <ReceiptUpload
-                onUploaded={() => void invalidate()}
-                orderId={order.id}
-                receipt={order.receipt}
-              />
-            ) : null}
-
-            {/* A Crypto Bot order is confirmed by its webhook, so there is
-                never a receipt to wait for — the row only made sense for a
-                manual transfer, or once a file actually arrived. */}
-            {/* A Crypto Bot order is confirmed by its webhook and a closed one
-                is finished, so neither has a receipt still to come. The row
-                only earns its place while one could still arrive, or once a
-                file actually did. */}
-            {adminToolsVisible &&
-            (order.receipt ||
-              (order.paymentMethodType === "MANUAL" && !isClosed)) ? (
-              <ReceiptStatus receipt={order.receipt} />
-            ) : null}
-
-            {order.deliveredKey ? (
-              <CopyField
-                title={t("orderDetail.deliveredKey")}
-                value={order.deliveredKey}
-                copied={copiedField === "key"}
-                onCopy={() => copyValue(order.deliveredKey || "", "key")}
-              />
-            ) : null}
-
-            <OrderReceipt
-              className="mt-auto"
-              productTitle={order.productTitle || order.subject}
-              paymentTitle={order.paymentMethodTitle || t("common.notSelected")}
-              amountLabel={amountLabel}
-              createdAtLabel={createdAtLabel}
+          {/* On a finished order this row only repeated the "Оплата" line of
+              the summary below it, so it stops at the point it stops being
+              something you can act on. */}
+          {isClosed ? null : canSwitchPaymentMethod ? (
+            <PaymentMethodSelector
+              options={paymentOptions}
+              selectedKey={selectedPaymentKey}
+              loading={changePaymentMethodMutation.isPending}
+              onSelect={handlePaymentMethodSelect}
             />
-          </CardContent>
+          ) : (
+            <PaymentMethodSummary
+              title={order.paymentMethodTitle || t("orderDetail.paymentMethodFallback")}
+              description={
+                // Requisites are for paying with. Once the order is closed or
+                // cancelled they are nobody's business, including its own
+                // buyer's — the summary below still names the method.
+                (!isClosed && order.paymentMethodDetails) ||
+                (order.paymentMethodType === "CRYPTO_PAY"
+                  ? t("orderDetail.paymentCryptoLabel")
+                  : order.paymentMethodType === "MANUAL"
+                    ? t("orderDetail.paymentManualLabel")
+                    : t("common.notSelected"))
+              }
+              iconUrl={order.paymentMethodIconDataUrl}
+            />
+          )}
+
+          {showManualPayment ? (
+            <CopyField
+              title={t("orderDetail.requisites")}
+              value={order.paymentMethodDetails || ""}
+              copied={copiedField === "payment"}
+              onCopy={() => copyValue(order.paymentMethodDetails || "", "payment")}
+            />
+          ) : null}
+
+          {showCryptoPayment ? (
+            <LinkButton
+              external
+              fullWidth
+              href={order.cryptoInvoiceUrl || ""}
+              icon={<ExternalLink size={16} aria-hidden />}
+              size="lg"
+            >
+              {t("orderDetail.openInvoice")}
+            </LinkButton>
+          ) : null}
+
+          {isRealBuyerView && showManualPayment && !isClosed ? (
+            <Button fullWidth onClick={() => setIsConfirmPaymentOpen(true)}>
+              {t("orderDetail.markPaid")}
+            </Button>
+          ) : null}
+
+          {canAttachReceipt ? (
+            <ReceiptUpload
+              onUploaded={() => void invalidate()}
+              orderId={order.id}
+              receipt={order.receipt}
+            />
+          ) : null}
+
+          {/* A Crypto Bot order is confirmed by its webhook and a closed one
+              is finished, so neither has a receipt still to come. The row
+              only earns its place while one could still arrive, or once a
+              file actually did. */}
+          {adminToolsVisible &&
+          (order.receipt || (order.paymentMethodType === "MANUAL" && !isClosed)) ? (
+            <ReceiptStatus receipt={order.receipt} />
+          ) : null}
+
+          {order.deliveredKey ? (
+            <CopyField
+              title={t("orderDetail.deliveredKey")}
+              value={order.deliveredKey}
+              copied={copiedField === "key"}
+              onCopy={() => copyValue(order.deliveredKey || "", "key")}
+            />
+          ) : null}
+
+          <OrderReceipt
+            productTitle={order.productTitle || order.subject}
+            paymentTitle={order.paymentMethodTitle || t("common.notSelected")}
+            amountLabel={amountLabel}
+            createdAtLabel={createdAtLabel}
+          />
 
           {isRealBuyerView ? (
-            <CardFooter className="mt-auto flex-col items-stretch gap-2">
-              {order.isPaid && isRealBuyerView ? (
-                <Link
-                  href={`/orders/${order.id}/complete`}
-                  className={buttonVariants()}
-                >
+            <WellFooter>
+              {order.isPaid ? (
+                <LinkButton fullWidth href={`/orders/${order.id}/complete`}>
                   {t("orderDetail.openDelivery")}
-                </Link>
+                </LinkButton>
               ) : null}
               {/* Support is for anyone stuck, and a buyer stuck on paying
                   needs it more than one who already got their key. */}
               {supportLink ? (
-                <a
+                <LinkButton
+                  external
+                  fullWidth
                   href={supportLink}
-                  target="_blank"
-                  rel="noreferrer"
-                  className={buttonVariants({ variant: "secondary" })}
+                  icon={<LifeBuoy size={16} aria-hidden />}
+                  variant="secondary"
                 >
-                  <LifeBuoy data-icon="inline-start" />
                   {t("orderDetail.telegramSupport")}
-                </a>
+                </LinkButton>
               ) : null}
               {/* Outlined: a solid red block under "I have paid" pulled the
                   eye to the one action the buyer should not take. */}
               {!order.isPaid && !isClosed ? (
                 <Button
-                  variant="destructive-outline"
                   disabled={cancelOrderMutation.isPending}
+                  fullWidth
+                  loading={cancelOrderMutation.isPending}
                   onClick={() => cancelOrderMutation.mutate()}
+                  variant="outline"
                 >
                   {t("orderDetail.cancelOrder")}
                 </Button>
@@ -507,21 +494,22 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
                   still waiting for payment must not be able to vanish. */}
               {isClosed ? (
                 <Button
+                  fullWidth
+                  icon={<Trash2 size={16} aria-hidden />}
                   onClick={() => setIsHideModalOpen(true)}
-                  variant="destructive-outline"
+                  variant="outline"
                 >
-                  <Trash2 data-icon="inline-start" />
                   {t("orderDetail.hideAction")}
                 </Button>
               ) : null}
-            </CardFooter>
+            </WellFooter>
           ) : null}
-        </Card>
+        </Well>
       </ScreenBody>
 
       <ResponsiveDialog
         confirmLabel={t("orderDetail.hideAction")}
-        confirmVariant="destructive"
+        confirmVariant="danger"
         description={t("orderDetail.hideDescription")}
         loading={hideFromHistoryMutation.isPending}
         onConfirm={() => hideFromHistoryMutation.mutate()}

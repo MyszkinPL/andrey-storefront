@@ -3,28 +3,19 @@
 import { useMemo, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { LifeBuoy, ReceiptText, Trash2 } from "lucide-react"
+import { Button, Cluster, EmptyState, Pill, Tabs } from "sealui"
 
-import { Badge } from "@/components/ui/badge"
-import { Button, buttonVariants } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@/components/ui/empty"
-import { ListGroup, ListRow, ListRowMedia, ListSkeleton } from "@/components/list-row"
+import { useI18n } from "@/components/i18n-provider"
+import { LinkButton } from "@/components/link-button"
+import { ListGroup, ListRow, ListSkeleton } from "@/components/list-row"
 import { OrderTimeLeft } from "@/components/order-time-left"
 import { ProfileAvatarLink } from "@/components/profile-avatar-link"
 import { ResponsiveDialog } from "@/components/responsive-dialog"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Screen, ScreenBody, ScreenError, ScreenHeader } from "@/components/screen"
-import { useI18n } from "@/components/i18n-provider"
-import { clearOrderHistory, getMe, getOrders } from "@/lib/api"
 import { useNotify } from "@/hooks/use-notify"
 import { useRelativeTime } from "@/hooks/use-relative-time"
-import { orderBadgeVariant, orderStatusKey } from "@/lib/order-status"
+import { clearOrderHistory, getMe, getOrders } from "@/lib/api"
+import { orderPillColor, orderStatusKey } from "@/lib/order-status"
 
 type FilterKey = "all" | "waiting" | "review" | "active" | "closed"
 
@@ -57,8 +48,7 @@ export function OrdersScreen() {
   const buckets = useMemo(() => {
     const waiting = orders.filter(
       (order) =>
-        !order.isPaid &&
-        !["CLOSED", "CANCELLED", "PAYMENT_REVIEW"].includes(order.status),
+        !order.isPaid && !["CLOSED", "CANCELLED", "PAYMENT_REVIEW"].includes(order.status),
     )
     const active = orders.filter(
       (order) => order.isPaid && !["CLOSED", "CANCELLED"].includes(order.status),
@@ -86,28 +76,25 @@ export function OrdersScreen() {
           tp("orders.waitingCount", buckets.waiting.length),
         ].join(" · ")}
         trailing={
-          <div className="flex items-center gap-2">
+          <>
             {supportLink ? (
-              <a
-                aria-label={t("orders.support")}
-                className={buttonVariants({ size: "sm", variant: "secondary" })}
+              <LinkButton
+                external
                 href={supportLink}
-                rel="noreferrer"
-                target="_blank"
+                icon={<LifeBuoy size={16} aria-hidden />}
+                size="sm"
+                variant="secondary"
               >
-                <LifeBuoy data-icon="inline-start" />
-                {/* Icon-only on a phone read as "no support button": the
-                    label stays, and the title truncates instead. */}
                 {t("orders.support")}
-              </a>
+              </LinkButton>
             ) : null}
             <ProfileAvatarLink />
-          </div>
+          </>
         }
       />
 
       {isLoading ? (
-        <ListSkeleton className="lg:grid lg:grid-cols-2" />
+        <ListSkeleton />
       ) : isError && !ordersData ? (
         <ScreenError
           onRetry={() => refetch()}
@@ -115,74 +102,73 @@ export function OrdersScreen() {
           title={t("orders.errorTitle")}
         />
       ) : orders.length === 0 ? (
-        <OrdersEmpty title={t("orders.emptyTitle")} description={t("orders.emptyDescription")} />
+        <EmptyState
+          description={t("orders.emptyDescription")}
+          icon={<ReceiptText />}
+          title={t("orders.emptyTitle")}
+        />
       ) : (
         <ScreenBody>
-          <Tabs value={filter} onValueChange={(value) => setFilter(value as FilterKey)}>
-            <TabsList className="grid w-full grid-cols-5">
-              {[
-                { key: "all" as const, label: t("orders.filterAll") },
-                { key: "waiting" as const, label: t("orders.filterPayment") },
-                { key: "review" as const, label: t("orders.filterReview") },
-                { key: "active" as const, label: t("orders.filterDelivery") },
-                { key: "closed" as const, label: t("orders.filterHistory") },
-              ].map((item) => (
-                <TabsTrigger key={item.key} value={item.key} className="px-1 text-xs">
-                  {item.label}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
+          <div className="shop-scroll-x">
+            <Tabs
+              aria-label={t("orders.title")}
+              items={[
+                { value: "all", label: t("orders.filterAll") },
+                { value: "waiting", label: t("orders.filterPayment") },
+                { value: "review", label: t("orders.filterReview") },
+                { value: "active", label: t("orders.filterDelivery") },
+                { value: "closed", label: t("orders.filterHistory") },
+              ]}
+              onValueChange={(value) => setFilter(value as FilterKey)}
+              value={filter}
+            />
+          </div>
 
           {/* Clearing is offered where the finished orders actually are. */}
           {filter === "closed" && buckets.closed.length > 0 ? (
-            <div className="flex justify-end px-1">
+            <Cluster justify="end">
               <Button
+                icon={<Trash2 size={16} aria-hidden />}
                 onClick={() => setIsClearOpen(true)}
                 size="sm"
-                variant="destructive-outline"
+                variant="outline"
               >
-                <Trash2 data-icon="inline-start" />
                 {t("orders.clearHistoryAction")}
               </Button>
-            </div>
+            </Cluster>
           ) : null}
 
           {visibleOrders.length === 0 ? (
-            <OrdersEmpty title={t("orders.filterEmptyTitle")} description={t("orders.filterEmptyDescription")} />
+            <EmptyState
+              description={t("orders.filterEmptyDescription")}
+              icon={<ReceiptText />}
+              title={t("orders.filterEmptyTitle")}
+            />
           ) : (
-            <ListGroup className="lg:grid lg:grid-cols-2">
-              {visibleOrders.map((order) => (
-                <ListRow
-                  description={
-                    <>
-                      {`#${order.number}${
-                        order.productCategory ? ` · ${order.productCategory}` : ""
-                      }${
-                        order.paymentMethodTitle && !order.isPaid
-                          ? ` · ${order.paymentMethodTitle}`
-                          : ""
-                      } · `}
-                      {/* The clock matters more than "5 min ago" while the
-                          order is still waiting to be paid. */}
-                      <OrderTimeLeft fallback={formatRelative(order.updatedAt)} order={order} />
-                    </>
-                  }
-                  href={`/orders/${order.id}`}
-                  key={order.id}
-                  media={
-                    <ListRowMedia>
-                      <ReceiptText />
-                    </ListRowMedia>
-                  }
-                  title={order.productTitle || order.subject}
-                  trailing={
-                    <Badge variant={orderBadgeVariant(order)}>
-                      {t(orderStatusKey(order))}
-                    </Badge>
-                  }
-                />
-              ))}
+            <ListGroup>
+                {visibleOrders.map((order) => (
+                  <ListRow
+                    description={
+                      <>
+                        {`#${order.number}${
+                          order.productCategory ? ` · ${order.productCategory}` : ""
+                        }${
+                          order.paymentMethodTitle && !order.isPaid
+                            ? ` · ${order.paymentMethodTitle}`
+                            : ""
+                        } · `}
+                        {/* The clock matters more than "5 min ago" while the
+                            order is still waiting to be paid. */}
+                        <OrderTimeLeft fallback={formatRelative(order.updatedAt)} order={order} />
+                      </>
+                    }
+                    href={`/orders/${order.id}`}
+                    key={order.id}
+                    media={<ReceiptText />}
+                    title={order.productTitle || order.subject}
+                    trailing={<Pill color={orderPillColor(order)}>{t(orderStatusKey(order))}</Pill>}
+                  />
+                ))}
             </ListGroup>
           )}
         </ScreenBody>
@@ -190,7 +176,7 @@ export function OrdersScreen() {
 
       <ResponsiveDialog
         confirmLabel={t("orders.clearHistoryAction")}
-        confirmVariant="destructive"
+        confirmVariant="danger"
         description={t("orders.clearHistoryDescription")}
         loading={clearMutation.isPending}
         onConfirm={() => clearMutation.mutate()}
@@ -201,22 +187,3 @@ export function OrdersScreen() {
     </Screen>
   )
 }
-
-function OrdersEmpty({ title, description }: { title: string; description: string }) {
-  return (
-    <Card>
-      <CardContent>
-        <Empty>
-          <EmptyMedia variant="icon">
-            <ReceiptText />
-          </EmptyMedia>
-          <EmptyHeader>
-            <EmptyTitle>{title}</EmptyTitle>
-            <EmptyDescription>{description}</EmptyDescription>
-          </EmptyHeader>
-        </Empty>
-      </CardContent>
-    </Card>
-  )
-}
-

@@ -2,21 +2,18 @@
 
 import { useQuery } from "@tanstack/react-query"
 import { CreditCard, Languages, UserRound } from "lucide-react"
+import { Avatar, EmptyState } from "sealui"
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Card, CardContent } from "@/components/ui/card"
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@/components/ui/empty"
-import { Field, FieldDescription, FieldTitle } from "@/components/ui/field"
-import { ListGroup, ListRow, ListRowMedia } from "@/components/list-row"
-import { Screen, ScreenBody, ScreenError, ScreenHeader } from "@/components/screen"
-import { LanguageSwitcher } from "@/components/language-switcher"
 import { useTranslate } from "@/components/i18n-provider"
+import { LanguageSwitcher } from "@/components/language-switcher"
+import { ListGroup, ListRow, ListSkeleton } from "@/components/list-row"
+import {
+  Screen,
+  ScreenBody,
+  ScreenError,
+  ScreenHeader,
+  SectionTitle,
+} from "@/components/screen"
 import { getMe, getPaymentMethods } from "@/lib/api"
 
 export function ProfileScreen() {
@@ -42,35 +39,23 @@ export function ProfileScreen() {
 
   const methods = (paymentData?.paymentMethods ?? []).filter((method) => method.isActive)
   const hasCryptoPay = Boolean(paymentData?.cryptoPay.enabled)
+  const roleLabel =
+    meData?.user.role === "ADMIN" ? t("profile.administrator") : t("profile.buyer")
 
   return (
     <Screen>
       <ScreenHeader
         back="/catalog"
+        subtitle={meData?.user.username ? `@${meData.user.username}` : roleLabel}
         title={meData?.user.firstName || t("profile.title")}
-        subtitle={
-          meData?.user.username
-            ? `@${meData.user.username}`
-            : meData?.user.role === "ADMIN"
-              ? t("profile.administrator")
-              : t("profile.buyer")
-        }
         trailing={
-          <Avatar className="size-10">
-            {meData?.user.photoUrl ? (
-              <AvatarImage alt={meData.user.firstName} src={meData.user.photoUrl} />
-            ) : null}
-            <AvatarFallback>{(meData?.user.firstName || "S").slice(0, 1)}</AvatarFallback>
-          </Avatar>
+          <Avatar name={meData?.user.firstName || "S"} size="lg" src={meData?.user.photoUrl} />
         }
       />
 
       <ScreenBody>
         {isLoadingMe || isLoadingPayments ? (
-          <ProfileEmpty
-            title={t("profile.loadingTitle")}
-            description={t("profile.loadingDescription")}
-          />
+          <ListSkeleton rows={3} />
         ) : isErrorMe || isErrorPayments ? (
           <ScreenError
             onRetry={() => {
@@ -84,17 +69,8 @@ export function ProfileScreen() {
           <>
             <ListGroup>
               <ListRow
-                description={
-                  meData?.user.role === "ADMIN"
-                    ? t("profile.administrator")
-                    : t("profile.buyer")
-                }
-                media={
-                  <ListRowMedia>
-                    {/* A lifebuoy is the support icon everywhere else. */}
-                    <UserRound />
-                  </ListRowMedia>
-                }
+                description={roleLabel}
+                media={<UserRound />}
                 title={t("profile.account")}
               />
             </ListGroup>
@@ -105,27 +81,24 @@ export function ProfileScreen() {
             <ListGroup>
               <ListRow
                 description={t("language.description")}
-                media={
-                  <ListRowMedia>
-                    <Languages />
-                  </ListRowMedia>
-                }
+                media={<Languages />}
                 title={t("language.label")}
-                trailing={<LanguageSwitcher className="w-36" />}
+                trailing={<LanguageSwitcher />}
               />
             </ListGroup>
 
             {methods.length === 0 && !hasCryptoPay ? (
-              <ProfileEmpty
-                title={t("profile.noMethodsTitle")}
+              <EmptyState
                 description={t("profile.noMethodsDescription")}
+                icon={<CreditCard />}
+                title={t("profile.noMethodsTitle")}
               />
             ) : (
               <>
-                <Field className="gap-1 px-1">
-                  <FieldTitle>{t("profile.paymentMethods")}</FieldTitle>
-                  <FieldDescription>{t("profile.paymentMethodsHint")}</FieldDescription>
-                </Field>
+                <SectionTitle
+                  hint={t("profile.paymentMethodsHint")}
+                  title={t("profile.paymentMethods")}
+                />
                 <ListGroup>
                   {methods.map((method) => (
                     <PaymentMethodRow
@@ -170,31 +143,8 @@ function PaymentMethodRow({
   return (
     <ListRow
       description={subtitle}
-      media={
-        <Avatar className="size-10">
-          {iconUrl ? <AvatarImage src={iconUrl} alt={title} /> : null}
-          <AvatarFallback>{title.slice(0, 2).toUpperCase()}</AvatarFallback>
-        </Avatar>
-      }
+      media={<Avatar name={title} size="md" src={iconUrl} />}
       title={title}
     />
-  )
-}
-
-function ProfileEmpty({ title, description }: { title: string; description: string }) {
-  return (
-    <Card>
-      <CardContent>
-        <Empty>
-          <EmptyMedia variant="icon">
-            <CreditCard />
-          </EmptyMedia>
-          <EmptyHeader>
-            <EmptyTitle>{title}</EmptyTitle>
-            <EmptyDescription>{description}</EmptyDescription>
-          </EmptyHeader>
-        </Empty>
-      </CardContent>
-    </Card>
   )
 }

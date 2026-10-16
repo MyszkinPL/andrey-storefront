@@ -3,46 +3,33 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { KeyRound, PackageCheck, PackageSearch, ShoppingBag } from "lucide-react"
-
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { Button, buttonVariants } from "@/components/ui/button"
+import { KeyRound, LifeBuoy, PackageCheck, PackageSearch, ShoppingBag } from "lucide-react"
 import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import { Empty, EmptyMedia } from "@/components/ui/empty"
-import {
+  Avatar,
+  Banner,
+  Button,
   Field,
-  FieldContent,
-  FieldDescription,
-  FieldGroup,
-  FieldLabel,
-  FieldTitle,
-} from "@/components/ui/field"
-import { Separator } from "@/components/ui/separator"
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { BackButton } from "@/components/back-button"
+  Pill,
+  SelectParts,
+  Separator,
+  Text,
+  Well,
+} from "sealui"
+
+import { useI18n, useTranslate } from "@/components/i18n-provider"
+import { LinkButton } from "@/components/link-button"
 import {
   areOrderInstructionsDismissed,
   OrderInstructionsDialog,
 } from "@/components/order-instructions-dialog"
-import { Screen, ScreenBody, ScreenState } from "@/components/screen"
+import {
+  Screen,
+  ScreenBody,
+  ScreenHeader,
+  ScreenState,
+  StickyActions,
+} from "@/components/screen"
 import { useHaptic } from "@/hooks/use-telegram"
-import { useI18n, useTranslate } from "@/components/i18n-provider"
 import {
   createOrder,
   getMe,
@@ -172,116 +159,143 @@ export function ProductScreen({ productId }: { productId: string }) {
     product.deliveryType === "AUTO_KEY"
       ? t("product.autoDelivery")
       : t("product.manualDelivery")
+  const keyCount = product.availableKeyCount ?? 0
+
+  // The same actions sit in the card on desktop and float above the bottom
+  // edge on a phone, so the buyer never hunts for the button under a long
+  // description. An admin who deactivates every method leaves the buyer with
+  // nothing to buy with: then support is the only sensible button, and a
+  // button that can never be pressed is worse than none.
+  const actions = (
+    <>
+      {paymentOptions.length === 0 && supportLink ? (
+        <LinkButton
+          external
+          fullWidth
+          href={supportLink}
+          icon={<LifeBuoy size={16} aria-hidden />}
+          variant="secondary"
+        >
+          {t("orderDetail.telegramSupport")}
+        </LinkButton>
+      ) : null}
+      {paymentOptions.length > 0 ? (
+        <Button
+          disabled={!selectedPayment || orderMutation.isPending}
+          fullWidth
+          icon={<ShoppingBag size={16} aria-hidden />}
+          loading={orderMutation.isPending}
+          onClick={placeOrder}
+        >
+          {orderMutation.isPending ? t("product.placingOrder") : t("product.placeOrder")}
+        </Button>
+      ) : null}
+    </>
+  )
+  const hasActions = paymentOptions.length > 0 || Boolean(supportLink)
 
   return (
-    <Screen noTabBar className="min-h-[calc(100dvh-3rem)]">
-      <ScreenBody className="flex-1">
-        <BackButton className="-ms-1 self-start" href="/catalog" />
-        <Card className="flex-1">
-          <CardHeader>
-            <CardTitle>{product.title}</CardTitle>
-            <CardDescription>{category}</CardDescription>
-            <CardAction>
-              <Badge variant="secondary">{formatPrice(product.priceRub, locale, currency)}</Badge>
-            </CardAction>
-          </CardHeader>
-          <CardContent className="flex flex-1 flex-col gap-4">
-            <ProductImage imageUrl={product.imageUrl} title={product.title} />
-            <CardDescription>{product.description}</CardDescription>
-            <Separator />
-            <Field orientation="horizontal">
-              {/* A key icon next to "manual delivery" promised a key that a
-                  manual product may never have. */}
+    <Screen noTabBar>
+      <ScreenHeader
+        back="/catalog"
+        subtitle={category}
+        title={product.title}
+        trailing={<Pill color="gray">{formatPrice(product.priceRub, locale, currency)}</Pill>}
+      />
+
+      <ScreenBody grow>
+        <Well>
+          <div className="shop-cover">
+            {product.imageUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img alt={product.title} src={product.imageUrl} />
+            ) : (
+              <PackageSearch aria-hidden />
+            )}
+          </div>
+
+          {product.description ? (
+            <Text as="p" size="sm" tone="secondary">
+              {product.description}
+            </Text>
+          ) : null}
+
+          <Separator />
+
+          <div className="shop-row">
+            {/* A key icon next to "manual delivery" promised a key that a
+                manual product may never have. */}
+            <div className="shop-row-media">
               {product.deliveryType === "AUTO_KEY" ? (
-                <KeyRound className="size-4 text-muted-foreground" />
+                <KeyRound aria-hidden />
               ) : (
-                <PackageCheck className="size-4 text-muted-foreground" />
+                <PackageCheck aria-hidden />
               )}
-              <FieldContent>
-                <FieldTitle>{deliveryLabel}</FieldTitle>
-              </FieldContent>
-              {product.deliveryType === "AUTO_KEY" ? (
-                <Badge variant="outline">{tp("catalog.keys", product.availableKeyCount ?? 0)}</Badge>
-              ) : null}
-            </Field>
-
-            {product.specs.length > 0 ? (
-              <>
-                <Separator />
-                {/* A real two-column grid: right-aligned values left a ragged
-                    edge as soon as one wrapped, and the label column collapsed
-                    onto two lines. */}
-                <dl className="grid grid-cols-[minmax(6rem,8rem)_1fr] gap-x-4 gap-y-2 sm:grid-cols-[minmax(8rem,10rem)_1fr]">
-                  {product.specs.map((spec) => (
-                    <Fragment key={`${spec.label}-${spec.value}`}>
-                      <dt className="text-muted-foreground text-xs leading-5">
-                        {spec.label}
-                      </dt>
-                      <dd className="text-sm leading-5">{spec.value}</dd>
-                    </Fragment>
-                  ))}
-                </dl>
-              </>
+            </div>
+            <div className="shop-row-copy">
+              <Text as="span" size="sm">
+                {deliveryLabel}
+              </Text>
+            </div>
+            {product.deliveryType === "AUTO_KEY" ? (
+              <div className="shop-row-trailing">
+                <Pill color={keyCount > 0 ? "green" : "yellow"}>{tp("catalog.keys", keyCount)}</Pill>
+              </div>
             ) : null}
+          </div>
 
-            <FieldGroup className="mt-auto gap-4">
+          {product.specs.length > 0 ? (
+            <>
               <Separator />
-              {/* An admin who deactivates every method leaves the buyer with an
-                  empty dropdown and a dead button, and no idea why. */}
-              {paymentOptions.length === 0 ? (
-                <Field>
-                  <FieldTitle>{t("product.noPaymentTitle")}</FieldTitle>
-                  <FieldDescription>{t("product.noPaymentDescription")}</FieldDescription>
-                </Field>
-              ) : (
-                <PaymentMethodSelect
-                  options={paymentOptions}
-                  selectedKey={selectedPayment?.key || ""}
-                  onSelect={setSelectedPaymentKey}
-                />
-              )}
-              {orderMutation.error ? (
-                <Field>
-                  <FieldTitle>{t("product.orderFailed")}</FieldTitle>
-                  <FieldDescription>{orderMutation.error.message}</FieldDescription>
-                </Field>
-              ) : null}
-            </FieldGroup>
-          </CardContent>
-          {/* Pinned to the bottom edge while the card scrolls, so the buyer
-              never has to hunt for the button under a long description. */}
-          <CardFooter className="sticky bottom-0 z-10 mt-auto flex-col items-stretch gap-2 rounded-b-2xl border-t bg-card/95 pt-4 backdrop-blur">
-            {paymentOptions.length === 0 && supportLink ? (
-              <a
-                className={buttonVariants({ variant: "secondary" })}
-                href={supportLink}
-                rel="noreferrer"
-                target="_blank"
-              >
-                {t("orderDetail.telegramSupport")}
-              </a>
-            ) : null}
-            {/* A button that can never be pressed is worse than no button:
-                the note above already says why buying is off. */}
-            {paymentOptions.length > 0 ? (
-              <Button
-                className="w-full"
-                disabled={!selectedPayment || orderMutation.isPending}
-                onClick={placeOrder}
-              >
-                {orderMutation.isPending ? (
-                  t("product.placingOrder")
-                ) : (
-                  <>
-                    <ShoppingBag data-icon="inline-start" />
-                    {t("product.placeOrder")}
-                  </>
-                )}
-              </Button>
-            ) : null}
-          </CardFooter>
-        </Card>
+              {/* A real two-column grid: right-aligned values left a ragged
+                  edge as soon as one wrapped, and the label column collapsed
+                  onto two lines. */}
+              <dl className="shop-specs">
+                {product.specs.map((spec) => (
+                  <Fragment key={`${spec.label}-${spec.value}`}>
+                    <dt>{spec.label}</dt>
+                    <dd>{spec.value}</dd>
+                  </Fragment>
+                ))}
+              </dl>
+            </>
+          ) : null}
+        </Well>
+
+        <Well>
+          {paymentOptions.length === 0 ? (
+            <Banner
+              description={t("product.noPaymentDescription")}
+              title={t("product.noPaymentTitle")}
+              variant="warning"
+            />
+          ) : (
+            <PaymentMethodSelect
+              onSelect={setSelectedPaymentKey}
+              options={paymentOptions}
+              selectedKey={selectedPayment?.key || ""}
+            />
+          )}
+
+          {orderMutation.error ? (
+            <Banner
+              description={orderMutation.error.message}
+              title={t("product.orderFailed")}
+              variant="danger"
+            />
+          ) : null}
+
+          {hasActions ? (
+            <div className="shop-hide-desktop-actions">
+              <div className="shop-card-foot" data-static="">
+                {actions}
+              </div>
+            </div>
+          ) : null}
+        </Well>
       </ScreenBody>
+
+      {hasActions ? <StickyActions>{actions}</StickyActions> : null}
 
       <OrderInstructionsDialog
         loading={orderMutation.isPending}
@@ -293,102 +307,86 @@ export function ProductScreen({ productId }: { productId: string }) {
   )
 }
 
-function ProductImage({
-  imageUrl,
-  title,
-}: {
-  imageUrl: string | null
+type PaymentChoice = {
+  key: string
   title: string
-}) {
+  subtitle: string
+  iconUrl: string | null
+}
+
+/** The option row: icon, name, one-line hint. Shared by trigger and list. */
+function OptionRow({ option, hint }: { option: PaymentChoice; hint?: boolean }) {
   return (
-    <div className="mx-auto flex aspect-square w-full max-w-xs items-center justify-center overflow-hidden rounded-2xl bg-muted">
-      {imageUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={imageUrl} alt={title} className="size-full object-cover" />
-      ) : (
-        <Empty>
-          <EmptyMedia variant="icon">
-            <PackageSearch />
-          </EmptyMedia>
-        </Empty>
-      )}
-    </div>
+    <span className="shop-inline">
+      <Avatar name={option.title} size="sm" src={option.iconUrl} />
+      <span className="shop-row-copy">
+        <Text as="span" size="sm" truncate>
+          {option.title}
+        </Text>
+        {hint && option.subtitle ? (
+          <Text as="span" size="xs" tone="muted" truncate>
+            {option.subtitle}
+          </Text>
+        ) : null}
+      </span>
+    </span>
   )
 }
 
+/**
+ * The order-detail selector wants an option `type`; here the choice is only
+ * a key, so the same row is built locally on the Select parts.
+ */
 function PaymentMethodSelect({
   options,
   selectedKey,
   onSelect,
 }: {
-  options: Array<{
-    key: string
-    title: string
-    subtitle: string
-    iconUrl: string | null
-  }>
+  options: PaymentChoice[]
   selectedKey: string
   onSelect: (key: string) => void
 }) {
   const t = useTranslate()
-  const [open, setOpen] = useState(false)
   const selectedOption = options.find((option) => option.key === selectedKey)
 
   return (
-    <Field>
-      <FieldLabel>{t("product.paymentMethod")}</FieldLabel>
-      <Select
-        open={open}
-        onOpenChange={(nextOpen) => setOpen(nextOpen)}
-        value={selectedKey}
-        onValueChange={(value) => {
-          if (value) {
-            onSelect(String(value))
-            setOpen(false)
-          }
-        }}
+    <Field
+      description={selectedOption?.subtitle || undefined}
+      label={t("product.paymentMethod")}
+      nativeLabel={false}
+    >
+      <SelectParts.Root
         items={options.map((option) => ({ value: option.key, label: option.title }))}
+        onValueChange={(value) => {
+          if (typeof value === "string" && value) onSelect(value)
+        }}
+        value={selectedKey}
       >
-        <SelectTrigger size="lg">
+        <SelectParts.Trigger>
           {selectedOption ? (
-            <Avatar className="size-6">
-              {selectedOption.iconUrl ? (
-                <AvatarImage src={selectedOption.iconUrl} alt={selectedOption.title} />
-              ) : null}
-              <AvatarFallback>{getAvatarFallback(selectedOption.title)}</AvatarFallback>
-            </Avatar>
-          ) : null}
-          <SelectValue placeholder={t("product.choosePayment")} />
-        </SelectTrigger>
-        <SelectContent className="max-h-72">
-          <SelectGroup>
-            {options.map((option) => (
-              <SelectItem key={option.key} value={option.key} label={option.title}>
-                {/* The item text slot is a plain inline box, so the avatar
-                    and the name used to touch. A flex row gives them a gap
-                    and room for the one-line hint under the name. */}
-                <span className="flex min-w-0 items-center gap-2.5 py-0.5">
-                  <Avatar className="size-7">
-                    {option.iconUrl ? <AvatarImage src={option.iconUrl} alt={option.title} /> : null}
-                    <AvatarFallback>{getAvatarFallback(option.title)}</AvatarFallback>
-                  </Avatar>
-                  <span className="flex min-w-0 flex-col leading-tight">
-                    <span className="truncate">{option.title}</span>
-                    {option.subtitle ? (
-                      <span className="truncate text-muted-foreground text-xs">{option.subtitle}</span>
-                    ) : null}
-                  </span>
-                </span>
-              </SelectItem>
-            ))}
-          </SelectGroup>
-        </SelectContent>
-      </Select>
-      {selectedOption?.subtitle ? <FieldDescription>{selectedOption.subtitle}</FieldDescription> : null}
+            <OptionRow option={selectedOption} />
+          ) : (
+            <SelectParts.Value placeholder={t("product.choosePayment")} />
+          )}
+          <SelectParts.Icon />
+        </SelectParts.Trigger>
+        <SelectParts.Portal>
+          <SelectParts.Positioner>
+            <SelectParts.Popup>
+              <SelectParts.List>
+                {options.map((option) => (
+                  <SelectParts.Item key={option.key} value={option.key}>
+                    <SelectParts.ItemIndicator />
+                    <SelectParts.ItemText>
+                      <OptionRow hint option={option} />
+                    </SelectParts.ItemText>
+                  </SelectParts.Item>
+                ))}
+              </SelectParts.List>
+            </SelectParts.Popup>
+          </SelectParts.Positioner>
+        </SelectParts.Portal>
+      </SelectParts.Root>
     </Field>
   )
-}
-
-function getAvatarFallback(title: string) {
-  return title.slice(0, 2).toUpperCase()
 }

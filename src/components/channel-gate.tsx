@@ -3,17 +3,8 @@
 import { usePathname } from "next/navigation"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { Megaphone } from "lucide-react"
+import { EmptyState } from "sealui"
 
-import { Button, buttonVariants } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import {
-  Empty,
-  EmptyContent,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@/components/ui/empty"
 import { useTranslate } from "@/components/i18n-provider"
 import { useNotify } from "@/hooks/use-notify"
 import { getMe } from "@/lib/api"
@@ -41,40 +32,21 @@ export function ChannelGate({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-md items-center px-4 py-6">
-      <Card className="w-full">
-        <CardContent>
-          <Empty>
-            <EmptyMedia variant="icon">
-              <Megaphone />
-            </EmptyMedia>
-            <EmptyHeader>
-              <EmptyTitle>{t("channelGate.title")}</EmptyTitle>
-              <EmptyDescription>
-                {t("channelGate.description", { channel: gate.username })}
-              </EmptyDescription>
-            </EmptyHeader>
-            <EmptyContent className="w-full gap-2">
-              <a
-                className={buttonVariants({ className: "w-full" })}
-                href={gate.url}
-                rel="noreferrer"
-                target="_blank"
-              >
-                {t("channelGate.open")}
-              </a>
-              <Button
-                className="w-full"
-                disabled={isFetching}
-                onClick={() => void recheck()}
-                variant="outline"
-              >
-                {t("channelGate.recheck")}
-              </Button>
-            </EmptyContent>
-          </Empty>
-        </CardContent>
-      </Card>
+    <main className="shop-gate">
+      <EmptyState
+        actions={[
+          { label: t("channelGate.open"), onClick: () => window.open(gate.url, "_blank", "noreferrer") },
+          {
+            label: t("channelGate.recheck"),
+            onClick: () => void recheck(),
+            variant: "outline",
+            loading: isFetching,
+          },
+        ]}
+        description={t("channelGate.description", { channel: gate.username })}
+        icon={<Megaphone />}
+        title={t("channelGate.title")}
+      />
     </main>
   )
 }

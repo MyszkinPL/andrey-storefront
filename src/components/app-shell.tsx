@@ -13,10 +13,12 @@ import { SideNav } from "@/components/side-nav"
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <ChannelGate>
-      <div className="lg:flex lg:min-h-dvh">
+      <div className="shop-layout">
         <SideNav />
-        <div className="flex min-w-0 flex-1 flex-col">
-          <ModeSwitcher className="lg:hidden" />
+        <div className="shop-main">
+          <div className="lg:hidden">
+            <ModeSwitcher />
+          </div>
           {children}
           <BottomTabs />
         </div>

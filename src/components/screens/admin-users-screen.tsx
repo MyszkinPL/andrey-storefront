@@ -3,24 +3,15 @@
 import { useMemo, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { ShieldCheck } from "lucide-react"
+import { Avatar, Button, EmptyState, Pill, Tabs } from "sealui"
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@/components/ui/empty"
-import { SearchInput } from "@/components/search-input"
-import { ListGroup, ListRow, ListSkeleton } from "@/components/list-row"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Screen, ScreenBody, ScreenError, ScreenHeader } from "@/components/screen"
 import { useI18n } from "@/components/i18n-provider"
+import { ListGroup, ListRow, ListSkeleton } from "@/components/list-row"
+import { Screen, ScreenBody, ScreenError, ScreenHeader } from "@/components/screen"
+import { SearchInput } from "@/components/search-input"
 import { getAdminUsers, getMe } from "@/lib/api"
+
+type FilterKey = "all" | "buyers" | "admins" | "banned"
 
 export function AdminUsersScreen() {
   const { t, tp } = useI18n()
@@ -41,7 +32,7 @@ export function AdminUsersScreen() {
 
   const { data: meData } = useQuery({ queryKey: ["me"], queryFn: getMe })
   const [search, setSearch] = useState("")
-  const [filter, setFilter] = useState<"all" | "buyers" | "admins" | "banned">("all")
+  const [filter, setFilter] = useState<FilterKey>("all")
   const [page, setPage] = useState(1)
 
   const { data, isLoading, isError, refetch } = useQuery({
@@ -69,35 +60,36 @@ export function AdminUsersScreen() {
       />
 
       <ScreenBody>
-        <SearchInput
-          onValueChange={(value) => {
-            setSearch(value)
-            setPage(1)
-          }}
-          placeholder={t("adminUsers.searchPlaceholder")}
-          value={search}
-        />
+        <div className="shop-toolbar">
+          <SearchInput
+            onValueChange={(value) => {
+              setSearch(value)
+              setPage(1)
+            }}
+            placeholder={t("adminUsers.searchPlaceholder")}
+            value={search}
+          />
 
-        <Tabs value={filter} onValueChange={(value) => {
-          setFilter(value as typeof filter)
-          setPage(1)
-        }}>
-          <TabsList className="w-full">
-            {[
-              { key: "all" as const, label: t("adminUsers.filterAll") },
-              { key: "buyers" as const, label: t("adminUsers.filterBuyers") },
-              { key: "admins" as const, label: t("adminUsers.filterAdmins") },
-              { key: "banned" as const, label: t("adminUsers.filterBanned") },
-            ].map((item) => (
-              <TabsTrigger key={item.key} value={item.key}>
-                {item.label}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
+          <div className="shop-scroll-x">
+            <Tabs
+              aria-label={t("adminUsers.title")}
+              items={[
+                { value: "all", label: t("adminUsers.filterAll") },
+                { value: "buyers", label: t("adminUsers.filterBuyers") },
+                { value: "admins", label: t("adminUsers.filterAdmins") },
+                { value: "banned", label: t("adminUsers.filterBanned") },
+              ]}
+              onValueChange={(value) => {
+                setFilter(value as FilterKey)
+                setPage(1)
+              }}
+              value={filter}
+            />
+          </div>
+        </div>
 
         {isLoading ? (
-          <ListSkeleton className="lg:grid lg:grid-cols-2" trailing={false} />
+          <ListSkeleton />
         ) : isError && !data ? (
           <ScreenError
             onRetry={() => refetch()}
@@ -105,67 +97,47 @@ export function AdminUsersScreen() {
             title={t("adminUsers.errorTitle")}
           />
         ) : users.length === 0 ? (
-          <UsersEmpty
-            title={t("adminUsers.emptyTitle")}
+          <EmptyState
             description={t("adminUsers.emptyDescription")}
+            icon={<ShieldCheck />}
+            title={t("adminUsers.emptyTitle")}
           />
         ) : (
-          <ListGroup className="lg:grid lg:grid-cols-2">
-            {users.map((user) => (
-              <ListRow
-                description={`${
-                  user.username ? `@${user.username}` : `tg:${user.telegramId}`
-                } · ID ${user.telegramId} · ${tp(
-                  "adminUsers.countActive",
-                  user.activeOrderCount,
-                )}`}
-                href={`/admin/users/${user.id}`}
-                key={user.id}
-                media={
-                  <Avatar className="size-10">
-                    {user.photoUrl ? (
-                      <AvatarImage src={user.photoUrl} alt={user.firstName} />
-                    ) : null}
-                    <AvatarFallback>{user.firstName.slice(0, 1)}</AvatarFallback>
-                  </Avatar>
-                }
-                title={[user.firstName, user.lastName || ""].join(" ").trim()}
-                trailing={
-                  user.isBanned ? (
-                    <Badge variant="destructive">{t("adminUsers.banned")}</Badge>
-                  ) : user.role === "ADMIN" ? (
-                    <Badge variant="secondary">{t("adminUsers.admin")}</Badge>
-                  ) : null
-                }
-              />
-            ))}
+          <ListGroup>
+            {users.map((user) => {
+              const displayName = [user.firstName, user.lastName || ""].join(" ").trim()
+
+              return (
+                <ListRow
+                  description={`${
+                    user.username ? `@${user.username}` : `tg:${user.telegramId}`
+                  } · ID ${user.telegramId} · ${tp(
+                    "adminUsers.countActive",
+                    user.activeOrderCount,
+                  )}`}
+                  href={`/admin/users/${user.id}`}
+                  key={user.id}
+                  media={<Avatar name={displayName || user.firstName} src={user.photoUrl} />}
+                  title={displayName}
+                  trailing={
+                    user.isBanned ? (
+                      <Pill color="red">{t("adminUsers.banned")}</Pill>
+                    ) : user.role === "ADMIN" ? (
+                      <Pill color="blue">{t("adminUsers.admin")}</Pill>
+                    ) : null
+                  }
+                />
+              )
+            })}
           </ListGroup>
         )}
 
         {data?.pageInfo?.hasMore ? (
-          <Button variant="secondary" onClick={() => setPage((current) => current + 1)}>
+          <Button fullWidth onClick={() => setPage((current) => current + 1)} variant="secondary">
             {t("adminUsers.showMore")}
           </Button>
         ) : null}
       </ScreenBody>
     </Screen>
-  )
-}
-
-function UsersEmpty({ title, description }: { title: string; description: string }) {
-  return (
-    <Card>
-      <CardContent>
-        <Empty>
-          <EmptyMedia variant="icon">
-            <ShieldCheck />
-          </EmptyMedia>
-          <EmptyHeader>
-            <EmptyTitle>{title}</EmptyTitle>
-            <EmptyDescription>{description}</EmptyDescription>
-          </EmptyHeader>
-        </Empty>
-      </CardContent>
-    </Card>
   )
 }

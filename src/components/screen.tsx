@@ -1,93 +1,27 @@
 "use client"
 
 import { CircleDashed, RotateCw, TriangleAlert } from "lucide-react"
+import type { ReactNode } from "react"
+import { EmptyState, Heading, Text } from "sealui"
 
-import { Button } from "@/components/ui/button"
-import {
-  Empty,
-  EmptyContent,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@/components/ui/empty"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardTitle,
-} from "@/components/ui/card"
 import { BackButton } from "@/components/back-button"
 import { useTranslate } from "@/components/i18n-provider"
-import { cn } from "@/lib/utils"
 
 /**
- * The one horizontal container every phone-layout element shares: screens,
- * the mode switcher above them and the tab bar below. They used to cap at
- * three different widths (28rem, 32rem, 64rem), so on anything wider than a
- * phone the switcher and the tab bar floated as narrow islands in the middle
- * of a much wider page.
+ * One horizontal container shared by every phone-layout element: screens,
+ * the mode switcher above them and the tab bar below.
  */
-export const SCREEN_CONTAINER = "mx-auto w-full max-w-5xl px-3 sm:px-4"
-
 export function Screen({
   children,
-  className,
   noTabBar = false,
 }: {
-  children: React.ReactNode
-  className?: string
+  children: ReactNode
   noTabBar?: boolean
 }) {
   return (
-    <main
-      className={cn(
-        SCREEN_CONTAINER,
-        // `clip`, not `hidden`: hidden turns the main into a scroll container
-        // and position: sticky then sticks to it instead of the viewport.
-        "box-border flex flex-col overflow-x-clip pt-[calc(env(safe-area-inset-top)+0.75rem)]",
-        // From `lg` the side rail replaces the tab bar, so the space it
-        // reserved at the bottom becomes ordinary page padding.
-        "lg:px-8 lg:pt-8 lg:pb-10",
-        // How much the docked tab bar covers, for anything pinned above it.
-        !noTabBar && "min-h-[calc(100dvh-3rem)] [--dock:3.5rem] lg:min-h-0 lg:[--dock:0px]",
-        noTabBar && "[--dock:0px]",
-        noTabBar && "min-h-0",
-        // Clears the tab bar: 0.75rem offset + its natural coss height.
-        !noTabBar && "pb-[calc(env(safe-area-inset-bottom)+4.5rem)]",
-        noTabBar && "pb-[calc(env(safe-area-inset-bottom)+1rem)]",
-        className,
-      )}
-    >
+    <main className="shop-screen" data-no-tab-bar={noTabBar ? "" : undefined}>
       {children}
     </main>
-  )
-}
-
-/**
- * Primary actions pinned above the bottom edge on a phone. A long form used
- * to keep "Save" only in the header, so after filling it in the admin had
- * to scroll all the way back up; the same for "Place order" under a long
- * product card. From `sm` the header actions are within reach and this
- * bar hides.
- */
-export function StickyActions({
-  children,
-  className,
-}: {
-  children: React.ReactNode
-  className?: string
-}) {
-  return (
-    <div
-      className={cn(
-        "sticky bottom-[calc(env(safe-area-inset-bottom)+var(--dock,0px)+0.75rem)] z-20 mt-2 flex gap-2 rounded-xl border bg-card/95 p-2 shadow-lg/10 backdrop-blur sm:hidden",
-        "*:flex-1",
-        className,
-      )}
-    >
-      {children}
-    </div>
   )
 }
 
@@ -100,35 +34,43 @@ export function ScreenHeader({
 }: {
   /** Renders an in-app back control; a string is the destination route. */
   back?: boolean | string
-  before?: React.ReactNode
-  title: React.ReactNode
-  subtitle?: React.ReactNode
-  trailing?: React.ReactNode
-  inlineTrailingMobile?: boolean
+  before?: ReactNode
+  title: ReactNode
+  subtitle?: ReactNode
+  trailing?: ReactNode
 }) {
   return (
-    <header className="mb-2 flex items-center gap-3 px-1 lg:mb-4">
-      {back ? (
-        <BackButton className="-ms-1 shrink-0" href={typeof back === "string" ? back : undefined} />
-      ) : null}
-      {before ? <div className="shrink-0">{before}</div> : null}
-      <div className="min-w-0 flex-1">
-        <CardTitle className="truncate lg:text-2xl">{title}</CardTitle>
-        {subtitle ? <CardDescription className="truncate">{subtitle}</CardDescription> : null}
+    <header className="shop-header">
+      {back ? <BackButton href={typeof back === "string" ? back : undefined} /> : null}
+      {before ? <div className="shop-header-side">{before}</div> : null}
+      <div className="shop-header-copy">
+        <Heading as="h1" size="sm" truncate>
+          {title}
+        </Heading>
+        {subtitle ? (
+          <Text as="p" size="sm" tone="muted" truncate>
+            {subtitle}
+          </Text>
+        ) : null}
       </div>
-      {trailing ? <div className="shrink-0">{trailing}</div> : null}
+      {trailing ? <div className="shop-header-side">{trailing}</div> : null}
     </header>
   )
 }
 
 export function ScreenBody({
   children,
-  className,
+  grow = false,
 }: {
-  children: React.ReactNode
-  className?: string
+  children: ReactNode
+  /** Fills the screen so a card can push its footer to the bottom. */
+  grow?: boolean
 }) {
-  return <div className={cn("flex flex-col gap-2 lg:gap-3", className)}>{children}</div>
+  return (
+    <div className="shop-body" data-grow={grow ? "" : undefined}>
+      {children}
+    </div>
+  )
 }
 
 export function ScreenEmpty({
@@ -137,30 +79,24 @@ export function ScreenEmpty({
   title,
   subtitle,
 }: {
-  action?: React.ReactNode
-  icon: React.ReactNode
+  action?: { label: string; onClick: () => void; icon?: ReactNode }
+  icon: ReactNode
   title: string
   subtitle?: string
 }) {
   return (
-    <Card>
-      <CardContent>
-        <Empty>
-          <EmptyMedia variant="icon">{icon}</EmptyMedia>
-          <EmptyHeader>
-            <EmptyTitle>{title}</EmptyTitle>
-            {subtitle ? <EmptyDescription>{subtitle}</EmptyDescription> : null}
-          </EmptyHeader>
-          {action ? <EmptyContent>{action}</EmptyContent> : null}
-        </Empty>
-      </CardContent>
-    </Card>
+    <EmptyState
+      actions={action ? [{ ...action, variant: "outline" }] : undefined}
+      description={subtitle}
+      icon={icon}
+      title={title}
+    />
   )
 }
 
 /**
- * A failed fetch used to look exactly like an empty list, and offered no way
- * out short of restarting the app. It gets its own icon and a retry button.
+ * A failed fetch gets its own icon and a retry button, so it never looks
+ * like an empty list.
  */
 export function ScreenError({
   onRetry,
@@ -176,12 +112,7 @@ export function ScreenError({
   return (
     <ScreenEmpty
       action={
-        onRetry ? (
-          <Button onClick={onRetry} variant="outline">
-            <RotateCw data-icon="inline-start" />
-            {t("common.retry")}
-          </Button>
-        ) : undefined
+        onRetry ? { label: t("common.retry"), onClick: onRetry, icon: <RotateCw size={16} /> } : undefined
       }
       icon={<TriangleAlert />}
       subtitle={subtitle}
@@ -192,8 +123,8 @@ export function ScreenError({
 
 /**
  * Whole-screen placeholder for a detail route with nothing to show yet. It
- * keeps the back control, because a screen that failed to load is otherwise a
- * dead end when it was opened straight from a bot link.
+ * keeps the back control, because a screen that failed to load is otherwise
+ * a dead end when it was opened straight from a bot link.
  */
 export function ScreenState({
   back,
@@ -204,7 +135,7 @@ export function ScreenState({
 }: {
   back?: boolean | string
   description?: string
-  icon?: React.ReactNode
+  icon?: ReactNode
   /** Renders a retry button and switches the icon to the failure one. */
   onRetry?: () => void
   title: string
@@ -212,20 +143,42 @@ export function ScreenState({
   return (
     <Screen noTabBar>
       {back ? (
-        <BackButton
-          className="-ms-1 mb-2 self-start"
-          href={typeof back === "string" ? back : undefined}
-        />
+        <div className="shop-header">
+          <BackButton href={typeof back === "string" ? back : undefined} />
+        </div>
       ) : null}
       {onRetry ? (
         <ScreenError onRetry={onRetry} subtitle={description} title={title} />
       ) : (
-        <ScreenEmpty
-          icon={icon ?? <CircleDashed />}
-          subtitle={description}
-          title={title}
-        />
+        <ScreenEmpty icon={icon ?? <CircleDashed />} subtitle={description} title={title} />
       )}
     </Screen>
+  )
+}
+
+/**
+ * Primary actions pinned above the bottom edge on a phone, so a long form
+ * never sends the admin back up to the header to save. Hidden from `sm`,
+ * where the header actions are within reach.
+ */
+export function StickyActions({ children }: { children: ReactNode }) {
+  return <div className="shop-sticky">{children}</div>
+}
+
+/** Section label above a group of rows or tiles. */
+export function SectionTitle({ title, hint }: { title: string; hint?: string }) {
+  return (
+    <div className="shop-header" style={{ minHeight: 0 }}>
+      <div className="shop-header-copy">
+        <Text as="h2" size="sm">
+          {title}
+        </Text>
+        {hint ? (
+          <Text as="p" size="xs" tone="muted">
+            {hint}
+          </Text>
+        ) : null}
+      </div>
+    </div>
   )
 }

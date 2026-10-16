@@ -19,7 +19,9 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "sealui": ["./vendor/sealui/src/index.ts"],
+      "sealui/*": ["./vendor/sealui/src/*"]
     }
   },
   "include": [
@@ -30,5 +32,14 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules",
+    "vendor/sealui/src/catalog",
+    "vendor/sealui/src/App.tsx",
+    "vendor/sealui/src/main.tsx",
+    "vendor/sealui/polar-orbit",
+    "vendor/sealui/scripts",
+    "vendor/sealui/vite.config.ts",
+    "vendor/sealui/node_modules"
+  ]
 }

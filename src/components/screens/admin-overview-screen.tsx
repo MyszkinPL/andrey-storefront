@@ -1,41 +1,13 @@
 "use client"
 
+import type { CSSProperties } from "react"
 import { useQuery } from "@tanstack/react-query"
-import {
-  Activity,
-  CreditCard,
-  Eye,
-  Package2,
-  Receipt,
-  Send,
-  ShieldCheck,
-  UserPlus,
-  UserX,
-  Users,
-  Wallet,
-  type LucideIcon,
-} from "lucide-react"
+import { Eye } from "lucide-react"
+import { EmptyState, StatisticCard, Text } from "sealui"
 
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@/components/ui/empty"
-import { Field, FieldDescription, FieldTitle } from "@/components/ui/field"
-import { ListGroup, ListRow, ListRowMedia } from "@/components/list-row"
-import { Screen, ScreenBody, ScreenEmpty, ScreenError, ScreenHeader } from "@/components/screen"
 import { useI18n } from "@/components/i18n-provider"
-import { formatPrice } from "@/lib/format"
+import { ListGroup, ListRow, ListSkeleton } from "@/components/list-row"
+import { Screen, ScreenBody, ScreenError, ScreenHeader, SectionTitle } from "@/components/screen"
 import {
   getAdminUsers,
   getMe,
@@ -44,6 +16,7 @@ import {
   getProducts,
   getShopStats,
 } from "@/lib/api"
+import { formatPrice } from "@/lib/format"
 
 export function AdminOverviewScreen() {
   const { t, tp, locale, currency } = useI18n()
@@ -101,29 +74,23 @@ export function AdminOverviewScreen() {
   }
 
   const audience = [
-    { label: t("admin.statUsers"), value: stats?.users.total ?? 0, icon: Users },
-    { label: t("admin.statBotStarted"), value: stats?.users.botStarted ?? 0, icon: Send },
-    { label: t("admin.statNewUsers"), value: stats?.users.newLast7Days ?? 0, icon: UserPlus },
-    { label: t("admin.statActiveUsers"), value: stats?.users.activeLast7Days ?? 0, icon: Activity },
-    {
-      label: t("admin.statBans"),
-      value: usersData?.summary.banned || 0,
-      icon: UserX,
-    },
+    { label: t("admin.statUsers"), value: stats?.users.total ?? 0 },
+    { label: t("admin.statBotStarted"), value: stats?.users.botStarted ?? 0 },
+    { label: t("admin.statNewUsers"), value: stats?.users.newLast7Days ?? 0 },
+    { label: t("admin.statActiveUsers"), value: stats?.users.activeLast7Days ?? 0 },
+    { label: t("admin.statBans"), value: usersData?.summary.banned || 0 },
   ]
 
   const tiles = [
     {
       label: t("admin.statActiveProducts"),
       value: productsData?.products.filter((item) => item.isActive).length || 0,
-      icon: Package2,
     },
     {
       label: t("admin.statActiveOrders"),
       value:
         ordersData?.orders.filter((item) => !["CLOSED", "CANCELLED"].includes(item.status)).length ||
         0,
-      icon: Receipt,
     },
     {
       label: t("admin.statKeys"),
@@ -132,26 +99,34 @@ export function AdminOverviewScreen() {
           (sum, item) => sum + (item.deliveryType === "AUTO_KEY" ? item.availableKeyCount || 0 : 0),
           0,
         ) || 0,
-      icon: ShieldCheck,
     },
     {
       label: t("admin.statPaymentMethods"),
       value: paymentData?.paymentMethods.length || 0,
-      icon: CreditCard,
     },
   ]
+
+  const isLoading = isLoadingProducts || isLoadingOrders || isLoadingPayments || isLoadingUsers
+  const isError = isErrorProducts || isErrorOrders || isErrorPayments || isErrorUsers
 
   return (
     <Screen>
       <ScreenHeader title={t("admin.overviewTitle")} subtitle={t("admin.overviewSubtitle")} />
 
       <ScreenBody>
-        {isLoadingProducts || isLoadingOrders || isLoadingPayments || isLoadingUsers ? (
-          <OverviewEmpty
-            title={t("admin.overviewLoadingTitle")}
-            description={t("admin.overviewLoadingDescription")}
-          />
-        ) : isErrorProducts || isErrorOrders || isErrorPayments || isErrorUsers ? (
+        {isLoading ? (
+          // The tiles keep their labels while the numbers load, so the
+          // layout does not jump once the counts land.
+          <>
+            <SectionTitle
+              hint={t("admin.overviewLoadingDescription")}
+              title={t("admin.overviewLoadingTitle")}
+            />
+            <StatTiles items={tiles} loading />
+            <StatTiles items={audience} loading />
+            <ListSkeleton rows={3} />
+          </>
+        ) : isError ? (
           <ScreenError
             onRetry={() => {
               refetchProducts()
@@ -165,45 +140,32 @@ export function AdminOverviewScreen() {
           />
         ) : (
           <>
-            <Field className="gap-1 px-1">
-              <FieldTitle>{t("admin.shopTitle")}</FieldTitle>
-              <FieldDescription>{t("admin.shopHint")}</FieldDescription>
-            </Field>
+            <SectionTitle hint={t("admin.shopHint")} title={t("admin.shopTitle")} />
             <StatTiles items={tiles} />
 
-            <Field className="gap-1 px-1 pt-2">
-              <FieldTitle>{t("admin.audienceTitle")}</FieldTitle>
-              <FieldDescription>{t("admin.audienceHint")}</FieldDescription>
-            </Field>
+            <SectionTitle hint={t("admin.audienceHint")} title={t("admin.audienceTitle")} />
             <StatTiles items={audience} />
 
             {stats?.orders.paid ? (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-2xl">
-                    {formatPrice(stats.orders.revenue, locale, currency)}
-                  </CardTitle>
-                  <CardDescription>
-                    {t("admin.revenueHint", {
-                      paid: stats.orders.paid,
-                      total: stats.orders.total,
-                    })}
-                  </CardDescription>
-                  <CardAction>
-                    <Wallet className="size-5 text-muted-foreground" />
-                  </CardAction>
-                </CardHeader>
-              </Card>
+              <StatisticCard
+                size="lg"
+                title={t("admin.revenueHint", {
+                  paid: stats.orders.paid,
+                  total: stats.orders.total,
+                })}
+              >
+                <Text as="span" size="xl" tabularNums>
+                  {formatPrice(stats.orders.revenue, locale, currency)}
+                </Text>
+              </StatisticCard>
             ) : null}
 
-            <Field className="gap-1 px-1 pt-2">
-              <FieldTitle>{t("admin.topViewedTitle")}</FieldTitle>
-              <FieldDescription>
-                {`${tp("admin.viewsCount", stats?.products.totalViews ?? 0)} — ${t(
-                  "admin.topViewedHint",
-                )}`}
-              </FieldDescription>
-            </Field>
+            <SectionTitle
+              hint={`${tp("admin.viewsCount", stats?.products.totalViews ?? 0)} — ${t(
+                "admin.topViewedHint",
+              )}`}
+              title={t("admin.topViewedTitle")}
+            />
             {stats && stats.topViewed.length > 0 ? (
               <ListGroup>
                 {stats.topViewed.map((product, index) => (
@@ -215,15 +177,19 @@ export function AdminOverviewScreen() {
                     ].join(" \u00B7 ")}
                     href={`/admin/products/${product.id}/edit`}
                     key={product.id}
-                    media={<ListRowMedia>{index + 1}</ListRowMedia>}
+                    media={
+                      <Text as="span" size="sm" tabularNums tone="secondary">
+                        {index + 1}
+                      </Text>
+                    }
                     title={product.title}
                   />
                 ))}
               </ListGroup>
             ) : (
-              <ScreenEmpty
+              <EmptyState
+                description={t("admin.topViewedEmptyHint")}
                 icon={<Eye />}
-                subtitle={t("admin.topViewedEmptyHint")}
                 title={t("admin.topViewedEmpty")}
               />
             )}
@@ -234,45 +200,30 @@ export function AdminOverviewScreen() {
   )
 }
 
+/**
+ * One tile per number. The grid fits as many columns as there are tiles on
+ * desktop and falls back to two on a phone, so the audience row never
+ * leaves a lonely fifth tile.
+ */
 function StatTiles({
   items,
+  loading = false,
 }: {
-  items: Array<{ label: string; value: number; icon: LucideIcon }>
+  items: Array<{ label: string; value: number }>
+  loading?: boolean
 }) {
   return (
-    <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-      {items.map((item) => {
-        const Icon = item.icon
-        return (
-          <Card key={item.label}>
-            <CardHeader>
-              <CardTitle className="text-2xl tabular-nums">{item.value}</CardTitle>
-              <CardDescription>{item.label}</CardDescription>
-              <CardAction>
-                <Icon className="size-5 text-muted-foreground" />
-              </CardAction>
-            </CardHeader>
-          </Card>
-        )
-      })}
+    <div
+      className="shop-stats"
+      style={{ "--shop-stats-cols": String(items.length) } as CSSProperties}
+    >
+      {items.map((item) => (
+        <StatisticCard key={item.label} title={item.label}>
+          <Text as="span" loading={loading} placeholderText="0000" size="xl" tabularNums>
+            {item.value}
+          </Text>
+        </StatisticCard>
+      ))}
     </div>
-  )
-}
-
-function OverviewEmpty({ title, description }: { title: string; description: string }) {
-  return (
-    <Card>
-      <CardContent>
-        <Empty>
-          <EmptyMedia variant="icon">
-            <Package2 />
-          </EmptyMedia>
-          <EmptyHeader>
-            <EmptyTitle>{title}</EmptyTitle>
-            <EmptyDescription>{description}</EmptyDescription>
-          </EmptyHeader>
-        </Empty>
-      </CardContent>
-    </Card>
   )
 }

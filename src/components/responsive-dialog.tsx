@@ -1,34 +1,38 @@
 "use client"
 
-import { useTranslate } from "@/components/i18n-provider"
-import { Button } from "@/components/ui/button"
+import type { ReactNode } from "react"
+import { Button } from "sealui"
 import {
-  Dialog,
-  DialogClose,
+  DialogBackdrop,
   DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogPanel,
   DialogPopup,
+  DialogPortal,
+  DialogRoot,
   DialogTitle,
-} from "@/components/ui/dialog"
+  DialogViewport,
+} from "sealui/components/Dialog"
 import {
-  Drawer,
-  DrawerClose,
+  DrawerBackdrop,
+  DrawerContent,
   DrawerDescription,
   DrawerFooter,
   DrawerHeader,
-  DrawerPanel,
   DrawerPopup,
+  DrawerPortal,
+  DrawerRoot,
   DrawerTitle,
-} from "@/components/ui/drawer"
+  DrawerViewport,
+} from "sealui/components/Drawer"
+
+import { useTranslate } from "@/components/i18n-provider"
 import { useMediaQuery } from "@/hooks/use-media-query"
 
 /**
  * Confirmation that reaches the thumb: a bottom sheet on a phone, a centred
- * dialog from `sm` up. Every confirmation used to be a centred dialog, which
- * on a phone puts a destructive choice in the middle of the screen, far from
- * where the hand is.
+ * dialog from `sm` up. Both are sealui parts, so the sheet keeps Base UI's
+ * swipe-to-close and the dialog its focus trap.
  */
 export function ResponsiveDialog({
   open,
@@ -36,7 +40,7 @@ export function ResponsiveDialog({
   title,
   description,
   confirmLabel,
-  confirmVariant = "default",
+  confirmVariant = "primary",
   confirmDisabled = false,
   loading,
   onConfirm,
@@ -47,49 +51,73 @@ export function ResponsiveDialog({
   title: string
   description?: string
   confirmLabel: string
-  confirmVariant?: "default" | "destructive"
+  confirmVariant?: "primary" | "danger"
   /** Keeps the confirm button off until the reader has done their part. */
   confirmDisabled?: boolean
   loading?: boolean
   onConfirm: () => void
-  children?: React.ReactNode
+  children?: ReactNode
 }) {
   const t = useTranslate()
   const isDesktop = useMediaQuery("sm")
 
-  const Root = isDesktop ? Dialog : Drawer
-  const Popup = isDesktop ? DialogPopup : DrawerPopup
-  const Header = isDesktop ? DialogHeader : DrawerHeader
-  const Title = isDesktop ? DialogTitle : DrawerTitle
-  const Description = isDesktop ? DialogDescription : DrawerDescription
-  const Footer = isDesktop ? DialogFooter : DrawerFooter
-  const Close = isDesktop ? DialogClose : DrawerClose
-  const Panel = isDesktop ? DialogPanel : DrawerPanel
+  const handleOpenChange = (next: boolean) => {
+    if (!loading) onOpenChange(next)
+  }
+
+  const actions = (
+    <>
+      <Button disabled={loading} onClick={() => handleOpenChange(false)} variant="outline">
+        {t("common.cancel")}
+      </Button>
+      <Button
+        disabled={loading || confirmDisabled}
+        loading={loading}
+        onClick={onConfirm}
+        variant={confirmVariant}
+      >
+        {confirmLabel}
+      </Button>
+    </>
+  )
+
+  if (isDesktop) {
+    return (
+      <DialogRoot onOpenChange={handleOpenChange} open={open}>
+        <DialogPortal>
+          <DialogBackdrop />
+          <DialogViewport>
+            <DialogPopup>
+              <DialogHeader>
+                <DialogTitle>{title}</DialogTitle>
+                {description ? <DialogDescription>{description}</DialogDescription> : null}
+              </DialogHeader>
+              {children}
+              <DialogFooter>{actions}</DialogFooter>
+            </DialogPopup>
+          </DialogViewport>
+        </DialogPortal>
+      </DialogRoot>
+    )
+  }
 
   return (
-    <Root open={open} onOpenChange={(next) => !loading && onOpenChange(next)}>
-      <Popup>
-        <Header>
-          <Title>{title}</Title>
-          {description ? <Description>{description}</Description> : null}
-        </Header>
-
-        {children ? <Panel>{children}</Panel> : null}
-
-        <Footer>
-          <Close disabled={loading} render={<Button variant="outline" />}>
-            {t("common.cancel")}
-          </Close>
-          <Button
-            disabled={loading || confirmDisabled}
-            loading={loading}
-            onClick={onConfirm}
-            variant={confirmVariant}
-          >
-            {confirmLabel}
-          </Button>
-        </Footer>
-      </Popup>
-    </Root>
+    <DrawerRoot onOpenChange={handleOpenChange} open={open} swipeDirection="down">
+      <DrawerPortal>
+        <DrawerBackdrop />
+        <DrawerViewport side="bottom">
+          <DrawerPopup>
+            <DrawerContent>
+              <DrawerHeader>
+                <DrawerTitle>{title}</DrawerTitle>
+                {description ? <DrawerDescription>{description}</DrawerDescription> : null}
+              </DrawerHeader>
+              {children}
+              <DrawerFooter>{actions}</DrawerFooter>
+            </DrawerContent>
+          </DrawerPopup>
+        </DrawerViewport>
+      </DrawerPortal>
+    </DrawerRoot>
   )
 }

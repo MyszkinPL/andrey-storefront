@@ -1,51 +1,31 @@
 "use client"
 
-import Link from "next/link"
 import { useEffect, useMemo, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { ImagePlus, PencilLine, Plus, RefreshCcw } from "lucide-react"
+import { Copy, CreditCard, ImagePlus, PencilLine, Plus, RefreshCcw } from "lucide-react"
+import {
+  Avatar,
+  Button,
+  Card,
+  Cluster,
+  EmptyState,
+  Field,
+  Input,
+  Pill,
+  SegmentedControl,
+  Select,
+  Setting,
+  Stack,
+  Switch,
+  Well,
+  WellContent,
+  WellFooter,
+  WellHeader,
+} from "sealui"
 
 import { AccessStateScreen } from "@/components/access-state-screen"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { Button, buttonVariants } from "@/components/ui/button"
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyTitle,
-} from "@/components/ui/empty"
-import {
-  Field,
-  FieldDescription,
-  FieldGroup,
-  FieldLabel,
-} from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupButton,
-  InputGroupInput,
-} from "@/components/ui/input-group"
+import { LinkButton } from "@/components/link-button"
 import { ListGroup, ListRow } from "@/components/list-row"
-import {
-  Select,
-  SelectItem,
-  SelectPopup,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { Switch } from "@/components/ui/switch"
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { Screen, ScreenBody, ScreenHeader, StickyActions } from "@/components/screen"
 import { useI18n } from "@/components/i18n-provider"
 import { useNotify } from "@/hooks/use-notify"
@@ -174,217 +154,211 @@ export function AdminSettingsScreen() {
     )
   }
 
+  const saveLabel = mutation.isPending ? t("common.saving") : t("common.save")
+
   return (
     <Screen>
       <ScreenHeader
         title={t("adminSettings.title")}
         subtitle={t("adminSettings.subtitle")}
         trailing={
-          <Button
-            className="max-sm:hidden"
-            size="sm"
-            disabled={mutation.isPending}
-            onClick={() => mutation.mutate()}
-          >
-            {mutation.isPending ? t("common.saving") : t("common.save")}
-          </Button>
+          <div className="max-sm:hidden">
+            <Button disabled={mutation.isPending} onClick={() => mutation.mutate()} size="sm">
+              {saveLabel}
+            </Button>
+          </div>
         }
       />
 
       <ScreenBody>
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("adminSettings.shopSection")}</CardTitle>
-            <CardDescription>{t("adminSettings.shopSectionHint")}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <FieldGroup>
-              <Field>
-                <FieldLabel htmlFor="shop-name">{t("adminSettings.name")}</FieldLabel>
-                <Input id="shop-name" value={shopName} onChange={(event) => setShopName(event.target.value)} placeholder={t("adminSettings.name")} />
+        <Well>
+          <WellHeader
+            description={t("adminSettings.shopSectionHint")}
+            title={t("adminSettings.shopSection")}
+          />
+          <WellContent>
+            <Stack gap="4">
+              <Field label={t("adminSettings.name")}>
+                <Input
+                  id="shop-name"
+                  onChange={(event) => setShopName(event.target.value)}
+                  placeholder={t("adminSettings.name")}
+                  value={shopName}
+                />
               </Field>
-              <Field>
-                <FieldLabel htmlFor="shop-support">{t("adminSettings.support")}</FieldLabel>
-                <Input id="shop-support" value={supportUsername} onChange={(event) => setSupportUsername(event.target.value)} placeholder="@username" />
+              <Field label={t("adminSettings.support")}>
+                <Input
+                  id="shop-support"
+                  onChange={(event) => setSupportUsername(event.target.value)}
+                  placeholder="@username"
+                  value={supportUsername}
+                />
               </Field>
-              <Field>
-                <FieldLabel htmlFor="shop-channel">{t("admin.channelLabel")}</FieldLabel>
+              <Field description={t("admin.channelHint")} label={t("admin.channelLabel")}>
                 <Input
                   id="shop-channel"
                   onChange={(event) => setRequiredChannel(event.target.value)}
                   placeholder={t("admin.channelPlaceholder")}
                   value={requiredChannel}
                 />
-                <FieldDescription>{t("admin.channelHint")}</FieldDescription>
               </Field>
-            </FieldGroup>
-          </CardContent>
-        </Card>
+            </Stack>
+          </WellContent>
+        </Well>
 
-        <Card>
-          <CardHeader>
-            <MethodPreview iconUrl="/crypto-bot-logo.svg" title="Crypto Bot" />
-            <CardTitle>Crypto Bot</CardTitle>
-            <CardDescription>{t("adminSettings.cryptoHint")}</CardDescription>
-            <CardAction>
-              <Switch
-                checked={cryptoPayEnabled}
-                onCheckedChange={setCryptoPayEnabled}
-                aria-label={t("adminSettings.cryptoToggle")}
-              />
-            </CardAction>
-          </CardHeader>
-          <CardContent>
-            <FieldGroup>
-              <Field>
-                <FieldLabel htmlFor="crypto-token">API token</FieldLabel>
-                <Input id="crypto-token" value={cryptoPayToken} onChange={(event) => setCryptoPayToken(event.target.value)} placeholder={t("adminSettings.cryptoTokenPlaceholder")} />
+        <Well>
+          <WellHeader
+            action={
+              // The switch has no visible caption of its own; the hidden
+              // label text keeps its accessible name and makes it clickable.
+              <label className="shop-inline" htmlFor="crypto-enabled">
+                <span className="shop-visually-hidden">{t("adminSettings.cryptoToggle")}</span>
+                <Switch checked={cryptoPayEnabled} id="crypto-enabled" onCheckedChange={setCryptoPayEnabled} />
+              </label>
+            }
+            description={t("adminSettings.cryptoHint")}
+            title={
+              <span className="shop-inline">
+                <Avatar name="Crypto Bot" size="md" src="/crypto-bot-logo.svg" />
+                Crypto Bot
+              </span>
+            }
+          />
+          <WellContent>
+            <Stack gap="4">
+              <Field label="API token">
+                <Input
+                  id="crypto-token"
+                  onChange={(event) => setCryptoPayToken(event.target.value)}
+                  placeholder={t("adminSettings.cryptoTokenPlaceholder")}
+                  value={cryptoPayToken}
+                />
               </Field>
-              <Field orientation="horizontal">
-                <FieldLabel htmlFor="crypto-testnet">Testnet</FieldLabel>
-                <Switch id="crypto-testnet" checked={cryptoPayUseTestnet} onCheckedChange={setCryptoPayUseTestnet} />
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="crypto-fiat">
-                  {t("adminSettings.currencyLabel")}
-                </FieldLabel>
+              <Card>
+                <Setting layout="inline" title={<label htmlFor="crypto-testnet">Testnet</label>}>
+                  <Switch checked={cryptoPayUseTestnet} id="crypto-testnet" onCheckedChange={setCryptoPayUseTestnet} />
+                </Setting>
+              </Card>
+              <Field label={t("adminSettings.currencyLabel")} nativeLabel={false}>
                 <Select
-                  value={cryptoPayFiat}
                   onValueChange={(value) => setCryptoPayFiat(String(value))}
-                >
-                  <SelectTrigger className="w-full" id="crypto-fiat">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectPopup className="max-h-72">
-                    {fiatOptions.map((code) => (
-                      <SelectItem key={code} value={code}>
-                        {code}
-                      </SelectItem>
-                    ))}
-                  </SelectPopup>
-                </Select>
+                  options={fiatOptions.map((code) => ({ value: code, label: code }))}
+                  value={cryptoPayFiat}
+                />
               </Field>
-              <Field>
-                <FieldLabel>{t("adminSettings.coins")}</FieldLabel>
+              <Field label={t("adminSettings.coins")} nativeLabel={false}>
                 {assetOptions.length > 0 ? (
                   // `multiple`: without it the group was a radio, so a shop
                   // could never accept more than one coin at a time.
-                  <ToggleGroup
-                    className="flex flex-wrap gap-1.5"
-                    multiple
-                    onValueChange={(value) => setCryptoPayDefaultAssets(value.join(","))}
-                    size="sm"
-                    value={selectedCryptoAssets}
-                    variant="default"
-                  >
-                    {assetOptions.map((asset) => (
-                      <ToggleGroupItem
-                        className="shrink-0 rounded-full px-3"
-                        key={asset.code}
-                        value={asset.code}
-                        variant="outline"
-                      >
-                        {asset.code}
-                      </ToggleGroupItem>
-                    ))}
-                  </ToggleGroup>
+                  <div className="shop-scroll-x">
+                    <SegmentedControl
+                      aria-label={t("adminSettings.coins")}
+                      multiple
+                      onValueChange={(value) => setCryptoPayDefaultAssets(value.join(","))}
+                      options={assetOptions.map((asset) => ({ value: asset.code, label: asset.code }))}
+                      size="sm"
+                      value={selectedCryptoAssets}
+                    />
+                  </div>
                 ) : (
-                  <Badge variant="secondary">
-                    {cryptoPayTokenValue ? t("adminSettings.pressRefresh") : t("adminSettings.tokenFirst")}
-                  </Badge>
+                  <Cluster>
+                    <Pill color="gray">
+                      {cryptoPayTokenValue ? t("adminSettings.pressRefresh") : t("adminSettings.tokenFirst")}
+                    </Pill>
+                  </Cluster>
                 )}
               </Field>
-              <Field>
-                <FieldLabel htmlFor="crypto-webhook">Webhook</FieldLabel>
-                <InputGroup>
-                  <InputGroupInput id="crypto-webhook" readOnly value={cryptoWebhookUrl || t("adminSettings.webhookPlaceholder")} />
-                  {cryptoWebhookUrl ? (
-                    <InputGroupAddon align="inline-end">
-                      <InputGroupButton onClick={() => void navigator.clipboard.writeText(cryptoWebhookUrl)}>
-                        {t("common.copy")}
-                      </InputGroupButton>
-                    </InputGroupAddon>
-                  ) : null}
-                </InputGroup>
+              <Field label="Webhook">
+                <Input
+                  id="crypto-webhook"
+                  postSlot={
+                    cryptoWebhookUrl ? (
+                      <Button
+                        aria-label={t("common.copy")}
+                        onClick={() => void navigator.clipboard.writeText(cryptoWebhookUrl)}
+                        size="icon"
+                        variant="ghost"
+                      >
+                        <Copy size={16} aria-hidden />
+                      </Button>
+                    ) : undefined
+                  }
+                  readOnly
+                  value={cryptoWebhookUrl || t("adminSettings.webhookPlaceholder")}
+                />
               </Field>
+            </Stack>
+          </WellContent>
+          <WellFooter>
+            <Cluster>
               <Button
-                variant="secondary"
                 disabled={!cryptoPayTokenValue}
+                icon={<RefreshCcw size={16} aria-hidden />}
                 onClick={() => void refetchCurrencies()}
+                variant="secondary"
               >
-                <RefreshCcw data-icon="inline-start" />
                 {isFetchingCurrencies ? t("adminSettings.refreshingCurrencies") : t("adminSettings.refreshCurrencies")}
               </Button>
-            </FieldGroup>
-          </CardContent>
-        </Card>
+            </Cluster>
+          </WellFooter>
+        </Well>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("adminSettings.manualSection")}</CardTitle>
-            <CardDescription>
-              {[
-                tp("adminSettings.methodsTotal", paymentMethods.length),
-                tp("adminSettings.methodsActive", activeCount),
-              ].join(" · ")}
-            </CardDescription>
-            <CardAction className="flex gap-2">
-              <Link
-                href="/admin/settings/payments/new?template=bank"
-                className={buttonVariants({ size: "sm", variant: "secondary" })}
-              >
-                {t("adminSettings.template")}
-              </Link>
-              <Link href="/admin/settings/payments/new" className={buttonVariants({ size: "sm" })}>
-                <Plus data-icon="inline-start" />
-                {t("adminSettings.add")}
-              </Link>
-            </CardAction>
-          </CardHeader>
-          <CardContent>
-            <ListGroup>
-              {paymentMethods.map((method) => (
-                <ListRow
-                  description={method.details || t("adminSettings.noDetails")}
-                  key={method.id}
-                  media={
-                    <MethodPreview
-                      iconUrl={method.iconUrl}
-                      title={method.title}
-                    />
-                  }
-                  title={method.title}
-                  trailing={
-                    <div className="flex items-center gap-1">
-                      {!method.isActive ? (
-                        <Badge variant="secondary">{t("adminSettings.hidden")}</Badge>
-                      ) : null}
-                      <Link
-                        href={`/admin/settings/payments/${method.id}`}
-                        className={buttonVariants({ size: "icon-sm", variant: "secondary" })}
-                        aria-label={t("adminSettings.editMethod")}
-                      >
-                        <PencilLine />
-                      </Link>
-                    </div>
-                  }
-                />
-              ))}
-            </ListGroup>
+        <Well>
+          <WellHeader
+            action={
+              <Cluster gap="2">
+                <LinkButton href="/admin/settings/payments/new?template=bank" size="sm" variant="secondary">
+                  {t("adminSettings.template")}
+                </LinkButton>
+                <LinkButton href="/admin/settings/payments/new" icon={<Plus size={16} aria-hidden />} size="sm">
+                  {t("adminSettings.add")}
+                </LinkButton>
+              </Cluster>
+            }
+            description={[
+              tp("adminSettings.methodsTotal", paymentMethods.length),
+              tp("adminSettings.methodsActive", activeCount),
+            ].join(" · ")}
+            title={t("adminSettings.manualSection")}
+          />
+          <WellContent>
             {paymentMethods.length === 0 ? (
-              <Empty>
-                <EmptyHeader>
-                  <EmptyTitle>{t("adminSettings.noMethodsTitle")}</EmptyTitle>
-                  <EmptyDescription>{t("adminSettings.noMethodsDescription")}</EmptyDescription>
-                </EmptyHeader>
-              </Empty>
-            ) : null}
-          </CardContent>
-        </Card>
+              <EmptyState
+                description={t("adminSettings.noMethodsDescription")}
+                icon={<CreditCard />}
+                title={t("adminSettings.noMethodsTitle")}
+              />
+            ) : (
+              <ListGroup>
+                {paymentMethods.map((method) => (
+                  <ListRow
+                    description={method.details || t("adminSettings.noDetails")}
+                    key={method.id}
+                    media={<MethodPreview iconUrl={method.iconUrl} title={method.title} />}
+                    title={method.title}
+                    trailing={
+                      <>
+                        {!method.isActive ? <Pill color="gray">{t("adminSettings.hidden")}</Pill> : null}
+                        <LinkButton
+                          aria-label={t("adminSettings.editMethod")}
+                          href={`/admin/settings/payments/${method.id}`}
+                          size="sm"
+                          variant="secondary"
+                        >
+                          <PencilLine size={16} aria-hidden />
+                        </LinkButton>
+                      </>
+                    }
+                  />
+                ))}
+              </ListGroup>
+            )}
+          </WellContent>
+        </Well>
 
         <StickyActions>
           <Button disabled={mutation.isPending} onClick={() => mutation.mutate()}>
-            {mutation.isPending ? t("common.saving") : t("common.save")}
+            {saveLabel}
           </Button>
         </StickyActions>
       </ScreenBody>
@@ -399,12 +373,14 @@ function MethodPreview({
   iconUrl?: string | null
   title: string
 }) {
+  const initials = title.trim().slice(0, 2).toUpperCase()
+
   return (
-    <Avatar className="size-10">
-      {iconUrl ? <AvatarImage src={iconUrl} alt={title} /> : null}
-      <AvatarFallback>
-        {title ? title.slice(0, 2).toUpperCase() : <ImagePlus />}
-      </AvatarFallback>
-    </Avatar>
+    <Avatar
+      fallback={initials || <ImagePlus size={16} aria-hidden />}
+      name={title || "PM"}
+      size="md"
+      src={iconUrl}
+    />
   )
 }

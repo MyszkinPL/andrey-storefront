@@ -1,27 +1,10 @@
 "use client"
 
 import { RefreshCcw, Trash2 } from "lucide-react"
+import { Avatar, Button, Cluster, Pill, Text, Well, WellContent, WellHeader } from "sealui"
 
 import { useTranslate } from "@/components/i18n-provider"
 import type { Order } from "@/components/order-detail/types"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import {
-  Field,
-  FieldContent,
-  FieldDescription,
-  FieldGroup,
-  FieldTitle,
-} from "@/components/ui/field"
 
 /** Everything only an admin sees on an order: the buyer, and the levers. */
 export function AdminOrderPanel({
@@ -52,60 +35,54 @@ export function AdminOrderPanel({
   const t = useTranslate()
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{t("orderDetail.admin")}</CardTitle>
-        <CardDescription>
-          {t("orderDetail.orderNumber", { number: order.number })}
-        </CardDescription>
-        <CardAction>
-          {order.createdBy?.isBanned ? (
-            <Badge variant="destructive">{t("orderDetail.banned")}</Badge>
-          ) : null}
-        </CardAction>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-3">
+    <Well>
+      <WellHeader
+        action={order.createdBy?.isBanned ? <Pill color="red">{t("orderDetail.banned")}</Pill> : undefined}
+        description={t("orderDetail.orderNumber", { number: order.number })}
+        title={t("orderDetail.admin")}
+      />
+      <WellContent>
         {order.createdBy ? (
-          <Field orientation="horizontal">
-            <Avatar className="size-10">
-              {order.createdBy.photoUrl ? (
-                <AvatarImage src={order.createdBy.photoUrl} alt={order.createdBy.firstName} />
-              ) : null}
-              <AvatarFallback>{order.createdBy.firstName.slice(0, 1)}</AvatarFallback>
-            </Avatar>
-            <FieldContent>
-              <FieldTitle className="truncate">{order.createdBy.firstName}</FieldTitle>
-              <FieldDescription className="truncate">
-                {order.createdBy.username
-                  ? `@${order.createdBy.username}`
-                  : t("auth.noUsername")}
-              </FieldDescription>
-            </FieldContent>
-          </Field>
+          <div className="shop-row">
+            <Avatar name={order.createdBy.firstName} size="lg" src={order.createdBy.photoUrl} />
+            <div className="shop-row-copy">
+              <Text as="span" size="sm" truncate>
+                {order.createdBy.firstName}
+              </Text>
+              <Text as="span" size="xs" tone="muted" truncate>
+                {order.createdBy.username ? `@${order.createdBy.username}` : t("auth.noUsername")}
+              </Text>
+            </div>
+          </div>
         ) : null}
-        <FieldGroup className="gap-2 sm:flex sm:flex-row sm:flex-wrap">
+        <Cluster gap="2">
           {canConfirmManualPayment ? (
-            <Button size="sm" disabled={confirmPending} onClick={onConfirm}>
+            <Button disabled={confirmPending} loading={confirmPending} onClick={onConfirm} size="sm">
               {t("orderDetail.confirmPayment")}
             </Button>
           ) : null}
           {canRejectManualPayment ? (
-            <Button size="sm" variant="secondary" disabled={rejectPending} onClick={onReject}>
+            <Button disabled={rejectPending} onClick={onReject} size="sm" variant="secondary">
               {t("orderDetail.reject")}
             </Button>
           ) : null}
           {canRefreshCryptoPayment ? (
-            <Button size="sm" variant="secondary" disabled={refreshPending} onClick={onRefresh}>
-              <RefreshCcw data-icon="inline-start" />
+            <Button
+              disabled={refreshPending}
+              icon={<RefreshCcw size={16} aria-hidden />}
+              loading={refreshPending}
+              onClick={onRefresh}
+              size="sm"
+              variant="secondary"
+            >
               {t("orderDetail.check")}
             </Button>
           ) : null}
-          <Button size="sm" variant="destructive" onClick={onDelete}>
-            <Trash2 data-icon="inline-start" />
+          <Button icon={<Trash2 size={16} aria-hidden />} onClick={onDelete} size="sm" variant="danger">
             {t("common.delete")}
           </Button>
-        </FieldGroup>
-      </CardContent>
-    </Card>
+        </Cluster>
+      </WellContent>
+    </Well>
   )
 }

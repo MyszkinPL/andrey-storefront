@@ -46,3 +46,17 @@ export function orderBadgeVariant(order: OrderLike): OrderBadgeVariant {
   if (!order.isPaid) return "warning"
   return "success"
 }
+
+/** sealui Pill colour for the same states: amber while the buyer owes a
+ * payment, blue while the shop checks it, green once money arrived, red
+ * when it will not, gray for anything that simply ended. */
+export type OrderPillColor = "gray" | "blue" | "purple" | "yellow" | "red" | "green"
+
+export function orderPillColor(order: OrderLike): OrderPillColor {
+  if (order.status === "PAYMENT_REVIEW") return "blue"
+  if (order.status === "CANCELLED" && order.expiredAt) return "gray"
+  if (order.status === "CANCELLED") return "red"
+  if (order.status === "CLOSED" && !order.isPaid) return "gray"
+  if (!order.isPaid) return "yellow"
+  return "green"
+}

@@ -15,10 +15,10 @@ type TelegramContextValue = {
   isTelegram: boolean
 }
 
-/** Hex twins of --background in globals.css; Telegram only takes hex. */
+/** Hex twins of sealui's page background (polar-800 / gray-50); Telegram only takes hex. */
 const APP_BACKGROUND = {
-  dark: "#0a0a0a",
-  light: "#ffffff",
+  dark: "#181818",
+  light: "#f9fafb",
 } as const
 
 const TelegramContext = createContext<TelegramContextValue>({

@@ -22,8 +22,8 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: "cover",
-  // Matches --background in the dark theme (Tailwind neutral-950).
-  themeColor: "#0a0a0a",
+  // Matches sealui's dark page background (polar-800).
+  themeColor: "#181818",
 }
 
 export default function RootLayout({
@@ -32,11 +32,11 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="ru" suppressHydrationWarning className="dark font-sans">
+    <html data-theme="dark" lang="ru" suppressHydrationWarning className="dark font-sans">
       <body className="min-h-dvh bg-background text-foreground">
         {/* Paints the root before any script runs, so the first frame and
             any overscroll area are already the app's dark colour. */}
-        <style>{`html{background-color:#0a0a0a;color-scheme:dark}`}</style>
+        <style>{`html{background-color:#181818;color-scheme:dark}`}</style>
         <Script
           src="https://telegram.org/js/telegram-web-app.js"
           strategy="beforeInteractive"

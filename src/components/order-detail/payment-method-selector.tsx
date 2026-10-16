@@ -1,26 +1,28 @@
 "use client"
 
-import { useState } from "react"
+import { Avatar, Field, SelectParts, Text } from "sealui"
 
 import { useTranslate } from "@/components/i18n-provider"
-import { getAvatarFallback } from "@/components/order-detail/status"
 import type { PaymentOption } from "@/components/order-detail/types"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import {
-  Field,
-  FieldContent,
-  FieldDescription,
-  FieldLabel,
-  FieldTitle,
-} from "@/components/ui/field"
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+
+/** The option row: icon, name, one-line hint. Shared by trigger and list. */
+function OptionRow({ option, hint }: { option: PaymentOption; hint?: boolean }) {
+  return (
+    <span className="shop-inline">
+      <Avatar name={option.title} size="sm" src={option.iconUrl} />
+      <span className="shop-row-copy">
+        <Text as="span" size="sm" truncate>
+          {option.title}
+        </Text>
+        {hint && option.subtitle ? (
+          <Text as="span" size="xs" tone="muted" truncate>
+            {option.subtitle}
+          </Text>
+        ) : null}
+      </span>
+    </span>
+  )
+}
 
 export function PaymentMethodSelector({
   options,
@@ -34,63 +36,43 @@ export function PaymentMethodSelector({
   onSelect: (key: string) => void
 }) {
   const t = useTranslate()
-  const [open, setOpen] = useState(false)
-  const selectedOption = options.find((option) => option.key === selectedKey)
+  const selected = options.find((option) => option.key === selectedKey) ?? null
 
   return (
-    <Field>
-      <FieldLabel>{t("product.paymentMethod")}</FieldLabel>
-      <Select
-        open={open}
-        onOpenChange={(nextOpen) => setOpen(nextOpen)}
-        value={selectedKey || ""}
-        onValueChange={(value) => {
-          if (value) {
-            onSelect(String(value))
-            setOpen(false)
-          }
-        }}
+    <Field
+      description={loading ? t("orderDetail.changingPayment") : undefined}
+      label={t("product.paymentMethod")}
+      nativeLabel={false}
+    >
+      <SelectParts.Root
         disabled={loading}
         items={options.map((option) => ({ value: option.key, label: option.title }))}
+        onValueChange={(value) => {
+          if (typeof value === "string" && value) onSelect(value)
+        }}
+        value={selectedKey ?? ""}
       >
-        <SelectTrigger size="lg">
-          {selectedOption ? (
-            <Avatar className="size-6">
-              {selectedOption.iconUrl ? (
-                <AvatarImage src={selectedOption.iconUrl} alt={selectedOption.title} />
-              ) : null}
-              <AvatarFallback>{getAvatarFallback(selectedOption.title)}</AvatarFallback>
-            </Avatar>
-          ) : null}
-          <SelectValue placeholder={t("product.choosePayment")} />
-        </SelectTrigger>
-        <SelectContent className="max-h-72">
-          <SelectGroup>
-            {options.map((option) => (
-              <SelectItem key={option.key} value={option.key} label={option.title}>
-                {/* The item text slot is a plain inline box, so the avatar
-                    and the name used to touch. A flex row gives them a gap
-                    and room for the one-line hint under the name. */}
-                <span className="flex min-w-0 items-center gap-2.5 py-0.5">
-                  <Avatar className="size-7">
-                    {option.iconUrl ? <AvatarImage src={option.iconUrl} alt={option.title} /> : null}
-                    <AvatarFallback>{getAvatarFallback(option.title)}</AvatarFallback>
-                  </Avatar>
-                  <span className="flex min-w-0 flex-col leading-tight">
-                    <span className="truncate">{option.title}</span>
-                    {option.subtitle ? (
-                      <span className="truncate text-muted-foreground text-xs">{option.subtitle}</span>
-                    ) : null}
-                  </span>
-                </span>
-              </SelectItem>
-            ))}
-          </SelectGroup>
-        </SelectContent>
-      </Select>
-      {loading ? (
-        <FieldDescription>{t("orderDetail.changingPayment")}</FieldDescription>
-      ) : null}
+        <SelectParts.Trigger>
+          {selected ? <OptionRow option={selected} /> : <SelectParts.Value placeholder={t("product.choosePayment")} />}
+          <SelectParts.Icon />
+        </SelectParts.Trigger>
+        <SelectParts.Portal>
+          <SelectParts.Positioner>
+            <SelectParts.Popup>
+              <SelectParts.List>
+                {options.map((option) => (
+                  <SelectParts.Item key={option.key} value={option.key}>
+                    <SelectParts.ItemIndicator />
+                    <SelectParts.ItemText>
+                      <OptionRow hint option={option} />
+                    </SelectParts.ItemText>
+                  </SelectParts.Item>
+                ))}
+              </SelectParts.List>
+            </SelectParts.Popup>
+          </SelectParts.Positioner>
+        </SelectParts.Portal>
+      </SelectParts.Root>
     </Field>
   )
 }
@@ -105,15 +87,16 @@ export function PaymentMethodSummary({
   iconUrl: string | null
 }) {
   return (
-    <Field orientation="horizontal">
-      <Avatar className="size-10">
-        {iconUrl ? <AvatarImage src={iconUrl} alt={title} /> : null}
-        <AvatarFallback>{getAvatarFallback(title)}</AvatarFallback>
-      </Avatar>
-      <FieldContent>
-        <FieldTitle>{title}</FieldTitle>
-        <FieldDescription className="truncate">{description}</FieldDescription>
-      </FieldContent>
-    </Field>
+    <div className="shop-row">
+      <Avatar name={title} size="lg" src={iconUrl} />
+      <div className="shop-row-copy">
+        <Text as="span" size="sm">
+          {title}
+        </Text>
+        <Text as="span" size="xs" tone="muted" truncate>
+          {description}
+        </Text>
+      </div>
+    </div>
   )
 }

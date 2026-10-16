@@ -2,9 +2,9 @@
 
 import { ImageUp, Trash2 } from "lucide-react"
 import { useRef } from "react"
+import { Button, Cluster } from "sealui"
 
 import { useTranslate } from "@/components/i18n-provider"
-import { Button } from "@/components/ui/button"
 
 /**
  * A native file input renders the browser's own control, which ignores the
@@ -30,10 +30,10 @@ export function ImagePicker({
   const inputRef = useRef<HTMLInputElement>(null)
 
   return (
-    <div className="flex items-center gap-2">
+    <Cluster gap="2" align="center">
       <input
         accept={accept}
-        className="sr-only"
+        className="shop-visually-hidden"
         id={id}
         onChange={(event) => {
           const file = event.target.files?.[0] || null
@@ -47,12 +47,11 @@ export function ImagePicker({
 
       <Button
         disabled={disabled}
+        icon={<ImageUp size={16} aria-hidden />}
         onClick={() => inputRef.current?.click()}
         size="sm"
-        type="button"
         variant="outline"
       >
-        <ImageUp data-icon="inline-start" />
         {hasImage ? t("imagePicker.replace") : t("imagePicker.choose")}
       </Button>
 
@@ -61,13 +60,12 @@ export function ImagePicker({
           aria-label={t("imagePicker.remove")}
           disabled={disabled}
           onClick={onClear}
-          size="icon-sm"
-          type="button"
+          size="icon"
           variant="ghost"
         >
-          <Trash2 />
+          <Trash2 size={16} aria-hidden />
         </Button>
       ) : null}
-    </div>
+    </Cluster>
   )
 }

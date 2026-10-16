@@ -6,7 +6,6 @@ import { Fragment } from "react"
 import { useTranslate } from "@/components/i18n-provider"
 import type { Order } from "@/components/order-detail/types"
 import type { TranslationKey } from "@/lib/i18n"
-import { cn } from "@/lib/utils"
 
 type Step = { key: TranslationKey; state: "done" | "active" | "upcoming" }
 
@@ -38,48 +37,32 @@ export function orderSteps(order: Order): Step[] {
   }))
 }
 
-export function OrderProgress({ order, className }: { order: Order; className?: string }) {
+export function OrderProgress({ order }: { order: Order }) {
   const t = useTranslate()
   if (order.status === "CANCELLED") return null
 
   const steps = orderSteps(order)
 
   return (
-    <ol aria-label={t("orderProgress.label")} className={cn("flex items-start", className)}>
+    <ol aria-label={t("orderProgress.label")} className="shop-stepper">
       {steps.map((step, index) => (
         <Fragment key={step.key}>
           {index > 0 ? (
             <li
               aria-hidden="true"
-              className={cn(
-                // Sits at the vertical centre of the 28px circle.
-                "mt-3.5 h-0.5 flex-1 rounded-full transition-colors",
-                steps[index - 1].state === "done" ? "bg-primary" : "bg-border",
-              )}
+              className="shop-stepper-line"
+              data-done={steps[index - 1].state === "done" ? "" : undefined}
             />
           ) : null}
           <li
             aria-current={step.state === "active" ? "step" : undefined}
-            className="flex w-16 shrink-0 flex-col items-center gap-1.5 text-center"
+            className="shop-stepper-step"
+            data-state={step.state}
           >
-            <span
-              className={cn(
-                "flex size-7 items-center justify-center rounded-full border-2 font-semibold text-xs tabular-nums transition-colors",
-                step.state === "done" && "border-primary bg-primary text-primary-foreground",
-                step.state === "active" && "border-primary bg-primary/10 text-primary",
-                step.state === "upcoming" && "border-border bg-muted text-muted-foreground",
-              )}
-            >
-              {step.state === "done" ? <Check className="size-3.5" /> : index + 1}
+            <span className="shop-stepper-dot">
+              {step.state === "done" ? <Check aria-hidden /> : index + 1}
             </span>
-            <span
-              className={cn(
-                "text-xs leading-4",
-                step.state === "upcoming" ? "text-muted-foreground" : "font-medium text-foreground",
-              )}
-            >
-              {t(step.key)}
-            </span>
+            <span className="shop-stepper-label">{t(step.key)}</span>
           </li>
         </Fragment>
       ))}

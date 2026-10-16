@@ -19,7 +19,7 @@ export function ConfirmDeleteDialog({
   return (
     <ResponsiveDialog
       confirmLabel={t("common.delete")}
-      confirmVariant="destructive"
+      confirmVariant="danger"
       description={t("orderDetail.deleteDescription")}
       loading={loading}
       onConfirm={onConfirm}

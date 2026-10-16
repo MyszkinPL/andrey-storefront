@@ -1,24 +1,20 @@
-import Link from "next/link"
+"use client"
 
-import {
-  Frame,
-  FrameDescription,
-  FramePanel,
-  FrameTitle,
-} from "@/components/ui/frame"
-import { Skeleton } from "@/components/ui/skeleton"
-import { cn } from "@/lib/utils"
+import Link from "next/link"
+import type { ReactNode } from "react"
+import { List, ListItem, Text } from "sealui"
 
 /**
- * List rows across the app are the same shape — optional media, a title with
- * one or two lines of detail, and something trailing. Composed from coss's
- * Frame primitives so every list shares the design system's panel styling.
+ * List rows across the app are the same shape: optional media, a title with
+ * one line of detail, and something trailing. Built on sealui's List panel,
+ * so every list shares the design system's border, radius and dividers.
  */
-export function ListGroup({
-  className,
-  ...props
-}: React.ComponentProps<typeof Frame>) {
-  return <Frame className={cn("gap-1", className)} {...props} />
+export function ListGroup({ children }: { children: ReactNode }) {
+  return (
+    <List size="small">
+      {children}
+    </List>
+  )
 }
 
 export function ListRow({
@@ -27,122 +23,78 @@ export function ListRow({
   title,
   description,
   trailing,
-  className,
   onClick,
 }: {
   href?: string
-  media?: React.ReactNode
-  title: React.ReactNode
-  description?: React.ReactNode
-  trailing?: React.ReactNode
-  className?: string
+  media?: ReactNode
+  title: ReactNode
+  description?: ReactNode
+  trailing?: ReactNode
   onClick?: () => void
 }) {
-  const panel = (
-    <FramePanel
-      className={cn(
-        "flex h-full items-center gap-3 p-3",
-        (href || onClick) && "transition-colors hover:bg-accent/40",
-        className,
-      )}
-    >
-      {media ? <div className="shrink-0">{media}</div> : null}
-
-      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <FrameTitle className="truncate">{title}</FrameTitle>
+  const body = (
+    <div className="shop-row">
+      {media ? <div className="shop-row-media">{media}</div> : null}
+      <div className="shop-row-copy">
+        <Text as="span" size="sm" truncate>
+          {title}
+        </Text>
         {description ? (
-          <FrameDescription className="truncate text-xs">
+          <Text as="span" size="xs" tone="muted" truncate>
             {description}
-          </FrameDescription>
+          </Text>
         ) : null}
       </div>
-
-      {trailing ? <div className="shrink-0">{trailing}</div> : null}
-    </FramePanel>
+      {trailing ? <div className="shop-row-trailing">{trailing}</div> : null}
+    </div>
   )
-
-  // The row is a single tab stop, and coss puts a ring on everything it owns;
-  // these wrappers are ours, so they had none and a keyboard user could not
-  // see where they were.
-  const focusRing =
-    "block rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background"
 
   if (href) {
     return (
-      <Link className={focusRing} href={href}>
-        {panel}
+      <Link className="shop-link" href={href}>
+        <ListItem size="small" onSelect={() => undefined}>
+          {body}
+        </ListItem>
       </Link>
     )
   }
 
   if (onClick) {
     return (
-      <button className={cn(focusRing, "w-full text-left")} onClick={onClick} type="button">
-        {panel}
-      </button>
+      <ListItem size="small" onSelect={onClick}>
+        {body}
+      </ListItem>
     )
   }
 
-  return panel
+  return <ListItem size="small">{body}</ListItem>
 }
 
-/** Square media box for thumbnails and icons inside a row. */
-export function ListRowMedia({
-  className,
-  children,
-}: {
-  className?: string
-  children: React.ReactNode
-}) {
-  return (
-    <div
-      className={cn(
-        "flex size-10 items-center justify-center overflow-hidden rounded-xl bg-muted text-muted-foreground [&_svg:not([class*='size-'])]:size-4",
-        className,
-      )}
-    >
-      {children}
-    </div>
-  )
+/** Rows that stack two per line from `lg`. */
+export function ListColumns({ children }: { children: ReactNode }) {
+  return <div className="shop-two-col">{children}</div>
 }
 
 /**
- * Loading placeholder shaped like the rows it replaces. Every list used to show
- * the same "nothing here" card while fetching, which reads as an empty result
- * and makes the layout jump once data lands.
+ * Loading placeholder shaped like the rows it replaces, so the layout does
+ * not jump once data lands.
  */
-export function ListSkeleton({
-  className,
-  media = true,
-  mediaClassName,
-  rows = 4,
-  trailing = true,
-}: {
-  className?: string
-  media?: boolean
-  /** Match the real row's media box so the layout does not jump. */
-  mediaClassName?: string
-  rows?: number
-  trailing?: boolean
-}) {
-  // Fixed widths rather than random ones: a skeleton has to render the same on
-  // the server and the client, and the variation only needs to look organic.
-  const widths = ["w-2/5", "w-1/2", "w-1/3", "w-2/5", "w-5/12"]
-
+export function ListSkeleton({ rows = 4, media = true }: { rows?: number; media?: boolean }) {
   return (
-    <ListGroup aria-hidden="true" className={className}>
-      {Array.from({ length: rows }, (_, index) => (
-        <FramePanel className="flex h-full items-center gap-3 p-3" key={index}>
-          {media ? (
-            <Skeleton className={cn("size-10 shrink-0 rounded-xl", mediaClassName)} />
-          ) : null}
-          <div className="flex min-w-0 flex-1 flex-col gap-2">
-            <Skeleton className={cn("h-3.5 max-w-40", widths[index % widths.length])} />
-            <Skeleton className="h-3 w-3/5 max-w-56" />
-          </div>
-          {trailing ? <Skeleton className="h-5 w-16 shrink-0 rounded-full" /> : null}
-        </FramePanel>
-      ))}
-    </ListGroup>
+    <div aria-hidden="true">
+      <List size="small">
+        {Array.from({ length: rows }, (_, index) => (
+          <ListItem key={index} size="small">
+            <div className="shop-row">
+              {media ? <div className="shop-row-media" /> : null}
+              <div className="shop-row-copy">
+                <Text as="span" loading placeholderText="Loading a product name" size="sm" />
+                <Text as="span" loading placeholderText="and a line of detail" size="xs" />
+              </div>
+            </div>
+          </ListItem>
+        ))}
+      </List>
+    </div>
   )
 }

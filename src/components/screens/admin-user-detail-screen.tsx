@@ -3,39 +3,29 @@
 import { useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Ban, History, ShieldCheck, ShieldX } from "lucide-react"
+import {
+  Avatar,
+  Button,
+  Cluster,
+  DetailRow,
+  EmptyState,
+  Heading,
+  Pill,
+  Text,
+  Well,
+  WellContent,
+  WellHeader,
+} from "sealui"
 
 import { AccessStateScreen } from "@/components/access-state-screen"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyTitle,
-} from "@/components/ui/empty"
-import {
-  Field,
-  FieldDescription,
-  FieldGroup,
-  FieldLabel,
-} from "@/components/ui/field"
-import { ListGroup, ListRow, ListRowMedia } from "@/components/list-row"
-import { Screen, ScreenBody, ScreenHeader, ScreenState } from "@/components/screen"
 import { useI18n } from "@/components/i18n-provider"
+import { ListGroup, ListRow } from "@/components/list-row"
 import { ResponsiveDialog } from "@/components/responsive-dialog"
+import { Screen, ScreenBody, ScreenHeader, ScreenState } from "@/components/screen"
 import { useNotify } from "@/hooks/use-notify"
+import { getAdminUser, getMe, updateAdminUserModeration } from "@/lib/api"
 import { formatPrice } from "@/lib/format"
 import type { TranslationKey } from "@/lib/i18n"
-import { getAdminUser, getMe, updateAdminUserModeration } from "@/lib/api"
 
 export function AdminUserDetailScreen({ userId }: { userId: string }) {
   const { t, tp, locale, currency } = useI18n()
@@ -72,7 +62,6 @@ export function AdminUserDetailScreen({ userId }: { userId: string }) {
     },
   })
 
-  
   if (meData && meData.user.role !== "ADMIN") {
     return (
       <AccessStateScreen
@@ -108,6 +97,7 @@ export function AdminUserDetailScreen({ userId }: { userId: string }) {
   const isCurrentUser = meData?.user.id === user.id
   const canBan = user.role !== "ADMIN"
   const canRevokeAdmin = user.role === "ADMIN" && !isCurrentUser
+  const roleLabel = user.role === "ADMIN" ? t("adminUsers.admin") : t("profile.buyer")
 
   return (
     <Screen noTabBar>
@@ -117,100 +107,93 @@ export function AdminUserDetailScreen({ userId }: { userId: string }) {
         subtitle={user.username ? `@${user.username}` : `tg:${user.telegramId}`}
         trailing={
           user.isBanned ? (
-            <Badge variant="destructive">{t("adminUsers.banned")}</Badge>
+            <Pill color="red">{t("adminUsers.banned")}</Pill>
           ) : user.role === "ADMIN" ? (
-            <Badge variant="secondary">{t("adminUsers.admin")}</Badge>
+            <Pill color="blue">{t("adminUsers.admin")}</Pill>
           ) : null
         }
       />
 
       <ScreenBody>
-        <Card>
-          <CardHeader>
-            <Avatar className="size-10">
-              {user.photoUrl ? <AvatarImage src={user.photoUrl} alt={displayName} /> : null}
-              <AvatarFallback>{user.firstName.slice(0, 1)}</AvatarFallback>
-            </Avatar>
-            <CardTitle>{t("adminUserDetail.profile")}</CardTitle>
-            <CardDescription>
-              {user.role === "ADMIN" ? t("profile.administrator") : t("profile.buyer")} ·{" "}
-              {tp("adminUsers.countActive", user.activeOrderCount)}
-            </CardDescription>
-            <CardAction className="flex flex-wrap justify-end gap-2">
-              {user.role === "ADMIN" ? (
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  disabled={!canRevokeAdmin || moderationMutation.isPending}
-                  onClick={() => setConfirmRole("USER")}
-                >
-                  <ShieldX data-icon="inline-start" />
-                  {t("adminUserDetail.revokeAdmin")}
-                </Button>
-              ) : (
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  disabled={moderationMutation.isPending}
-                  onClick={() => setConfirmRole("ADMIN")}
-                >
-                  <ShieldCheck data-icon="inline-start" />
-                  {t("adminUserDetail.grantAdmin")}
-                </Button>
-              )}
-              {canBan ? (
-                <Button
-                  size="sm"
-                  variant={user.isBanned ? "secondary" : "destructive"}
-                  disabled={moderationMutation.isPending}
-                  onClick={() => {
-                    if (user.isBanned) {
-                      moderationMutation.mutate({ isBanned: false })
-                    } else {
-                      setConfirmBanOpen(true)
-                    }
-                  }}
-                >
-                  {!user.isBanned ? <Ban data-icon="inline-start" /> : null}
-                  {user.isBanned ? t("adminUserDetail.unban") : t("adminUserDetail.ban")}
-                </Button>
-              ) : null}
-            </CardAction>
-          </CardHeader>
-          <CardContent>
-            <FieldGroup>
-              <Field orientation="horizontal">
-                <FieldLabel>Telegram ID</FieldLabel>
-                <FieldDescription className="text-right">{user.telegramId}</FieldDescription>
-              </Field>
-              <Field orientation="horizontal">
-                <FieldLabel>Username</FieldLabel>
-                <FieldDescription className="text-right">
-                  {user.username ? `@${user.username}` : t("adminUserDetail.none")}
-                </FieldDescription>
-              </Field>
-              <Field orientation="horizontal">
-                <FieldLabel>{t("adminUserDetail.role")}</FieldLabel>
-                <FieldDescription className="text-right">
-                  {user.role === "ADMIN" ? t("adminUsers.admin") : t("profile.buyer")}
-                </FieldDescription>
-              </Field>
-              <Field orientation="horizontal">
-                <FieldLabel>{t("adminUserDetail.activeOrders")}</FieldLabel>
-                <FieldDescription className="text-right">{user.activeOrderCount}</FieldDescription>
-              </Field>
-            </FieldGroup>
-          </CardContent>
-        </Card>
+        <Well>
+          <div className="shop-row">
+            <Avatar name={displayName || user.firstName} size="lg" src={user.photoUrl} />
+            <div className="shop-row-copy">
+              <Heading as="h2" size="sm" truncate>
+                {t("adminUserDetail.profile")}
+              </Heading>
+              <Text as="p" size="sm" tone="muted" truncate>
+                {`${user.role === "ADMIN" ? t("profile.administrator") : t("profile.buyer")} · ${tp(
+                  "adminUsers.countActive",
+                  user.activeOrderCount,
+                )}`}
+              </Text>
+            </div>
+          </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("adminUserDetail.orderHistory")}</CardTitle>
-            <CardDescription>
-              {tp("adminUserDetail.orderHistoryRecent", user.orders.length)}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
+          {/* Role first, ban second: the destructive action sits after the
+              reversible one and stays visually quieter. */}
+          <Cluster>
+            {user.role === "ADMIN" ? (
+              <Button
+                disabled={!canRevokeAdmin || moderationMutation.isPending}
+                icon={<ShieldX size={16} aria-hidden />}
+                onClick={() => setConfirmRole("USER")}
+                size="sm"
+                variant="secondary"
+              >
+                {t("adminUserDetail.revokeAdmin")}
+              </Button>
+            ) : (
+              <Button
+                disabled={moderationMutation.isPending}
+                icon={<ShieldCheck size={16} aria-hidden />}
+                onClick={() => setConfirmRole("ADMIN")}
+                size="sm"
+                variant="secondary"
+              >
+                {t("adminUserDetail.grantAdmin")}
+              </Button>
+            )}
+            {canBan ? (
+              <Button
+                disabled={moderationMutation.isPending}
+                icon={user.isBanned ? undefined : <Ban size={16} aria-hidden />}
+                onClick={() => {
+                  if (user.isBanned) {
+                    moderationMutation.mutate({ isBanned: false })
+                  } else {
+                    setConfirmBanOpen(true)
+                  }
+                }}
+                size="sm"
+                variant={user.isBanned ? "secondary" : "danger"}
+              >
+                {user.isBanned ? t("adminUserDetail.unban") : t("adminUserDetail.ban")}
+              </Button>
+            ) : null}
+          </Cluster>
+
+          <WellContent>
+            <DetailRow label="Telegram ID" mono value={String(user.telegramId)} />
+            <DetailRow
+              label="Username"
+              value={user.username ? `@${user.username}` : t("adminUserDetail.none")}
+            />
+            <DetailRow label={t("adminUserDetail.role")} value={roleLabel} />
+            <DetailRow
+              label={t("adminUserDetail.activeOrders")}
+              value={String(user.activeOrderCount)}
+            />
+          </WellContent>
+        </Well>
+
+        <Well>
+          <WellHeader
+            description={tp("adminUserDetail.orderHistoryRecent", user.orders.length)}
+            title={t("adminUserDetail.orderHistory")}
+          />
+          <WellContent>
             {user.orders.length > 0 ? (
               <ListGroup>
                 {user.orders.map((order) => (
@@ -222,11 +205,7 @@ export function AdminUserDetailScreen({ userId }: { userId: string }) {
                     } · ${t(orderStatusKey2(order.status, order.isPaid))}`}
                     href={`/orders/${order.id}`}
                     key={order.id}
-                    media={
-                      <ListRowMedia>
-                        <History />
-                      </ListRowMedia>
-                    }
+                    media={<History />}
                     title={
                       order.productTitle ||
                       t("adminUserDetail.orderFallback", { number: order.number })
@@ -235,20 +214,19 @@ export function AdminUserDetailScreen({ userId }: { userId: string }) {
                 ))}
               </ListGroup>
             ) : (
-              <Empty>
-                <EmptyHeader>
-                  <EmptyTitle>{t("adminUserDetail.noOrdersTitle")}</EmptyTitle>
-                  <EmptyDescription>{t("adminUserDetail.noOrdersDescription")}</EmptyDescription>
-                </EmptyHeader>
-              </Empty>
+              <EmptyState
+                description={t("adminUserDetail.noOrdersDescription")}
+                icon={<History />}
+                title={t("adminUserDetail.noOrdersTitle")}
+              />
             )}
-          </CardContent>
-        </Card>
+          </WellContent>
+        </Well>
       </ScreenBody>
 
       <ResponsiveDialog
         confirmLabel={t("adminUserDetail.ban")}
-        confirmVariant="destructive"
+        confirmVariant="danger"
         description={t("adminUserDetail.banDescription")}
         loading={moderationMutation.isPending}
         onConfirm={() => moderationMutation.mutate({ isBanned: true })}
@@ -263,7 +241,7 @@ export function AdminUserDetailScreen({ userId }: { userId: string }) {
             ? t("adminUserDetail.grantAction")
             : t("adminUserDetail.revokeAction")
         }
-        confirmVariant={confirmRole === "USER" ? "destructive" : "default"}
+        confirmVariant={confirmRole === "USER" ? "danger" : "primary"}
         description={
           confirmRole === "ADMIN"
             ? t("adminUserDetail.grantDescription")
@@ -285,7 +263,6 @@ export function AdminUserDetailScreen({ userId }: { userId: string }) {
   )
 }
 
-
 function orderStatusKey2(status: string, isPaid: boolean): TranslationKey {
   if (status === "CANCELLED") return "adminUserDetail.statusCancelled"
   if (status === "CLOSED") {
@@ -295,4 +272,3 @@ function orderStatusKey2(status: string, isPaid: boolean): TranslationKey {
   if (!isPaid) return "adminUserDetail.statusPayment"
   return "adminUserDetail.statusPaid"
 }
-

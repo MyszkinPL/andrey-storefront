@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // sealui is vendored as a git subtree and linted in its own repo.
+    "vendor/**",
   ]),
 ]);
 

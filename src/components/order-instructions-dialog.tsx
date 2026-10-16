@@ -1,11 +1,10 @@
 "use client"
 
 import { useState } from "react"
+import { Checkbox, Stack, Text } from "sealui"
 
 import { useI18n } from "@/components/i18n-provider"
 import { ResponsiveDialog } from "@/components/responsive-dialog"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Label } from "@/components/ui/label"
 import { ORDER_PAYMENT_WINDOW_MS } from "@/lib/order-timer"
 
 const STORAGE_KEY = "andrey_order_instructions_dismissed"
@@ -28,8 +27,7 @@ function dismissOrderInstructions() {
 /**
  * Shown between "place order" and the order itself for a manual transfer.
  * The steps are the whole payment flow in three lines, and the buyer has to
- * tick that they read them before the order is created — the support chat
- * used to get the same "where do I send the money?" question every day.
+ * tick that they read them before the order is created.
  */
 export function OrderInstructionsDialog({
   open,
@@ -69,44 +67,41 @@ export function OrderInstructionsDialog({
       open={open}
       title={t("orderInstructions.title")}
     >
-      <div className="flex flex-col gap-5">
-        <ol className="flex flex-col gap-3">
+      <Stack gap="4">
+        <ol className="shop-steps">
           {steps.map((step, index) => (
-            <li className="flex items-start gap-3" key={step}>
-              <span
-                aria-hidden="true"
-                className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary font-semibold text-primary-foreground text-xs tabular-nums"
-              >
+            <li key={step}>
+              <span aria-hidden="true" className="shop-steps-num">
                 {index + 1}
               </span>
-              <span className="text-sm leading-6">{step}</span>
+              <Text as="span" size="sm">
+                {step}
+              </Text>
             </li>
           ))}
         </ol>
 
-        <p className="rounded-lg bg-muted px-3 py-2 text-muted-foreground text-xs">
-          {t("orderInstructions.timerNote", {
-            minutes: Math.round(ORDER_PAYMENT_WINDOW_MS / 60_000),
-          })}
-        </p>
-
-        <div className="flex flex-col gap-3">
-          <Label className="cursor-pointer items-center gap-3 font-normal">
-            <Checkbox
-              checked={acknowledged}
-              onCheckedChange={(checked) => setAcknowledged(checked === true)}
-            />
-            {t("orderInstructions.acknowledged")}
-          </Label>
-          <Label className="cursor-pointer items-center gap-3 font-normal text-muted-foreground">
-            <Checkbox
-              checked={dontShowAgain}
-              onCheckedChange={(checked) => setDontShowAgain(checked === true)}
-            />
-            {t("orderInstructions.dontShowAgain")}
-          </Label>
+        <div className="shop-note">
+          <Text as="p" size="xs" tone="muted">
+            {t("orderInstructions.timerNote", {
+              minutes: Math.round(ORDER_PAYMENT_WINDOW_MS / 60_000),
+            })}
+          </Text>
         </div>
-      </div>
+
+        <Stack gap="3">
+          <Checkbox
+            checked={acknowledged}
+            label={t("orderInstructions.acknowledged")}
+            onCheckedChange={setAcknowledged}
+          />
+          <Checkbox
+            checked={dontShowAgain}
+            label={t("orderInstructions.dontShowAgain")}
+            onCheckedChange={setDontShowAgain}
+          />
+        </Stack>
+      </Stack>
     </ResponsiveDialog>
   )
 }

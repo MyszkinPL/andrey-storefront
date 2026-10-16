@@ -3,11 +3,10 @@
 import { useMutation } from "@tanstack/react-query"
 import { FileCheck2, FileUp, Paperclip } from "lucide-react"
 import { useRef, useState } from "react"
+import { Button, Text } from "sealui"
 
 import { useI18n } from "@/components/i18n-provider"
 import { ResponsiveDialog } from "@/components/responsive-dialog"
-import { Button } from "@/components/ui/button"
-import { Field, FieldContent, FieldDescription, FieldTitle } from "@/components/ui/field"
 import { useNotify } from "@/hooks/use-notify"
 import { markManualOrderPaid, uploadOrderReceipt } from "@/lib/api"
 import type { OrderReceiptInfo } from "@/lib/contracts"
@@ -15,10 +14,10 @@ import { RECEIPT_MAX_MB, validateReceiptFile } from "@/lib/receipt-constants"
 import { formatBytes } from "@/lib/telegram-format"
 
 /**
- * "I have paid" for a manual transfer. The receipt is not an optional extra
- * any more: the sheet asks for the PDF first and only then marks the order
- * for review, so an admin never opens a "paid" order with nothing to check.
- * A receipt attached earlier counts, and can be replaced here.
+ * "I have paid" for a manual transfer. The receipt is not an optional extra:
+ * the sheet asks for the PDF first and only then marks the order for review,
+ * so an admin never opens a "paid" order with nothing to check. A receipt
+ * attached earlier counts, and can be replaced here.
  */
 export function ConfirmPaymentDialog({
   open,
@@ -55,11 +54,7 @@ export function ConfirmPaymentDialog({
   })
 
   function pick(next: File) {
-    const validationError = validateReceiptFile({
-      name: next.name,
-      size: next.size,
-      type: next.type,
-    })
+    const validationError = validateReceiptFile({ name: next.name, size: next.size, type: next.type })
     if (validationError === "size") {
       setError(t("receipt.errorSize", { limit: RECEIPT_MAX_MB }))
     } else if (validationError === "empty") {
@@ -98,7 +93,7 @@ export function ConfirmPaymentDialog({
     >
       <input
         accept="application/pdf,.pdf"
-        className="hidden"
+        className="shop-visually-hidden"
         onChange={(event) => {
           const next = event.target.files?.[0]
           // Reset so picking the same file twice still fires a change event.
@@ -109,33 +104,32 @@ export function ConfirmPaymentDialog({
         type="file"
       />
 
-      <Field className="rounded-xl border bg-muted/40 p-3">
-        <div className="flex w-full items-center gap-3">
+      <div className="shop-slot">
+        <div className="shop-row">
           {hasSomething ? (
-            <FileCheck2 className="size-5 shrink-0 text-success-foreground" />
+            <FileCheck2 size={20} aria-hidden style={{ color: "var(--seal-text-success)" }} />
           ) : (
-            <Paperclip className="size-5 shrink-0 text-muted-foreground" />
+            <Paperclip size={20} aria-hidden style={{ color: "var(--seal-text-secondary)" }} />
           )}
-          <FieldContent>
-            <FieldTitle>{t("receipt.title")}</FieldTitle>
-            <FieldDescription
-              className={error ? "text-destructive-foreground" : "truncate"}
-            >
+          <div className="shop-row-copy">
+            <Text as="span" size="sm">
+              {t("receipt.title")}
+            </Text>
+            <Text as="span" size="xs" tone={error ? "danger" : "muted"} truncate={!error}>
               {error || attached}
-            </FieldDescription>
-          </FieldContent>
+            </Text>
+          </div>
         </div>
         <Button
-          className="w-full"
           disabled={mutation.isPending}
+          fullWidth
+          icon={<FileUp size={16} aria-hidden />}
           onClick={() => inputRef.current?.click()}
-          type="button"
-          variant={hasSomething ? "outline" : "default"}
+          variant={hasSomething ? "outline" : "primary"}
         >
-          <FileUp data-icon="inline-start" />
           {hasSomething ? t("receipt.replace") : t("receipt.choose")}
         </Button>
-      </Field>
+      </div>
     </ResponsiveDialog>
   )
 }

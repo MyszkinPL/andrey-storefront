@@ -1,5 +1,3 @@
-import { cn } from "@/lib/utils"
-
 /**
  * The shop mark: four diagonal bars with the ® sign, on a 569×215 canvas
  * (2.65:1). The height drives the size and the width follows. It draws in
@@ -18,7 +16,7 @@ export function ShopLogo({
     <svg
       aria-hidden={label ? undefined : "true"}
       aria-label={label || undefined}
-      className={cn("h-6 w-auto shrink-0 text-foreground", className)}
+      className={["h-6 w-auto shrink-0 text-foreground", className].filter(Boolean).join(" ")}
       fill="currentColor"
       role="img"
       viewBox="0 0 569 215"

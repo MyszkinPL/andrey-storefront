@@ -4,22 +4,13 @@ import Link from "next/link"
 import { useMemo, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { PackageSearch } from "lucide-react"
+import { EmptyState, Tabs, Text } from "sealui"
 
-import { Card, CardHeader } from "@/components/ui/card"
-import { Skeleton } from "@/components/ui/skeleton"
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@/components/ui/empty"
-import { SearchInput } from "@/components/search-input"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useI18n } from "@/components/i18n-provider"
 import { ProfileAvatarLink } from "@/components/profile-avatar-link"
 import { Screen, ScreenBody, ScreenError } from "@/components/screen"
+import { SearchInput } from "@/components/search-input"
 import { ShopLogo } from "@/components/shop-logo"
-import { useI18n } from "@/components/i18n-provider"
 import { getMe, getProducts } from "@/lib/api"
 import { formatPrice } from "@/lib/format"
 
@@ -69,9 +60,13 @@ export function CatalogScreen() {
   return (
     <Screen>
       {/* The mark alone: the name printed beside it was the wordmark twice. */}
-      <header className="mb-2 flex items-center justify-between gap-3 px-1 lg:mb-4">
-        <ShopLogo aria-label={shopName} className="h-7 lg:h-8" />
-        <ProfileAvatarLink />
+      <header className="shop-header">
+        <div className="shop-header-copy">
+          <ShopLogo aria-label={shopName} className="h-7 lg:h-8" />
+        </div>
+        <div className="shop-header-side">
+          <ProfileAvatarLink />
+        </div>
       </header>
 
       <ScreenBody>
@@ -86,70 +81,65 @@ export function CatalogScreen() {
         ) : (
           <>
             {/* Search and categories stack on phones and share a row on desktop. */}
-            <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:gap-3">
-            <SearchInput
-              className="lg:max-w-xs"
-              onValueChange={setSearch}
-              placeholder={t("catalog.searchPlaceholder")}
-              value={search}
-            />
+            <div className="shop-toolbar">
+              <SearchInput
+                onValueChange={setSearch}
+                placeholder={t("catalog.searchPlaceholder")}
+                value={search}
+              />
 
-            {/* Tabs rather than a toggle group: exactly one category is always
-                active, so the catalog can never end up filtered to nothing.
-                The row scrolls because the number of categories is unbounded. */}
-            <div className="-mx-3 overflow-x-auto px-3 [-ms-overflow-style:none] [scrollbar-width:none] sm:-mx-4 sm:px-4 lg:mx-0 lg:px-0 [&::-webkit-scrollbar]:hidden">
-              <Tabs onValueChange={(value) => setCategory(String(value))} value={category}>
-                <TabsList className="w-max">
-                  {categories.map((item) => (
-                    <TabsTrigger className="shrink-0" key={item} value={item}>
-                      {item === ALL_CATEGORIES ? t("catalog.allCategories") : item}
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
-              </Tabs>
-            </div>
+              {/* Tabs rather than a toggle group: exactly one category is always
+                  active, so the catalog can never end up filtered to nothing.
+                  The row scrolls because the number of categories is unbounded. */}
+              <div className="shop-scroll-x">
+                <Tabs
+                  aria-label={t("catalog.allCategories")}
+                  items={categories.map((item) => ({
+                    value: item,
+                    label: item === ALL_CATEGORIES ? t("catalog.allCategories") : item,
+                  }))}
+                  onValueChange={(value) => setCategory(String(value))}
+                  value={category}
+                />
+              </div>
             </div>
 
             {filtered.length === 0 ? (
-              <CatalogEmpty
-                title={t("catalog.emptyTitle")}
+              <EmptyState
                 description={t("catalog.emptyDescription")}
+                icon={<PackageSearch />}
+                title={t("catalog.emptyTitle")}
               />
             ) : (
               /* A shop sells with pictures. The list row gave the cover 64px
                  and the description most of the width, which on a phone was
                  three truncated words; the card gives the cover the whole
                  column and keeps only what decides a tap: name and price. */
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:gap-3 xl:grid-cols-4">
+              <div className="shop-grid">
                 {filtered.map((product) => (
-                  <Link
-                    className="group block rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background"
-                    href={`/product/${product.id}`}
-                    key={product.id}
-                  >
-                    <Card className="h-full gap-2 overflow-hidden p-2 transition-colors hover:bg-accent/40">
-                      <div className="flex aspect-square w-full items-center justify-center overflow-hidden rounded-xl bg-muted font-semibold text-2xl text-muted-foreground">
-                        <ProductThumbnail
-                          imageUrl={product.imageUrl}
-                          title={product.title}
-                        />
-                      </div>
+                  <Link className="shop-product" href={`/product/${product.id}`} key={product.id}>
+                    <div className="shop-product-cover">
+                      <ProductThumbnail imageUrl={product.imageUrl} title={product.title} />
+                    </div>
 
-                      <div className="flex min-w-0 flex-col gap-0.5 px-1 pb-1">
-                        <p className="truncate font-medium text-sm">{product.title}</p>
-                        <p className="font-semibold text-base tabular-nums">
-                          {formatPrice(product.priceRub, locale, currency)}
-                        </p>
-                        <p className="truncate text-muted-foreground text-xs">
-                          {product.category || t("catalog.noCategory")} ·{" "}
-                          <span className={stockClassName(product)}>
-                            {product.deliveryType === "AUTO_KEY"
-                              ? tp("catalog.keys", product.availableKeyCount || 0)
-                              : t("catalog.manualDelivery")}
-                          </span>
-                        </p>
-                      </div>
-                    </Card>
+                    <div className="shop-product-copy">
+                      <Text as="span" size="sm" truncate>
+                        {product.title}
+                      </Text>
+                      <Text as="strong" size="md" tabularNums>
+                        {formatPrice(product.priceRub, locale, currency)}
+                      </Text>
+                      <Text as="span" size="xs" tone="muted" truncate>
+                        {product.category || t("catalog.noCategory")} ·{" "}
+                        {/* Stock is a status, not trivia: an empty key pool
+                            reads as a warning. */}
+                        <Text as="span" size="xs" tone={stockTone(product)}>
+                          {product.deliveryType === "AUTO_KEY"
+                            ? tp("catalog.keys", product.availableKeyCount || 0)
+                            : t("catalog.manualDelivery")}
+                        </Text>
+                      </Text>
+                    </div>
                   </Link>
                 ))}
               </div>
@@ -161,31 +151,18 @@ export function CatalogScreen() {
   )
 }
 
-
-/** Stock is a status, not trivia: out-of-stock keys should read as a warning. */
-function stockClassName(product: { deliveryType: string; availableKeyCount?: number | null }) {
-  if (product.deliveryType !== "AUTO_KEY") return undefined
-  return (product.availableKeyCount || 0) > 0
-    ? "text-success-foreground"
-    : "text-warning-foreground"
+function stockTone(product: {
+  deliveryType: string
+  availableKeyCount?: number | null
+}): "muted" | "success" | "warning" {
+  if (product.deliveryType !== "AUTO_KEY") return "muted"
+  return (product.availableKeyCount || 0) > 0 ? "success" : "warning"
 }
 
-function ProductThumbnail({
-  imageUrl,
-  title,
-}: {
-  imageUrl: string | null
-  title: string
-}) {
+function ProductThumbnail({ imageUrl, title }: { imageUrl: string | null; title: string }) {
   if (imageUrl) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        alt={title}
-        className="size-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
-        src={imageUrl}
-      />
-    )
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img alt={title} src={imageUrl} />
   }
 
   return <span>{title.slice(0, 2).toUpperCase()}</span>
@@ -194,42 +171,17 @@ function ProductThumbnail({
 /** Placeholder shaped like the product grid so nothing jumps when it lands. */
 function CatalogSkeleton() {
   return (
-    <div aria-hidden="true" className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:gap-3 xl:grid-cols-4">
+    <div aria-hidden="true" className="shop-grid">
       {Array.from({ length: 6 }, (_, index) => (
-        <Card className="gap-2 p-2" key={index}>
-          <Skeleton className="aspect-square w-full rounded-xl" />
-          <div className="flex flex-col gap-1.5 px-1 pb-1">
-            <Skeleton className="h-3.5 w-3/4" />
-            <Skeleton className="h-4 w-2/5" />
-            <Skeleton className="h-3 w-1/2" />
+        <div className="shop-product" key={index}>
+          <div className="shop-product-cover" />
+          <div className="shop-product-copy">
+            <Text as="span" loading placeholderText="A product name" size="sm" />
+            <Text as="strong" loading placeholderText="1 000 ₽" size="md" />
+            <Text as="span" loading placeholderText="Category · keys" size="xs" />
           </div>
-        </Card>
+        </div>
       ))}
     </div>
-  )
-}
-
-
-function CatalogEmpty({
-  title,
-  description,
-}: {
-  title: string
-  description: string
-}) {
-  return (
-    <Card>
-      <CardHeader>
-        <Empty>
-          <EmptyMedia variant="icon">
-            <PackageSearch />
-          </EmptyMedia>
-          <EmptyHeader>
-            <EmptyTitle>{title}</EmptyTitle>
-            <EmptyDescription>{description}</EmptyDescription>
-          </EmptyHeader>
-        </Empty>
-      </CardHeader>
-    </Card>
   )
 }

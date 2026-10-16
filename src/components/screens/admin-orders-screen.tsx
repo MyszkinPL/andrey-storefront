@@ -2,25 +2,16 @@
 
 import { useMemo, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
-import { Clock3 } from "lucide-react"
+import { Clock3, ReceiptText } from "lucide-react"
+import { EmptyState, Pill, Tabs } from "sealui"
 
-import { Badge } from "@/components/ui/badge"
-import { Card, CardContent } from "@/components/ui/card"
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@/components/ui/empty"
-import { ListGroup, ListRow, ListRowMedia, ListSkeleton } from "@/components/list-row"
-import { OrderTimeLeft } from "@/components/order-time-left"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Screen, ScreenBody, ScreenError, ScreenHeader } from "@/components/screen"
 import { useI18n } from "@/components/i18n-provider"
-import { getMe, getOrders } from "@/lib/api"
+import { ListGroup, ListRow, ListSkeleton } from "@/components/list-row"
+import { OrderTimeLeft } from "@/components/order-time-left"
+import { Screen, ScreenBody, ScreenError, ScreenHeader } from "@/components/screen"
 import { useRelativeTime } from "@/hooks/use-relative-time"
-import { orderBadgeVariant, orderStatusKey } from "@/lib/order-status"
+import { getMe, getOrders } from "@/lib/api"
+import { orderPillColor, orderStatusKey } from "@/lib/order-status"
 
 type FilterKey = "all" | "waiting" | "review" | "work" | "closed"
 
@@ -66,7 +57,7 @@ export function AdminOrdersScreen() {
       <ScreenHeader title={t("admin.ordersTitle")} subtitle={t("admin.ordersSubtitle")} />
 
       {isLoading ? (
-        <ListSkeleton className="lg:grid lg:grid-cols-2" />
+        <ListSkeleton />
       ) : isError && !data ? (
         <ScreenError
           onRetry={() => refetch()}
@@ -74,63 +65,63 @@ export function AdminOrdersScreen() {
           title={t("admin.ordersErrorTitle")}
         />
       ) : orders.length === 0 ? (
-        <OrdersEmpty
-          title={t("admin.ordersEmptyTitle")}
+        <EmptyState
           description={t("admin.ordersEmptyDescription")}
+          icon={<Clock3 />}
+          title={t("admin.ordersEmptyTitle")}
         />
       ) : (
         <ScreenBody>
-          <Tabs value={filter} onValueChange={(value) => setFilter(value as FilterKey)}>
-            <TabsList className="grid w-full grid-cols-5">
-              {[
-                { key: "all" as const, label: t("orders.filterAll") },
-                { key: "waiting" as const, label: t("orders.filterPayment") },
-                { key: "review" as const, label: t("orders.filterReview") },
-                { key: "work" as const, label: t("orders.filterDelivery") },
-                { key: "closed" as const, label: t("orders.filterHistory") },
-              ].map((item) => (
-                <TabsTrigger key={item.key} value={item.key} className="px-1 text-xs">
-                  {item.label}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
+          <div className="shop-scroll-x">
+            <Tabs
+              aria-label={t("admin.ordersTitle")}
+              items={[
+                { value: "all", label: t("orders.filterAll") },
+                { value: "waiting", label: t("orders.filterPayment") },
+                { value: "review", label: t("orders.filterReview") },
+                { value: "work", label: t("orders.filterDelivery") },
+                { value: "closed", label: t("orders.filterHistory") },
+              ]}
+              onValueChange={(value) => setFilter(value as FilterKey)}
+              value={filter}
+            />
+          </div>
 
           {visibleOrders.length === 0 ? (
-            <OrdersEmpty
-              title={t("orders.filterEmptyTitle")}
+            <EmptyState
               description={t("orders.filterEmptyDescription")}
+              icon={<Clock3 />}
+              title={t("orders.filterEmptyTitle")}
             />
           ) : (
-            <ListGroup className="lg:grid lg:grid-cols-2">
-              {visibleOrders.map((order) => (
-                <ListRow
-                  // The badge already names the state and the filter tabs
-                  // already group the work, so a sentence saying the same
-                  // thing only pushed the order number out of the row.
-                  description={
-                    <>
-                      {`${[`#${order.number}`, order.productCategory, order.paymentMethodTitle]
-                        .filter(Boolean)
-                        .join(" · ")} · `}
-                      <OrderTimeLeft fallback={formatRelative(order.updatedAt)} order={order} />
-                    </>
-                  }
-                  href={`/orders/${order.id}`}
-                  key={order.id}
-                  media={
-                    <ListRowMedia>
-                      <Clock3 />
-                    </ListRowMedia>
-                  }
-                  title={order.productTitle || order.subject}
-                  trailing={
-                    <Badge variant={orderBadgeVariant(order)}>
-                      {t(orderStatusKey(order))}
-                    </Badge>
-                  }
-                />
-              ))}
+            <ListGroup>
+              {visibleOrders.map((order) => {
+                // A clock while somebody is still waiting on a payment, a
+                // receipt once the money question is settled either way.
+                const isPending =
+                  !order.isPaid && !["CLOSED", "CANCELLED"].includes(order.status)
+
+                return (
+                  <ListRow
+                    // The pill already names the state and the filter tabs
+                    // already group the work, so a sentence saying the same
+                    // thing only pushed the order number out of the row.
+                    description={
+                      <>
+                        {`${[`#${order.number}`, order.productCategory, order.paymentMethodTitle]
+                          .filter(Boolean)
+                          .join(" · ")} · `}
+                        <OrderTimeLeft fallback={formatRelative(order.updatedAt)} order={order} />
+                      </>
+                    }
+                    href={`/orders/${order.id}`}
+                    key={order.id}
+                    media={isPending ? <Clock3 /> : <ReceiptText />}
+                    title={order.productTitle || order.subject}
+                    trailing={<Pill color={orderPillColor(order)}>{t(orderStatusKey(order))}</Pill>}
+                  />
+                )
+              })}
             </ListGroup>
           )}
         </ScreenBody>
@@ -138,22 +129,3 @@ export function AdminOrdersScreen() {
     </Screen>
   )
 }
-
-function OrdersEmpty({ title, description }: { title: string; description: string }) {
-  return (
-    <Card>
-      <CardContent>
-        <Empty>
-          <EmptyMedia variant="icon">
-            <Clock3 />
-          </EmptyMedia>
-          <EmptyHeader>
-            <EmptyTitle>{title}</EmptyTitle>
-            <EmptyDescription>{description}</EmptyDescription>
-          </EmptyHeader>
-        </Empty>
-      </CardContent>
-    </Card>
-  )
-}
-
