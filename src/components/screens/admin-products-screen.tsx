@@ -9,7 +9,6 @@ import {
   ImagePlus,
   PackagePlus,
   PackageSearch,
-  PencilLine,
   Trash2,
 } from "lucide-react"
 import { Button, EmptyState, Menu, MenuItem, MenuLinkItem, MenuSeparator, Pill } from "sealui"
@@ -136,27 +135,18 @@ export function AdminProductsScreen() {
                         ? tp("catalog.keys", product.availableKeyCount || 0)
                         : t("catalog.manualDelivery")
                     }`}
+                    href={`/admin/products/${product.id}/edit`}
                     key={product.id}
                     mediaBox
                     media={<ProductThumbnail imageUrl={product.imageUrl} title={product.title} />}
                     title={product.title}
                     trailing={
-                      /* Three icon buttons per row, one of them red, crowded the
-                         title off a phone and put "delete" one thumb-slip from
-                         "edit". Edit is the obvious tap and stays; the rest sit
-                         behind a menu. */
+                      /* Tapping the row edits; the rare actions sit behind a
+                         menu so "delete" is never one thumb-slip from "edit". */
                       <>
                         {!product.isActive ? (
                           <Pill color="gray">{t("adminProducts.hidden")}</Pill>
                         ) : null}
-                        <LinkButton
-                          aria-label={t("adminProducts.edit")}
-                          href={`/admin/products/${product.id}/edit`}
-                          size="icon"
-                          variant="secondary"
-                        >
-                          <PencilLine size={16} aria-hidden />
-                        </LinkButton>
                         <Menu
                           align="end"
                           aria-label={t("adminProducts.more")}

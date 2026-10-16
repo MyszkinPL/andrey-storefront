@@ -4,32 +4,32 @@ import type { PaymentMethodType } from "@prisma/client"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { ExternalLink, LifeBuoy, Timer, Trash2 } from "lucide-react"
-import type { BannerVariant } from "sealui"
-import { Banner, Button, Pill, Text, Well, WellFooter, WellHeader } from "sealui"
+import { ExternalLink, LifeBuoy, RefreshCcw, Trash2 } from "lucide-react"
+import { Avatar, Button, DetailRow, Heading, Pill, Text } from "sealui"
 
 import { useI18n } from "@/components/i18n-provider"
 import { LinkButton } from "@/components/link-button"
+import { ListGroup, ListRow } from "@/components/list-row"
 import { useMode } from "@/components/mode-provider"
 import { AdminOrderPanel } from "@/components/order-detail/admin-panel"
 import { ConfirmDeleteDialog } from "@/components/order-detail/confirm-delete-dialog"
 import { ConfirmPaymentDialog } from "@/components/order-detail/confirm-payment-dialog"
 import { CopyField } from "@/components/order-detail/copy-field"
 import { OrderProgress } from "@/components/order-detail/order-progress"
-import { OrderReceipt } from "@/components/order-detail/order-summary"
-import {
-  PaymentMethodSelector,
-  PaymentMethodSummary,
-} from "@/components/order-detail/payment-method-selector"
-import {
-  orderNoticeDescriptionKey,
-  orderNoticeTitle,
-  paymentStateKey,
-} from "@/components/order-detail/status"
+import { PaymentMethodSelector } from "@/components/order-detail/payment-method-selector"
+import { orderNoticeDescriptionKey, paymentStateKey } from "@/components/order-detail/status"
 import type { Order, PaymentOption } from "@/components/order-detail/types"
-import { ReceiptStatus, ReceiptUpload } from "@/components/receipt-upload"
+import { ReceiptUpload } from "@/components/receipt-upload"
 import { ResponsiveDialog } from "@/components/responsive-dialog"
-import { Screen, ScreenBody, ScreenHeader, ScreenState } from "@/components/screen"
+import {
+  ActionStack,
+  Screen,
+  ScreenBody,
+  ScreenHeader,
+  ScreenState,
+  Section,
+  StickyActions,
+} from "@/components/screen"
 import { useCountdown } from "@/hooks/use-countdown"
 import { useNotify } from "@/hooks/use-notify"
 import {
@@ -52,15 +52,20 @@ import {
   ORDER_PAYMENT_WINDOW_MS,
 } from "@/lib/order-timer"
 
-/** The notice tint follows the same precedence as its title. */
-function noticeVariant(order: Order): BannerVariant {
-  if (order.deliveredKey) return "success"
-  if (order.status === "PAYMENT_REVIEW") return "info"
-  if (isOrderExpired(order) || order.status === "CANCELLED") return "danger"
-  if (order.isPaid) return "success"
-  return "warning"
+/** The pill colour of the state heading follows the state itself. */
+function stateColor(order: Order): "green" | "yellow" | "blue" | "gray" | "red" {
+  if (order.deliveredKey || order.isPaid) return "green"
+  if (order.status === "PAYMENT_REVIEW") return "blue"
+  if (isOrderExpired(order)) return "gray"
+  if (order.status === "CANCELLED") return "red"
+  return "yellow"
 }
 
+/**
+ * An order screen that answers two questions in the first glance: where
+ * is my order, and what do I do now. State and clock on top, the one
+ * thing to do in the bottom bar, the rest in a details list below.
+ */
 export function OrderDetailScreen({ orderId }: { orderId: string }) {
   const router = useRouter()
   const { t, locale, currency } = useI18n()
@@ -69,6 +74,7 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
   const { mode } = useMode()
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [isHideModalOpen, setIsHideModalOpen] = useState(false)
+  const [isCancelOpen, setIsCancelOpen] = useState(false)
   const [isConfirmPaymentOpen, setIsConfirmPaymentOpen] = useState(false)
   const [draftPaymentKey, setDraftPaymentKey] = useState<string | null>(null)
   const [copiedField, setCopiedField] = useState<"payment" | "key" | null>(null)
@@ -85,7 +91,7 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
   })
 
   // The payment clock. Once it hits zero the server has closed the order (or
-  // is about to), so the card refreshes instead of showing 00:00 forever.
+  // is about to), so the screen refreshes instead of showing 00:00 forever.
   const timedOrder = data?.order && isOrderOnTimer(data.order) ? data.order : null
   const remaining = useCountdown(timedOrder?.expiresAt ?? null)
   useEffect(() => {
@@ -125,6 +131,7 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
     mutationFn: () => cancelOwnOrder(orderId),
     onError: notify.failure,
     onSuccess: async () => {
+      setIsCancelOpen(false)
       notify.success("uiNotify.orderCancelled")
       await invalidate()
     },
@@ -172,7 +179,6 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
       id: method.id,
       type: "MANUAL" as const,
       title: method.title,
-      // The requisites arrive with the order; the menu only names the method.
       subtitle: method.details ?? t("product.requisitesLater"),
       iconUrl: method.iconUrl,
     })) ?? []),
@@ -269,11 +275,13 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
     formatInvoiceAmount(order.cryptoInvoiceAmount, order.cryptoInvoiceFiat, locale) ??
     (order.priceRub ? formatPrice(order.priceRub, locale, currency) : null)
   const selectedPaymentKey = draftPaymentKey || currentPaymentKey
-  const showOrderNotice =
-    Boolean(order.deliveredKey) ||
-    order.status === "PAYMENT_REVIEW" ||
-    order.status === "CANCELLED" ||
-    order.isPaid
+  const paymentTitle = order.paymentMethodTitle || t("orderDetail.paymentMethodFallback")
+  const paymentDescription =
+    order.paymentMethodType === "CRYPTO_PAY"
+      ? t("orderDetail.paymentCryptoLabel")
+      : order.paymentMethodType === "MANUAL"
+        ? t("orderDetail.paymentManualLabel")
+        : t("common.notSelected")
   const handlePaymentMethodSelect = (key: string) => {
     if (changePaymentMethodMutation.isPending) return
 
@@ -293,219 +301,239 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
     )
   }
 
+  // The one thing to do now. A buyer pays or collects; an admin checks.
+  const primaryActions = (
+    <>
+      {isRealBuyerView && showManualPayment ? (
+        <Button fullWidth onClick={() => setIsConfirmPaymentOpen(true)} size="lg">
+          {t("orderDetail.markPaid")}
+        </Button>
+      ) : null}
+      {isRealBuyerView && showCryptoPayment ? (
+        <LinkButton
+          external
+          fullWidth
+          href={order.cryptoInvoiceUrl || ""}
+          icon={<ExternalLink size={16} aria-hidden />}
+          size="lg"
+        >
+          {t("orderDetail.openInvoice")}
+        </LinkButton>
+      ) : null}
+      {isRealBuyerView && order.isPaid ? (
+        <LinkButton fullWidth href={`/orders/${order.id}/complete`} size="lg">
+          {t("orderDetail.openDelivery")}
+        </LinkButton>
+      ) : null}
+      {canRejectManualPayment ? (
+        <Button
+          disabled={rejectManualPaymentMutation.isPending}
+          fullWidth
+          onClick={() => rejectManualPaymentMutation.mutate()}
+          size="lg"
+          variant="secondary"
+        >
+          {t("orderDetail.reject")}
+        </Button>
+      ) : null}
+      {canConfirmManualPayment ? (
+        <Button
+          disabled={confirmMutation.isPending}
+          fullWidth
+          loading={confirmMutation.isPending}
+          onClick={() => confirmMutation.mutate()}
+          size="lg"
+        >
+          {t("orderDetail.confirmPayment")}
+        </Button>
+      ) : null}
+      {canRefreshCryptoPayment ? (
+        <Button
+          disabled={refreshMutation.isPending}
+          fullWidth
+          icon={<RefreshCcw size={16} aria-hidden />}
+          loading={refreshMutation.isPending}
+          onClick={() => refreshMutation.mutate()}
+          size="lg"
+          variant="secondary"
+        >
+          {t("orderDetail.check")}
+        </Button>
+      ) : null}
+    </>
+  )
+  const hasPrimaryActions =
+    (isRealBuyerView && (showManualPayment || showCryptoPayment || order.isPaid)) ||
+    canConfirmManualPayment ||
+    canRejectManualPayment ||
+    canRefreshCryptoPayment
+
   return (
     <Screen narrow noTabBar>
       <ScreenHeader
         back={listHref}
-        subtitle={t("orderDetail.orderNumber", { number: order.number })}
+        subtitle={`${t("orderDetail.orderNumber", { number: order.number })} · ${createdAtLabel}`}
         title={order.productTitle || order.subject}
       />
 
       <ScreenBody grow>
-        {adminToolsVisible ? (
-          <AdminOrderPanel
-            order={order}
-            canConfirmManualPayment={canConfirmManualPayment}
-            canRejectManualPayment={canRejectManualPayment}
-            canRefreshCryptoPayment={canRefreshCryptoPayment}
-            confirmPending={confirmMutation.isPending}
-            rejectPending={rejectManualPaymentMutation.isPending}
-            refreshPending={refreshMutation.isPending}
-            onConfirm={() => confirmMutation.mutate()}
-            onReject={() => rejectManualPaymentMutation.mutate()}
-            onRefresh={() => refreshMutation.mutate()}
-            onDelete={() => setIsDeleteModalOpen(true)}
+        {/* State and clock in the largest type on the page. */}
+        <div className="shop-status">
+          <div className="shop-status-row">
+            <Heading as="h2" size="md">
+              {t(paymentStateKey(order))}
+            </Heading>
+            {timedOrder && remaining !== null ? (
+              // The last five minutes turn amber, the same warning colour an
+              // empty key pool uses in the catalog.
+              <span className="shop-timer" data-urgent={remaining <= 5 * 60_000 ? "" : undefined}>
+                {formatCountdown(remaining)}
+              </span>
+            ) : amountLabel ? (
+              <Pill color={stateColor(order)}>{amountLabel}</Pill>
+            ) : null}
+          </div>
+          <Text as="p" size="sm" tone="secondary">
+            {t(orderNoticeDescriptionKey(order), {
+              minutes: Math.round(ORDER_PAYMENT_WINDOW_MS / 60_000),
+            })}
+            {timedOrder && remaining !== null
+              ? ` ${remaining > 0 ? t("orderDetail.timerDescription") : t("orderDetail.timerExpiring")}`
+              : ""}
+          </Text>
+        </div>
+
+        <OrderProgress order={order} />
+
+        {canSwitchPaymentMethod ? (
+          <PaymentMethodSelector
+            options={paymentOptions}
+            selectedKey={selectedPaymentKey}
+            loading={changePaymentMethodMutation.isPending}
+            onSelect={handlePaymentMethodSelect}
           />
         ) : null}
 
-        <Well>
-          <WellHeader
-            action={amountLabel ? <Pill color="gray">{amountLabel}</Pill> : undefined}
-            description={t("orderDetail.summaryLine", {
-              number: order.number,
-              title: order.productTitle || order.subject,
-              date: createdAtLabel,
-            })}
-            title={t(paymentStateKey(order))}
+        {showManualPayment ? (
+          <CopyField
+            title={t("orderDetail.requisites")}
+            value={order.paymentMethodDetails || ""}
+            copied={copiedField === "payment"}
+            onCopy={() => copyValue(order.paymentMethodDetails || "", "payment")}
           />
+        ) : null}
 
-          <OrderProgress order={order} />
+        {order.deliveredKey ? (
+          <CopyField
+            title={t("orderDetail.deliveredKey")}
+            value={order.deliveredKey}
+            copied={copiedField === "key"}
+            onCopy={() => copyValue(order.deliveredKey || "", "key")}
+          />
+        ) : null}
 
-          {showOrderNotice ? (
-            <Banner
-              description={t(orderNoticeDescriptionKey(order), {
-                minutes: Math.round(ORDER_PAYMENT_WINDOW_MS / 60_000),
-              })}
-              title={orderNoticeTitle(order, amountLabel, t)}
-              variant={noticeVariant(order)}
-            />
-          ) : null}
+        {canAttachReceipt ? (
+          <ReceiptUpload
+            onUploaded={() => void invalidate()}
+            orderId={order.id}
+            receipt={order.receipt}
+          />
+        ) : null}
 
-          {timedOrder && remaining !== null ? (
-            <div className="shop-row">
-              <div className="shop-row-media">
-                <Timer aria-hidden />
-              </div>
-              <div className="shop-row-copy">
-                <Text as="span" size="sm">
-                  {t("orderDetail.timerTitle")}
-                </Text>
-                <Text as="span" size="xs" tone="muted">
-                  {remaining > 0
-                    ? t("orderDetail.timerDescription")
-                    : t("orderDetail.timerExpiring")}
-                </Text>
-              </div>
-              <div className="shop-row-trailing">
-                {/* The last five minutes turn amber, the same warning colour
-                    an empty key pool uses in the catalog. */}
-                <span
-                  className="shop-countdown"
-                  data-urgent={remaining <= 5 * 60_000 ? "" : undefined}
-                >
-                  {formatCountdown(remaining)}
-                </span>
-              </div>
-            </div>
-          ) : null}
+        {adminToolsVisible ? (
+          // A Crypto Bot order is confirmed by its webhook and a closed one
+          // is finished, so neither has a receipt still to come.
+          <AdminOrderPanel
+            order={order}
+            showReceipt={Boolean(order.receipt) || (order.paymentMethodType === "MANUAL" && !isClosed)}
+          />
+        ) : null}
 
-          {/* On a finished order this row only repeated the "Оплата" line of
-              the summary below it, so it stops at the point it stops being
-              something you can act on. */}
-          {isClosed ? null : canSwitchPaymentMethod ? (
-            <PaymentMethodSelector
-              options={paymentOptions}
-              selectedKey={selectedPaymentKey}
-              loading={changePaymentMethodMutation.isPending}
-              onSelect={handlePaymentMethodSelect}
-            />
-          ) : (
-            <PaymentMethodSummary
-              title={order.paymentMethodTitle || t("orderDetail.paymentMethodFallback")}
-              description={
-                // Requisites are for paying with. Once the order is closed or
-                // cancelled they are nobody's business, including its own
-                // buyer's — the summary below still names the method.
-                (!isClosed && order.paymentMethodDetails) ||
-                (order.paymentMethodType === "CRYPTO_PAY"
-                  ? t("orderDetail.paymentCryptoLabel")
-                  : order.paymentMethodType === "MANUAL"
-                    ? t("orderDetail.paymentManualLabel")
-                    : t("common.notSelected"))
-              }
-              iconUrl={order.paymentMethodIconDataUrl}
-            />
+        <Section title={t("orderDetail.details")}>
+          {canSwitchPaymentMethod ? null : (
+            <ListGroup>
+              <ListRow
+                description={
+                  // Requisites are for paying with. Once the order is closed
+                  // or cancelled they are nobody's business, including its
+                  // own buyer's.
+                  (!isClosed && order.status !== "PAYMENT_REVIEW" && order.paymentMethodDetails) ||
+                  paymentDescription
+                }
+                media={<Avatar name={paymentTitle} size="md" src={order.paymentMethodIconDataUrl} />}
+                title={paymentTitle}
+              />
+            </ListGroup>
           )}
+          <div className="shop-lines">
+            <DetailRow label={t("orderComplete.product")} value={order.productTitle || order.subject} />
+            <DetailRow label={t("orderComplete.amount")} value={amountLabel || undefined} />
+            <DetailRow label={t("orderComplete.createdAt")} value={createdAtLabel} />
+          </div>
+        </Section>
 
-          {showManualPayment ? (
-            <CopyField
-              title={t("orderDetail.requisites")}
-              value={order.paymentMethodDetails || ""}
-              copied={copiedField === "payment"}
-              onCopy={() => copyValue(order.paymentMethodDetails || "", "payment")}
-            />
-          ) : null}
+        {hasPrimaryActions ? (
+          <div className="shop-desktop-only">
+            <ActionStack>{primaryActions}</ActionStack>
+          </div>
+        ) : null}
 
-          {showCryptoPayment ? (
+        {/* Everything secondary stays quiet below the details: support for
+            anyone stuck, and the ways out of an order. */}
+        <ActionStack>
+          {isRealBuyerView && supportLink ? (
             <LinkButton
               external
               fullWidth
-              href={order.cryptoInvoiceUrl || ""}
-              icon={<ExternalLink size={16} aria-hidden />}
-              size="lg"
+              href={supportLink}
+              icon={<LifeBuoy size={16} aria-hidden />}
+              variant="secondary"
             >
-              {t("orderDetail.openInvoice")}
+              {t("orderDetail.telegramSupport")}
             </LinkButton>
           ) : null}
-
-          {isRealBuyerView && showManualPayment && !isClosed ? (
-            <Button fullWidth onClick={() => setIsConfirmPaymentOpen(true)}>
-              {t("orderDetail.markPaid")}
+          {isRealBuyerView && !order.isPaid && !isClosed ? (
+            <Button fullWidth onClick={() => setIsCancelOpen(true)} variant="outline">
+              {t("orderDetail.cancelOrder")}
             </Button>
           ) : null}
-
-          {canAttachReceipt ? (
-            <ReceiptUpload
-              onUploaded={() => void invalidate()}
-              orderId={order.id}
-              receipt={order.receipt}
-            />
+          {/* Only a finished order can leave the buyer's history — one
+              still waiting for payment must not be able to vanish. */}
+          {isRealBuyerView && isClosed ? (
+            <Button
+              fullWidth
+              icon={<Trash2 size={16} aria-hidden />}
+              onClick={() => setIsHideModalOpen(true)}
+              variant="outline"
+            >
+              {t("orderDetail.hideAction")}
+            </Button>
           ) : null}
-
-          {/* A Crypto Bot order is confirmed by its webhook and a closed one
-              is finished, so neither has a receipt still to come. The row
-              only earns its place while one could still arrive, or once a
-              file actually did. */}
-          {adminToolsVisible &&
-          (order.receipt || (order.paymentMethodType === "MANUAL" && !isClosed)) ? (
-            <ReceiptStatus receipt={order.receipt} />
+          {adminToolsVisible ? (
+            <Button
+              fullWidth
+              icon={<Trash2 size={16} aria-hidden />}
+              onClick={() => setIsDeleteModalOpen(true)}
+              variant="outline"
+            >
+              {t("common.delete")}
+            </Button>
           ) : null}
-
-          {order.deliveredKey ? (
-            <CopyField
-              title={t("orderDetail.deliveredKey")}
-              value={order.deliveredKey}
-              copied={copiedField === "key"}
-              onCopy={() => copyValue(order.deliveredKey || "", "key")}
-            />
-          ) : null}
-
-          <OrderReceipt
-            productTitle={order.productTitle || order.subject}
-            paymentTitle={order.paymentMethodTitle || t("common.notSelected")}
-            amountLabel={amountLabel}
-            createdAtLabel={createdAtLabel}
-          />
-
-          {isRealBuyerView ? (
-            <WellFooter>
-              {order.isPaid ? (
-                <LinkButton fullWidth href={`/orders/${order.id}/complete`}>
-                  {t("orderDetail.openDelivery")}
-                </LinkButton>
-              ) : null}
-              {/* Support is for anyone stuck, and a buyer stuck on paying
-                  needs it more than one who already got their key. */}
-              {supportLink ? (
-                <LinkButton
-                  external
-                  fullWidth
-                  href={supportLink}
-                  icon={<LifeBuoy size={16} aria-hidden />}
-                  variant="secondary"
-                >
-                  {t("orderDetail.telegramSupport")}
-                </LinkButton>
-              ) : null}
-              {/* Outlined: a solid red block under "I have paid" pulled the
-                  eye to the one action the buyer should not take. */}
-              {!order.isPaid && !isClosed ? (
-                <Button
-                  disabled={cancelOrderMutation.isPending}
-                  fullWidth
-                  loading={cancelOrderMutation.isPending}
-                  onClick={() => cancelOrderMutation.mutate()}
-                  variant="outline"
-                >
-                  {t("orderDetail.cancelOrder")}
-                </Button>
-              ) : null}
-              {/* Only a finished order can leave the buyer's history — one
-                  still waiting for payment must not be able to vanish. */}
-              {isClosed ? (
-                <Button
-                  fullWidth
-                  icon={<Trash2 size={16} aria-hidden />}
-                  onClick={() => setIsHideModalOpen(true)}
-                  variant="outline"
-                >
-                  {t("orderDetail.hideAction")}
-                </Button>
-              ) : null}
-            </WellFooter>
-          ) : null}
-        </Well>
+        </ActionStack>
       </ScreenBody>
+
+      {hasPrimaryActions ? <StickyActions>{primaryActions}</StickyActions> : null}
+
+      <ResponsiveDialog
+        confirmLabel={t("orderDetail.cancelOrder")}
+        confirmVariant="danger"
+        description={t("orderDetail.hintCancelled")}
+        loading={cancelOrderMutation.isPending}
+        onConfirm={() => cancelOrderMutation.mutate()}
+        onOpenChange={setIsCancelOpen}
+        open={isCancelOpen}
+        title={`${t("orderDetail.cancelOrder")}?`}
+      />
 
       <ResponsiveDialog
         confirmLabel={t("orderDetail.hideAction")}

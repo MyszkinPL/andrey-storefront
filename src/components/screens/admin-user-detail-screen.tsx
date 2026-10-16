@@ -2,31 +2,27 @@
 
 import { useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { Ban, History, ShieldCheck, ShieldX } from "lucide-react"
-import {
-  Avatar,
-  Button,
-  Cluster,
-  DetailRow,
-  EmptyState,
-  Heading,
-  Pill,
-  Text,
-  Well,
-  WellContent,
-  WellHeader,
-} from "sealui"
+import { Ban, ShieldCheck, ShieldX } from "lucide-react"
+import { Avatar, Button, DetailRow, Pill, Text } from "sealui"
 
 import { AccessStateScreen } from "@/components/access-state-screen"
 import { useI18n } from "@/components/i18n-provider"
 import { ListGroup, ListRow } from "@/components/list-row"
 import { ResponsiveDialog } from "@/components/responsive-dialog"
-import { Screen, ScreenBody, ScreenHeader, ScreenState } from "@/components/screen"
+import {
+  ActionStack,
+  Screen,
+  ScreenBody,
+  ScreenHeader,
+  ScreenState,
+  Section,
+} from "@/components/screen"
 import { useNotify } from "@/hooks/use-notify"
 import { getAdminUser, getMe, updateAdminUserModeration } from "@/lib/api"
 import { formatPrice } from "@/lib/format"
 import type { TranslationKey } from "@/lib/i18n"
 
+/** One person: who they are, their orders, and the two moderation levers. */
 export function AdminUserDetailScreen({ userId }: { userId: string }) {
   const { t, tp, locale, currency } = useI18n()
   const notify = useNotify()
@@ -97,131 +93,108 @@ export function AdminUserDetailScreen({ userId }: { userId: string }) {
   const isCurrentUser = meData?.user.id === user.id
   const canBan = user.role !== "ADMIN"
   const canRevokeAdmin = user.role === "ADMIN" && !isCurrentUser
-  const roleLabel = user.role === "ADMIN" ? t("adminUsers.admin") : t("profile.buyer")
+  const roleLabel = user.role === "ADMIN" ? t("profile.administrator") : t("profile.buyer")
 
   return (
     <Screen narrow noTabBar>
       <ScreenHeader
         back="/admin/users"
         title={displayName}
-        subtitle={user.username ? `@${user.username}` : `tg:${user.telegramId}`}
-        trailing={
-          user.isBanned ? (
-            <Pill color="red">{t("adminUsers.banned")}</Pill>
-          ) : user.role === "ADMIN" ? (
-            <Pill color="blue">{t("adminUsers.admin")}</Pill>
-          ) : null
-        }
+        subtitle={`${roleLabel} · ${tp("adminUsers.countActive", user.activeOrderCount)}`}
+        trailing={<Avatar name={displayName || user.firstName} size="lg" src={user.photoUrl} />}
       />
 
       <ScreenBody>
-        <Well>
-          <div className="shop-row">
-            <Avatar name={displayName || user.firstName} size="lg" src={user.photoUrl} />
-            <div className="shop-row-copy">
-              <Heading as="h2" size="sm" truncate>
-                {t("adminUserDetail.profile")}
-              </Heading>
-              <Text as="p" size="sm" tone="muted" truncate>
-                {`${user.role === "ADMIN" ? t("profile.administrator") : t("profile.buyer")} · ${tp(
-                  "adminUsers.countActive",
-                  user.activeOrderCount,
-                )}`}
-              </Text>
-            </div>
+        {user.isBanned ? (
+          <div className="shop-section-head">
+            <Pill color="red">{t("adminUsers.banned")}</Pill>
           </div>
+        ) : null}
 
-          {/* Role first, ban second: the destructive action sits after the
-              reversible one and stays visually quieter. */}
-          <Cluster>
-            {user.role === "ADMIN" ? (
-              <Button
-                disabled={!canRevokeAdmin || moderationMutation.isPending}
-                icon={<ShieldX size={16} aria-hidden />}
-                onClick={() => setConfirmRole("USER")}
-                size="sm"
-                variant="secondary"
-              >
-                {t("adminUserDetail.revokeAdmin")}
-              </Button>
-            ) : (
-              <Button
-                disabled={moderationMutation.isPending}
-                icon={<ShieldCheck size={16} aria-hidden />}
-                onClick={() => setConfirmRole("ADMIN")}
-                size="sm"
-                variant="secondary"
-              >
-                {t("adminUserDetail.grantAdmin")}
-              </Button>
-            )}
-            {canBan ? (
-              <Button
-                disabled={moderationMutation.isPending}
-                icon={user.isBanned ? undefined : <Ban size={16} aria-hidden />}
-                onClick={() => {
-                  if (user.isBanned) {
-                    moderationMutation.mutate({ isBanned: false })
-                  } else {
-                    setConfirmBanOpen(true)
-                  }
-                }}
-                size="sm"
-                variant={user.isBanned ? "secondary" : "danger"}
-              >
-                {user.isBanned ? t("adminUserDetail.unban") : t("adminUserDetail.ban")}
-              </Button>
-            ) : null}
-          </Cluster>
-
-          <WellContent>
-            <DetailRow label="Telegram ID" mono value={String(user.telegramId)} />
-            <DetailRow
-              label="Username"
-              value={user.username ? `@${user.username}` : t("adminUserDetail.none")}
-            />
-            <DetailRow label={t("adminUserDetail.role")} value={roleLabel} />
-            <DetailRow
-              label={t("adminUserDetail.activeOrders")}
-              value={String(user.activeOrderCount)}
-            />
-          </WellContent>
-        </Well>
-
-        <Well>
-          <WellHeader
-            description={tp("adminUserDetail.orderHistoryRecent", user.orders.length)}
-            title={t("adminUserDetail.orderHistory")}
+        <div className="shop-lines">
+          <DetailRow label="Telegram ID" mono value={String(user.telegramId)} />
+          <DetailRow
+            label="Username"
+            value={user.username ? `@${user.username}` : t("adminUserDetail.none")}
           />
-          <WellContent>
-            {user.orders.length > 0 ? (
-              <ListGroup>
-                {user.orders.map((order) => (
-                  <ListRow
-                    description={`#${order.number}${
-                      order.productCategory ? ` · ${order.productCategory}` : ""
-                    }${
-                      order.priceRub ? ` · ${formatPrice(order.priceRub, locale, currency)}` : ""
-                    } · ${t(orderStatusKey2(order.status, order.isPaid))}`}
-                    href={`/orders/${order.id}`}
-                    key={order.id}
-                    media={<History />}
-                    title={
-                      order.productTitle ||
-                      t("adminUserDetail.orderFallback", { number: order.number })
-                    }
-                  />
-                ))}
-              </ListGroup>
-            ) : (
-              <EmptyState
-                description={t("adminUserDetail.noOrdersDescription")}
-                icon={<History />}
-                title={t("adminUserDetail.noOrdersTitle")}
-              />
-            )}
-          </WellContent>
-        </Well>
+          <DetailRow label={t("adminUserDetail.role")} value={roleLabel} />
+          <DetailRow label={t("adminUserDetail.activeOrders")} value={String(user.activeOrderCount)} />
+        </div>
+
+        <Section
+          hint={tp("adminUserDetail.orderHistoryRecent", user.orders.length)}
+          title={t("adminUserDetail.orderHistory")}
+        >
+          {user.orders.length > 0 ? (
+            <ListGroup>
+              {user.orders.map((order) => (
+                <ListRow
+                  description={`#${order.number}${
+                    order.productCategory ? ` · ${order.productCategory}` : ""
+                  }${order.priceRub ? ` · ${formatPrice(order.priceRub, locale, currency)}` : ""}`}
+                  href={`/orders/${order.id}`}
+                  key={order.id}
+                  title={
+                    order.productTitle ||
+                    t("adminUserDetail.orderFallback", { number: order.number })
+                  }
+                  trailing={
+                    <Pill color={historyPillColor(order.status, order.isPaid)}>
+                      {t(historyStatusKey(order.status, order.isPaid))}
+                    </Pill>
+                  }
+                />
+              ))}
+            </ListGroup>
+          ) : (
+            <Text as="p" size="sm" tone="muted">
+              {t("adminUserDetail.noOrdersTitle")} · {t("adminUserDetail.noOrdersDescription")}
+            </Text>
+          )}
+        </Section>
+
+        {/* Role first, ban second: the destructive action sits after the
+            reversible one and stays visually quieter. */}
+        <ActionStack>
+          {user.role === "ADMIN" ? (
+            <Button
+              disabled={!canRevokeAdmin || moderationMutation.isPending}
+              fullWidth
+              icon={<ShieldX size={16} aria-hidden />}
+              onClick={() => setConfirmRole("USER")}
+              variant="secondary"
+            >
+              {t("adminUserDetail.revokeAdmin")}
+            </Button>
+          ) : (
+            <Button
+              disabled={moderationMutation.isPending}
+              fullWidth
+              icon={<ShieldCheck size={16} aria-hidden />}
+              onClick={() => setConfirmRole("ADMIN")}
+              variant="secondary"
+            >
+              {t("adminUserDetail.grantAdmin")}
+            </Button>
+          )}
+          {canBan ? (
+            <Button
+              disabled={moderationMutation.isPending}
+              fullWidth
+              icon={user.isBanned ? undefined : <Ban size={16} aria-hidden />}
+              onClick={() => {
+                if (user.isBanned) {
+                  moderationMutation.mutate({ isBanned: false })
+                } else {
+                  setConfirmBanOpen(true)
+                }
+              }}
+              variant="outline"
+            >
+              {user.isBanned ? t("adminUserDetail.unban") : t("adminUserDetail.ban")}
+            </Button>
+          ) : null}
+        </ActionStack>
       </ScreenBody>
 
       <ResponsiveDialog
@@ -263,7 +236,7 @@ export function AdminUserDetailScreen({ userId }: { userId: string }) {
   )
 }
 
-function orderStatusKey2(status: string, isPaid: boolean): TranslationKey {
+function historyStatusKey(status: string, isPaid: boolean): TranslationKey {
   if (status === "CANCELLED") return "adminUserDetail.statusCancelled"
   if (status === "CLOSED") {
     return isPaid ? "adminUserDetail.statusDone" : "adminUserDetail.statusClosed"
@@ -271,4 +244,11 @@ function orderStatusKey2(status: string, isPaid: boolean): TranslationKey {
   if (status === "PAYMENT_REVIEW") return "adminUserDetail.statusReview"
   if (!isPaid) return "adminUserDetail.statusPayment"
   return "adminUserDetail.statusPaid"
+}
+
+function historyPillColor(status: string, isPaid: boolean): "green" | "yellow" | "blue" | "gray" | "red" {
+  if (status === "CANCELLED") return "red"
+  if (status === "CLOSED") return isPaid ? "green" : "gray"
+  if (status === "PAYMENT_REVIEW") return "blue"
+  return isPaid ? "green" : "yellow"
 }

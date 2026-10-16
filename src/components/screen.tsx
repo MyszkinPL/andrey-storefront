@@ -175,9 +175,17 @@ export function StickyActions({ children }: { children: ReactNode }) {
 }
 
 /** Section label above a group of rows or tiles. */
-export function SectionTitle({ title, hint }: { title: string; hint?: string }) {
+export function SectionTitle({
+  title,
+  hint,
+  action,
+}: {
+  title: ReactNode
+  hint?: ReactNode
+  action?: ReactNode
+}) {
   return (
-    <div className="shop-header" style={{ minHeight: 0 }}>
+    <div className="shop-section-head">
       <div className="shop-header-copy">
         <Text as="h2" size="sm">
           {title}
@@ -188,6 +196,37 @@ export function SectionTitle({ title, hint }: { title: string; hint?: string }) 
           </Text>
         ) : null}
       </div>
+      {action ? <div className="shop-header-side">{action}</div> : null}
     </div>
   )
+}
+
+/**
+ * A titled group of content straight on the page. It replaced the Well:
+ * on a phone a card inside a dark page inside a Telegram window was one
+ * frame too many, so the only surfaces left are the ones sealui draws as
+ * surfaces (lists, inputs, tiles).
+ */
+export function Section({
+  title,
+  hint,
+  action,
+  children,
+}: {
+  title?: ReactNode
+  hint?: ReactNode
+  action?: ReactNode
+  children?: ReactNode
+}) {
+  return (
+    <section className="shop-section">
+      {title ? <SectionTitle action={action} hint={hint} title={title} /> : null}
+      {children ? <div className="shop-section-body">{children}</div> : null}
+    </section>
+  )
+}
+
+/** Stacked full-width buttons at the foot of a detail screen. */
+export function ActionStack({ children }: { children: ReactNode }) {
+  return <div className="shop-actions">{children}</div>
 }

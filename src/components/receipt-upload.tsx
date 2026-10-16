@@ -9,7 +9,6 @@ import { useI18n } from "@/components/i18n-provider"
 import { useNotify } from "@/hooks/use-notify"
 import { uploadOrderReceipt } from "@/lib/api"
 import { RECEIPT_MAX_MB, validateReceiptFile } from "@/lib/receipt-constants"
-import { formatBytes } from "@/lib/telegram-format"
 
 export type OrderReceipt = {
   fileName: string
@@ -22,41 +21,6 @@ function ReceiptIcon({ attached }: { attached: boolean }) {
     <FileCheck2 size={18} aria-hidden style={{ color: "var(--seal-text-success)" }} />
   ) : (
     <Paperclip size={18} aria-hidden style={{ color: "var(--seal-text-secondary)" }} />
-  )
-}
-
-/**
- * Admin-side view. The PDF itself is delivered to the admin's Telegram chat,
- * so the app only reports whether one arrived.
- */
-export function ReceiptStatus({ receipt }: { receipt: OrderReceipt | null }) {
-  const { t, locale } = useI18n()
-
-  const uploadedAtLabel = receipt
-    ? new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }).format(
-        new Date(receipt.uploadedAt),
-      )
-    : ""
-
-  return (
-    <div className="shop-row">
-      <ReceiptIcon attached={Boolean(receipt)} />
-      <div className="shop-row-copy">
-        <Text as="span" size="sm">
-          {t("receipt.title")}
-        </Text>
-        <Text as="span" size="xs" tone="muted" truncate>
-          {receipt
-            ? `${t("receipt.fileInfo", { name: receipt.fileName, size: formatBytes(receipt.fileSize) })} · ${uploadedAtLabel}`
-            : t("receipt.pending")}
-        </Text>
-        {receipt ? (
-          <Text as="span" size="xs" tone="muted" truncate>
-            {t("receipt.adminHint")}
-          </Text>
-        ) : null}
-      </div>
-    </div>
   )
 }
 

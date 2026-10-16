@@ -2,12 +2,13 @@
 
 import type { CSSProperties } from "react"
 import { useQuery } from "@tanstack/react-query"
-import { Eye } from "lucide-react"
-import { EmptyState, StatisticCard, Text } from "sealui"
+import { ArrowRight } from "lucide-react"
+import { DetailRow, Pill, StatisticCard, Text } from "sealui"
 
 import { useI18n } from "@/components/i18n-provider"
+import { LinkButton } from "@/components/link-button"
 import { ListGroup, ListRow, ListSkeleton } from "@/components/list-row"
-import { Screen, ScreenBody, ScreenError, ScreenHeader, SectionTitle } from "@/components/screen"
+import { Screen, ScreenBody, ScreenError, ScreenHeader, Section } from "@/components/screen"
 import {
   getAdminUsers,
   getMe,
@@ -17,7 +18,12 @@ import {
   getShopStats,
 } from "@/lib/api"
 import { formatPrice } from "@/lib/format"
+import { orderPillColor, orderStatusKey } from "@/lib/order-status"
 
+/**
+ * The admin's home: what needs doing today, four numbers, and the lists
+ * worth a glance. Everything else is one tap away on its own tab.
+ */
 export function AdminOverviewScreen() {
   const { t, tp, locale, currency } = useI18n()
   const { data: meData } = useQuery({ queryKey: ["me"], queryFn: getMe })
@@ -38,6 +44,7 @@ export function AdminOverviewScreen() {
   } = useQuery({
     queryKey: ["orders", "all"],
     queryFn: () => getOrders({ scope: "all" }),
+    refetchInterval: 10_000,
   })
   const {
     data: paymentData,
@@ -73,37 +80,29 @@ export function AdminOverviewScreen() {
     )
   }
 
-  const audience = [
-    { label: t("admin.statUsers"), value: stats?.users.total ?? 0 },
-    { label: t("admin.statBotStarted"), value: stats?.users.botStarted ?? 0 },
-    { label: t("admin.statNewUsers"), value: stats?.users.newLast7Days ?? 0 },
-    { label: t("admin.statActiveUsers"), value: stats?.users.activeLast7Days ?? 0 },
-    { label: t("admin.statBans"), value: usersData?.summary.banned || 0 },
-  ]
+  const orders = ordersData?.orders ?? []
+  const activeOrders = orders.filter((item) => !["CLOSED", "CANCELLED"].includes(item.status))
+  // What the admin has to act on: a payment to check, or a paid order
+  // still waiting for its delivery.
+  const attention = activeOrders.filter(
+    (item) => item.status === "PAYMENT_REVIEW" || item.isPaid,
+  )
+  const products = productsData?.products ?? []
 
   const tiles = [
+    { label: t("admin.statActiveOrders"), value: activeOrders.length },
     {
-      label: t("admin.statActiveProducts"),
-      value: productsData?.products.filter((item) => item.isActive).length || 0,
-    },
-    {
-      label: t("admin.statActiveOrders"),
-      value:
-        ordersData?.orders.filter((item) => !["CLOSED", "CANCELLED"].includes(item.status)).length ||
-        0,
+      label: t("admin.statReview"),
+      value: orders.filter((item) => item.status === "PAYMENT_REVIEW").length,
     },
     {
       label: t("admin.statKeys"),
-      value:
-        productsData?.products.reduce(
-          (sum, item) => sum + (item.deliveryType === "AUTO_KEY" ? item.availableKeyCount || 0 : 0),
-          0,
-        ) || 0,
+      value: products.reduce(
+        (sum, item) => sum + (item.deliveryType === "AUTO_KEY" ? item.availableKeyCount || 0 : 0),
+        0,
+      ),
     },
-    {
-      label: t("admin.statPaymentMethods"),
-      value: paymentData?.paymentMethods.length || 0,
-    },
+    { label: t("admin.statUsers"), value: stats?.users.total ?? 0 },
   ]
 
   const isLoading = isLoadingProducts || isLoadingOrders || isLoadingPayments || isLoadingUsers
@@ -118,13 +117,8 @@ export function AdminOverviewScreen() {
           // The tiles keep their labels while the numbers load, so the
           // layout does not jump once the counts land.
           <>
-            <SectionTitle
-              hint={t("admin.overviewLoadingDescription")}
-              title={t("admin.overviewLoadingTitle")}
-            />
             <StatTiles items={tiles} loading />
-            <StatTiles items={audience} loading />
-            <ListSkeleton rows={3} />
+            <ListSkeleton media={false} rows={3} />
           </>
         ) : isError ? (
           <ScreenError
@@ -140,11 +134,37 @@ export function AdminOverviewScreen() {
           />
         ) : (
           <>
-            <SectionTitle hint={t("admin.shopHint")} title={t("admin.shopTitle")} />
             <StatTiles items={tiles} />
 
-            <SectionTitle hint={t("admin.audienceHint")} title={t("admin.audienceTitle")} />
-            <StatTiles items={audience} />
+            <Section
+              action={
+                <LinkButton href="/admin/orders" icon={<ArrowRight size={16} aria-hidden />} size="sm" variant="ghost">
+                  {t("admin.allOrders")}
+                </LinkButton>
+              }
+              hint={t("admin.attentionHint")}
+              title={t("admin.attentionTitle")}
+            >
+              {attention.length > 0 ? (
+                <ListGroup>
+                  {attention.slice(0, 5).map((order) => (
+                    <ListRow
+                      description={[`#${order.number}`, order.paymentMethodTitle]
+                        .filter(Boolean)
+                        .join(" · ")}
+                      href={`/orders/${order.id}`}
+                      key={order.id}
+                      title={order.productTitle || order.subject}
+                      trailing={<Pill color={orderPillColor(order)}>{t(orderStatusKey(order))}</Pill>}
+                    />
+                  ))}
+                </ListGroup>
+              ) : (
+                <Text as="p" size="sm" tone="muted">
+                  {t("admin.attentionEmpty")} · {t("admin.attentionEmptyHint")}
+                </Text>
+              )}
+            </Section>
 
             {stats?.orders.paid ? (
               <StatisticCard
@@ -160,40 +180,49 @@ export function AdminOverviewScreen() {
               </StatisticCard>
             ) : null}
 
-            <SectionTitle
-              hint={`${tp("admin.viewsCount", stats?.products.totalViews ?? 0)} — ${t(
-                "admin.topViewedHint",
-              )}`}
-              title={t("admin.topViewedTitle")}
-            />
             {stats && stats.topViewed.length > 0 ? (
-              <ListGroup>
-                {stats.topViewed.map((product, index) => (
-                  <ListRow
-                    description={[
-                      tp("admin.viewsCount", product.views),
-                      tp("admin.viewersCount", product.viewers),
-                      tp("admin.ordersCount", product.orders),
-                    ].join(" \u00B7 ")}
-                    href={`/admin/products/${product.id}/edit`}
-                    key={product.id}
-                    mediaBox
-                    media={
-                      <Text as="span" size="sm" tabularNums tone="secondary">
-                        {index + 1}
-                      </Text>
-                    }
-                    title={product.title}
-                  />
-                ))}
-              </ListGroup>
-            ) : (
-              <EmptyState
-                description={t("admin.topViewedEmptyHint")}
-                icon={<Eye />}
-                title={t("admin.topViewedEmpty")}
-              />
-            )}
+              <Section
+                hint={`${tp("admin.viewsCount", stats.products.totalViews)} ${t("admin.topViewedHint")}`}
+                title={t("admin.topViewedTitle")}
+              >
+                <ListGroup>
+                  {stats.topViewed.map((product, index) => (
+                    <ListRow
+                      description={[
+                        tp("admin.viewsCount", product.views),
+                        tp("admin.viewersCount", product.viewers),
+                        tp("admin.ordersCount", product.orders),
+                      ].join(" · ")}
+                      href={`/admin/products/${product.id}/edit`}
+                      key={product.id}
+                      media={
+                        <Text as="span" size="sm" tabularNums tone="muted">
+                          {index + 1}
+                        </Text>
+                      }
+                      title={product.title}
+                    />
+                  ))}
+                </ListGroup>
+              </Section>
+            ) : null}
+
+            <Section hint={t("admin.audienceHint")} title={t("admin.audienceTitle")}>
+              <div className="shop-lines">
+                <DetailRow label={t("admin.statBotStarted")} value={String(stats?.users.botStarted ?? 0)} />
+                <DetailRow label={t("admin.statNewUsers")} value={String(stats?.users.newLast7Days ?? 0)} />
+                <DetailRow label={t("admin.statActiveUsers")} value={String(stats?.users.activeLast7Days ?? 0)} />
+                <DetailRow label={t("admin.statBans")} value={String(usersData?.summary.banned || 0)} />
+                <DetailRow
+                  label={t("admin.statActiveProducts")}
+                  value={String(products.filter((item) => item.isActive).length)}
+                />
+                <DetailRow
+                  label={t("admin.statPaymentMethods")}
+                  value={String(paymentData?.paymentMethods.length || 0)}
+                />
+              </div>
+            </Section>
           </>
         )}
       </ScreenBody>
@@ -201,11 +230,7 @@ export function AdminOverviewScreen() {
   )
 }
 
-/**
- * One tile per number. The grid fits as many columns as there are tiles on
- * desktop and falls back to two on a phone, so the audience row never
- * leaves a lonely fifth tile.
- */
+/** Four numbers, two per row on a phone and one row on desktop. */
 function StatTiles({
   items,
   loading = false,

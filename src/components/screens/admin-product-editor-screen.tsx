@@ -8,24 +8,26 @@ import { ImagePlus, KeyRound, Plus, Trash2 } from "lucide-react"
 import {
   Banner,
   Button,
-  Card,
   Cluster,
   Field,
   Input,
   SegmentedControl,
-  Setting,
   Stack,
-  Switch,
   Text,
   Textarea,
-  Well,
-  WellContent,
-  WellHeader,
 } from "sealui"
 
 import { AccessStateScreen } from "@/components/access-state-screen"
 import { ImagePicker } from "@/components/image-picker"
-import { Screen, ScreenBody, ScreenHeader, ScreenState, StickyActions } from "@/components/screen"
+import {
+  Screen,
+  ScreenBody,
+  ScreenHeader,
+  ScreenState,
+  Section,
+  StickyActions,
+} from "@/components/screen"
+import { ToggleRow } from "@/components/toggle-row"
 import { useI18n, useTranslate } from "@/components/i18n-provider"
 import { ResponsiveDialog } from "@/components/responsive-dialog"
 import { deleteAdminProduct, getMe, getProduct, getProducts, saveAdminProduct, updateAdminProduct } from "@/lib/api"
@@ -260,28 +262,24 @@ export function AdminProductEditorScreen({
           />
         ) : null}
 
-        <Well>
-          <WellHeader
-            description={uploading ? t("adminProductEditor.processingImage") : t("adminProductEditor.coverHint")}
-            title={t("adminProductEditor.cover")}
-          />
-          <WellContent>
-            <ProductCoverPreview imageUrl={form.imageUrl} title={form.title || t("adminProductEditor.productFallback")} />
-            <Cluster justify="center">
-              <ImagePicker
-                disabled={uploading}
-                hasImage={Boolean(form.imageUrl)}
-                id="product-cover"
-                onClear={() => setForm((prev) => ({ ...prev, imageDataUrl: null, imageUrl: null }))}
-                onSelect={handleImageChange}
-              />
-            </Cluster>
-          </WellContent>
-        </Well>
+        {/* The cover sits next to its picker, the way a profile photo does. */}
+        <div className="shop-row">
+          <ProductCoverPreview imageUrl={form.imageUrl} title={form.title || t("adminProductEditor.productFallback")} />
+          <div className="shop-row-copy">
+            <Text as="span" size="xs" tone="muted">
+              {uploading ? t("adminProductEditor.processingImage") : t("adminProductEditor.coverHint")}
+            </Text>
+            <ImagePicker
+              disabled={uploading}
+              hasImage={Boolean(form.imageUrl)}
+              id="product-cover"
+              onClear={() => setForm((prev) => ({ ...prev, imageDataUrl: null, imageUrl: null }))}
+              onSelect={handleImageChange}
+            />
+          </div>
+        </div>
 
-        <Well>
-          <WellContent>
-            <Stack gap="4">
+        <Section>
               <Field label={t("adminProductEditor.name")}>
                 <Input
                   id="product-title"
@@ -333,22 +331,14 @@ export function AdminProductEditorScreen({
                   value={form.description}
                 />
               </Field>
-            </Stack>
-          </WellContent>
-        </Well>
 
-        <Card>
-          <Setting
-            layout="inline"
-            title={<label htmlFor="product-active">{t("adminProductEditor.showInShop")}</label>}
-          >
-            <Switch
-              checked={form.isActive}
-              id="product-active"
-              onCheckedChange={(checked) => setForm((prev) => ({ ...prev, isActive: checked }))}
-            />
-          </Setting>
-        </Card>
+          <ToggleRow
+            checked={form.isActive}
+            id="product-active"
+            onCheckedChange={(checked) => setForm((prev) => ({ ...prev, isActive: checked }))}
+            title={t("adminProductEditor.showInShop")}
+          />
+        </Section>
 
         <SegmentedControl
           aria-label={t("adminProductEditor.subtitle")}
@@ -367,27 +357,24 @@ export function AdminProductEditorScreen({
           variant="tabs"
         />
 
-        <Well>
-          <WellHeader
-            action={
-              <Button
-                icon={<Plus size={16} aria-hidden />}
-                onClick={() =>
-                  setForm((prev) => ({
-                    ...prev,
-                    specs: [...prev.specs, { label: "", value: "" }],
-                  }))
-                }
-                size="sm"
-                variant="secondary"
-              >
-                {t("adminProductEditor.add")}
-              </Button>
-            }
-            title={t("adminProductEditor.specs")}
-          />
-          <WellContent>
-            <Stack gap="4">
+        <Section
+          action={
+            <Button
+              icon={<Plus size={16} aria-hidden />}
+              onClick={() =>
+                setForm((prev) => ({
+                  ...prev,
+                  specs: [...prev.specs, { label: "", value: "" }],
+                }))
+              }
+              size="sm"
+              variant="secondary"
+            >
+              {t("adminProductEditor.add")}
+            </Button>
+          }
+          title={t("adminProductEditor.specs")}
+        >
               {form.specs.map((spec, index) => (
                 <SpecEditor
                   key={`${index}-${form.id || "new"}`}
@@ -397,18 +384,10 @@ export function AdminProductEditorScreen({
                   onChange={setForm}
                 />
               ))}
-            </Stack>
-          </WellContent>
-        </Well>
+        </Section>
 
         {form.deliveryType === "AUTO_KEY" ? (
-          <Well>
-            <WellHeader
-              description={t("adminProductEditor.keyPoolHint")}
-              title={t("adminProductEditor.keyPool")}
-            />
-            <WellContent>
-              <Stack gap="4">
+          <Section hint={t("adminProductEditor.keyPoolHint")} title={t("adminProductEditor.keyPool")}>
                 {productId ? (
                   <Stack gap="2">
                     <Text size="xs" tone="muted" tabularNums>
@@ -454,9 +433,7 @@ export function AdminProductEditorScreen({
                     value={form.keyPoolText}
                   />
                 </Field>
-              </Stack>
-            </WellContent>
-          </Well>
+          </Section>
         ) : null}
 
         <StickyActions>
@@ -572,7 +549,7 @@ function ProductCoverPreview({
   title: string
 }) {
   return (
-    <div className="shop-cover" data-size="sm">
+    <div className="shop-row-media" data-size="lg">
       {imageUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={imageUrl} alt={title} />

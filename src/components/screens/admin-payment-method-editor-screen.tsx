@@ -4,27 +4,20 @@ import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { ImagePlus, Trash2 } from "lucide-react"
-import {
-  Avatar,
-  Banner,
-  Button,
-  Card,
-  Cluster,
-  Field,
-  Input,
-  Setting,
-  Stack,
-  Switch,
-  Textarea,
-  Well,
-  WellContent,
-  WellFooter,
-  WellHeader,
-} from "sealui"
+import { Avatar, Banner, Button, Field, Input, Textarea } from "sealui"
 
 import { AccessStateScreen } from "@/components/access-state-screen"
 import { ImagePicker } from "@/components/image-picker"
-import { Screen, ScreenBody, ScreenHeader, ScreenState, StickyActions } from "@/components/screen"
+import {
+  ActionStack,
+  Screen,
+  ScreenBody,
+  ScreenHeader,
+  ScreenState,
+  Section,
+  StickyActions,
+} from "@/components/screen"
+import { ToggleRow } from "@/components/toggle-row"
 import { useTranslate } from "@/components/i18n-provider"
 import { getMe, getPaymentMethods, saveSettings } from "@/lib/api"
 import { optimizeSquareImage } from "@/lib/image"
@@ -57,6 +50,7 @@ const templateMethod: PaymentMethodForm = {
   isActive: true,
 }
 
+/** One manual payment method: its icon, name, requisites and visibility. */
 export function AdminPaymentMethodEditorScreen({
   methodId,
   template,
@@ -212,85 +206,69 @@ export function AdminPaymentMethodEditorScreen({
           />
         ) : null}
 
-        <Well>
-          <WellHeader
-            description={uploadingIcon ? t("adminPaymentEditor.processingImage") : t("adminPaymentEditor.iconHint")}
-            title={t("adminPaymentEditor.icon")}
+        {/* The icon sits next to its picker, the way a profile photo does. */}
+        <div className="shop-row">
+          <MethodPreview iconUrl={draft.iconUrl} title={draft.title} />
+          <div className="shop-row-copy">
+            <ImagePicker
+              disabled={uploadingIcon}
+              hasImage={Boolean(draft.iconUrl)}
+              id="payment-method-icon"
+              onClear={() =>
+                setDraft((prev) => (prev ? { ...prev, iconDataUrl: null, iconUrl: null } : prev))
+              }
+              onSelect={handleIcon}
+            />
+          </div>
+        </div>
+
+        <Section>
+          <Field label={t("adminPaymentEditor.name")}>
+            <Input
+              id="payment-method-title"
+              onChange={(event) => setDraft((prev) => (prev ? { ...prev, title: event.target.value } : prev))}
+              placeholder="СБП / Т-Банк"
+              value={draft.title}
+            />
+          </Field>
+
+          <Field label={t("adminPaymentEditor.details")}>
+            <Textarea
+              id="payment-method-details"
+              onChange={(event) =>
+                setDraft((prev) => (prev ? { ...prev, details: event.target.value } : prev))
+              }
+              placeholder={t("adminPaymentEditor.detailsPlaceholder")}
+              value={draft.details}
+            />
+          </Field>
+
+          <ToggleRow
+            checked={draft.isActive}
+            id="payment-method-active"
+            onCheckedChange={(checked) =>
+              setDraft((prev) => (prev ? { ...prev, isActive: checked } : prev))
+            }
+            title={t("adminPaymentEditor.showToBuyer")}
           />
-          <WellContent>
-            <Cluster gap="4">
-              <MethodPreview iconUrl={draft.iconUrl} title={draft.title} />
-              <ImagePicker
-                disabled={uploadingIcon}
-                hasImage={Boolean(draft.iconUrl)}
-                id="payment-method-icon"
-                onClear={() =>
-                  setDraft((prev) => (prev ? { ...prev, iconDataUrl: null, iconUrl: null } : prev))
-                }
-                onSelect={handleIcon}
-              />
-            </Cluster>
-          </WellContent>
-        </Well>
+        </Section>
 
-        <Well>
-          <WellContent>
-            <Stack gap="4">
-              <Field label={t("adminPaymentEditor.name")}>
-                <Input
-                  id="payment-method-title"
-                  onChange={(event) => setDraft((prev) => (prev ? { ...prev, title: event.target.value } : prev))}
-                  placeholder="СБП / Т-Банк"
-                  value={draft.title}
-                />
-              </Field>
-
-              <Field label={t("adminPaymentEditor.details")}>
-                <Textarea
-                  id="payment-method-details"
-                  onChange={(event) =>
-                    setDraft((prev) => (prev ? { ...prev, details: event.target.value } : prev))
-                  }
-                  placeholder={t("adminPaymentEditor.detailsPlaceholder")}
-                  value={draft.details}
-                />
-              </Field>
-
-              <Card>
-                <Setting
-                  layout="inline"
-                  title={<label htmlFor="payment-method-active">{t("adminPaymentEditor.showToBuyer")}</label>}
-                >
-                  <Switch
-                    checked={draft.isActive}
-                    id="payment-method-active"
-                    onCheckedChange={(checked) =>
-                      setDraft((prev) => (prev ? { ...prev, isActive: checked } : prev))
-                    }
-                  />
-                </Setting>
-              </Card>
-            </Stack>
-          </WellContent>
-
-          {methodId ? (
-            <WellFooter>
-              <Cluster>
-                <Button
-                  disabled={mutation.isPending}
-                  icon={<Trash2 size={16} aria-hidden />}
-                  onClick={() => mutation.mutate("delete")}
-                  variant="danger"
-                >
-                  {t("adminPaymentEditor.removeMethod")}
-                </Button>
-              </Cluster>
-            </WellFooter>
-          ) : null}
-        </Well>
+        {methodId ? (
+          <ActionStack>
+            <Button
+              disabled={mutation.isPending}
+              fullWidth
+              icon={<Trash2 size={16} aria-hidden />}
+              onClick={() => mutation.mutate("delete")}
+              variant="outline"
+            >
+              {t("adminPaymentEditor.removeMethod")}
+            </Button>
+          </ActionStack>
+        ) : null}
 
         <StickyActions>
-          <Button disabled={!canSave} onClick={() => mutation.mutate("save")}>
+          <Button disabled={!canSave} onClick={() => mutation.mutate("save")} size="lg">
             {saveLabel}
           </Button>
         </StickyActions>

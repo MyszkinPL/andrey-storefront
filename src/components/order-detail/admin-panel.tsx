@@ -1,88 +1,66 @@
 "use client"
 
-import { RefreshCcw, Trash2 } from "lucide-react"
-import { Avatar, Button, Cluster, Pill, Text, Well, WellContent, WellHeader } from "sealui"
+import { FileCheck2, Paperclip } from "lucide-react"
+import { Avatar, Pill } from "sealui"
 
-import { useTranslate } from "@/components/i18n-provider"
+import { useI18n } from "@/components/i18n-provider"
+import { ListGroup, ListRow } from "@/components/list-row"
 import type { Order } from "@/components/order-detail/types"
+import { Section } from "@/components/screen"
+import { formatBytes } from "@/lib/telegram-format"
 
-/** Everything only an admin sees on an order: the buyer, and the levers. */
-export function AdminOrderPanel({
-  order,
-  canConfirmManualPayment,
-  canRejectManualPayment,
-  canRefreshCryptoPayment,
-  confirmPending,
-  rejectPending,
-  refreshPending,
-  onConfirm,
-  onReject,
-  onRefresh,
-  onDelete,
-}: {
-  order: Order
-  canConfirmManualPayment: boolean
-  canRejectManualPayment: boolean
-  canRefreshCryptoPayment: boolean
-  confirmPending: boolean
-  rejectPending: boolean
-  refreshPending: boolean
-  onConfirm: () => void
-  onReject: () => void
-  onRefresh: () => void
-  onDelete: () => void
-}) {
-  const t = useTranslate()
+/**
+ * What only an admin sees on an order: who is buying, and whether their
+ * receipt arrived. The levers (confirm, reject, check) live in the bottom
+ * bar with the rest of the primary actions.
+ */
+export function AdminOrderPanel({ order, showReceipt }: { order: Order; showReceipt: boolean }) {
+  const { t, locale } = useI18n()
+  const buyer = order.createdBy
+  const receipt = order.receipt
+  const uploadedAtLabel = receipt
+    ? new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }).format(
+        new Date(receipt.uploadedAt),
+      )
+    : ""
+
+  if (!buyer && !showReceipt) return null
 
   return (
-    <Well>
-      <WellHeader
-        action={order.createdBy?.isBanned ? <Pill color="red">{t("orderDetail.banned")}</Pill> : undefined}
-        description={t("orderDetail.orderNumber", { number: order.number })}
-        title={t("orderDetail.admin")}
-      />
-      <WellContent>
-        {order.createdBy ? (
-          <div className="shop-row">
-            <Avatar name={order.createdBy.firstName} size="lg" src={order.createdBy.photoUrl} />
-            <div className="shop-row-copy">
-              <Text as="span" size="sm" truncate>
-                {order.createdBy.firstName}
-              </Text>
-              <Text as="span" size="xs" tone="muted" truncate>
-                {order.createdBy.username ? `@${order.createdBy.username}` : t("auth.noUsername")}
-              </Text>
-            </div>
-          </div>
+    <Section title={t("orderDetail.buyer")}>
+      <ListGroup>
+        {buyer ? (
+          <ListRow
+            description={buyer.username ? `@${buyer.username}` : t("auth.noUsername")}
+            href={`/admin/users/${buyer.id}`}
+            media={<Avatar name={buyer.firstName} size="md" src={buyer.photoUrl} />}
+            title={[buyer.firstName, buyer.lastName || ""].join(" ").trim()}
+            trailing={buyer.isBanned ? <Pill color="red">{t("orderDetail.banned")}</Pill> : undefined}
+          />
         ) : null}
-        <Cluster gap="2">
-          {canConfirmManualPayment ? (
-            <Button disabled={confirmPending} loading={confirmPending} onClick={onConfirm} size="sm">
-              {t("orderDetail.confirmPayment")}
-            </Button>
-          ) : null}
-          {canRejectManualPayment ? (
-            <Button disabled={rejectPending} onClick={onReject} size="sm" variant="secondary">
-              {t("orderDetail.reject")}
-            </Button>
-          ) : null}
-          {canRefreshCryptoPayment ? (
-            <Button
-              disabled={refreshPending}
-              icon={<RefreshCcw size={16} aria-hidden />}
-              loading={refreshPending}
-              onClick={onRefresh}
-              size="sm"
-              variant="secondary"
-            >
-              {t("orderDetail.check")}
-            </Button>
-          ) : null}
-          <Button icon={<Trash2 size={16} aria-hidden />} onClick={onDelete} size="sm" variant="danger">
-            {t("common.delete")}
-          </Button>
-        </Cluster>
-      </WellContent>
-    </Well>
+        {/* The PDF itself lands in the admin's Telegram chat; the row only
+            says whether one arrived. */}
+        {showReceipt ? (
+          <ListRow
+            description={
+              receipt
+                ? `${t("receipt.fileInfo", {
+                    name: receipt.fileName,
+                    size: formatBytes(receipt.fileSize),
+                  })} · ${uploadedAtLabel}`
+                : t("receipt.pending")
+            }
+            media={
+              receipt ? (
+                <FileCheck2 aria-hidden style={{ color: "var(--seal-text-success)" }} />
+              ) : (
+                <Paperclip aria-hidden />
+              )
+            }
+            title={t("receipt.title")}
+          />
+        ) : null}
+      </ListGroup>
+    </Section>
   )
 }

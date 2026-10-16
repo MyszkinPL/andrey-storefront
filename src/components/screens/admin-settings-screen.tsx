@@ -2,31 +2,26 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { Copy, CreditCard, ImagePlus, PencilLine, Plus, RefreshCcw } from "lucide-react"
+import { Copy, CreditCard, ImagePlus, Plus, RefreshCcw } from "lucide-react"
 import {
   Avatar,
   Button,
-  Card,
-  Cluster,
-  EmptyState,
   Field,
   Input,
   Pill,
   SegmentedControl,
   Select,
-  Setting,
+  Separator,
   Stack,
   Switch,
-  Well,
-  WellContent,
-  WellFooter,
-  WellHeader,
+  Text,
 } from "sealui"
 
 import { AccessStateScreen } from "@/components/access-state-screen"
 import { LinkButton } from "@/components/link-button"
 import { ListGroup, ListRow } from "@/components/list-row"
-import { Screen, ScreenBody, ScreenHeader, StickyActions } from "@/components/screen"
+import { Screen, ScreenBody, ScreenHeader, Section, StickyActions } from "@/components/screen"
+import { ToggleRow } from "@/components/toggle-row"
 import { useI18n } from "@/components/i18n-provider"
 import { useNotify } from "@/hooks/use-notify"
 import { getCryptoPayCurrencies, getMe, getPaymentMethods, saveSettings } from "@/lib/api"
@@ -37,6 +32,11 @@ const FALLBACK_FIATS = [
   "INR", "KZT", "PLN", "RUB", "THB", "TRY", "UAH", "USD", "UZS",
 ]
 
+/**
+ * Three sections on one page: the shop, Crypto Bot, manual methods. The
+ * Crypto Bot fields only unfold once the switch is on, so a shop that
+ * takes transfers by hand never scrolls past a token box.
+ */
 export function AdminSettingsScreen() {
   const { t, tp } = useI18n()
   const notify = useNotify()
@@ -171,61 +171,54 @@ export function AdminSettingsScreen() {
       />
 
       <ScreenBody>
-        <Well>
-          <WellHeader
-            description={t("adminSettings.shopSectionHint")}
-            title={t("adminSettings.shopSection")}
-          />
-          <WellContent>
-            <Stack gap="4">
-              <Field label={t("adminSettings.name")}>
-                <Input
-                  id="shop-name"
-                  onChange={(event) => setShopName(event.target.value)}
-                  placeholder={t("adminSettings.name")}
-                  value={shopName}
-                />
-              </Field>
-              <Field label={t("adminSettings.support")}>
-                <Input
-                  id="shop-support"
-                  onChange={(event) => setSupportUsername(event.target.value)}
-                  placeholder="@username"
-                  value={supportUsername}
-                />
-              </Field>
-              <Field description={t("admin.channelHint")} label={t("admin.channelLabel")}>
-                <Input
-                  id="shop-channel"
-                  onChange={(event) => setRequiredChannel(event.target.value)}
-                  placeholder={t("admin.channelPlaceholder")}
-                  value={requiredChannel}
-                />
-              </Field>
-            </Stack>
-          </WellContent>
-        </Well>
+        <Section hint={t("adminSettings.shopSectionHint")} title={t("adminSettings.shopSection")}>
+          <Field label={t("adminSettings.name")}>
+            <Input
+              id="shop-name"
+              onChange={(event) => setShopName(event.target.value)}
+              placeholder={t("adminSettings.name")}
+              value={shopName}
+            />
+          </Field>
+          <Field label={t("adminSettings.support")}>
+            <Input
+              id="shop-support"
+              onChange={(event) => setSupportUsername(event.target.value)}
+              placeholder="@username"
+              value={supportUsername}
+            />
+          </Field>
+          <Field description={t("admin.channelHint")} label={t("admin.channelLabel")}>
+            <Input
+              id="shop-channel"
+              onChange={(event) => setRequiredChannel(event.target.value)}
+              placeholder={t("admin.channelPlaceholder")}
+              value={requiredChannel}
+            />
+          </Field>
+        </Section>
 
-        <Well>
-          <WellHeader
-            action={
-              // The switch has no visible caption of its own; the hidden
-              // label text keeps its accessible name and makes it clickable.
-              <label className="shop-inline" htmlFor="crypto-enabled">
-                <span className="shop-visually-hidden">{t("adminSettings.cryptoToggle")}</span>
-                <Switch checked={cryptoPayEnabled} id="crypto-enabled" onCheckedChange={setCryptoPayEnabled} />
-              </label>
-            }
-            description={t("adminSettings.cryptoHint")}
-            title={
-              <span className="shop-inline">
-                <Avatar name="Crypto Bot" size="md" src="/crypto-bot-logo.svg" />
-                Crypto Bot
-              </span>
-            }
-          />
-          <WellContent>
-            <Stack gap="4">
+        <Separator />
+
+        <Section
+          action={
+            // The switch has no visible caption of its own; the hidden
+            // label text keeps its accessible name and makes it clickable.
+            <label className="shop-inline" htmlFor="crypto-enabled">
+              <span className="shop-visually-hidden">{t("adminSettings.cryptoToggle")}</span>
+              <Switch checked={cryptoPayEnabled} id="crypto-enabled" onCheckedChange={setCryptoPayEnabled} />
+            </label>
+          }
+          hint={t("adminSettings.cryptoHint")}
+          title={
+            <span className="shop-inline">
+              <Avatar name="Crypto Bot" size="sm" src="/crypto-bot-logo.svg" />
+              Crypto Bot
+            </span>
+          }
+        >
+          {cryptoPayEnabled ? (
+            <>
               <Field label="API token">
                 <Input
                   id="crypto-token"
@@ -234,11 +227,12 @@ export function AdminSettingsScreen() {
                   value={cryptoPayToken}
                 />
               </Field>
-              <Card>
-                <Setting layout="inline" title={<label htmlFor="crypto-testnet">Testnet</label>}>
-                  <Switch checked={cryptoPayUseTestnet} id="crypto-testnet" onCheckedChange={setCryptoPayUseTestnet} />
-                </Setting>
-              </Card>
+              <ToggleRow
+                checked={cryptoPayUseTestnet}
+                id="crypto-testnet"
+                onCheckedChange={setCryptoPayUseTestnet}
+                title="Testnet"
+              />
               <Field label={t("adminSettings.currencyLabel")} nativeLabel={false}>
                 <Select
                   onValueChange={(value) => setCryptoPayFiat(String(value))}
@@ -261,11 +255,11 @@ export function AdminSettingsScreen() {
                     />
                   </div>
                 ) : (
-                  <Cluster>
+                  <div>
                     <Pill color="gray">
                       {cryptoPayTokenValue ? t("adminSettings.pressRefresh") : t("adminSettings.tokenFirst")}
                     </Pill>
-                  </Cluster>
+                  </div>
                 )}
               </Field>
               <Field label="Webhook">
@@ -287,77 +281,77 @@ export function AdminSettingsScreen() {
                   value={cryptoWebhookUrl || t("adminSettings.webhookPlaceholder")}
                 />
               </Field>
-            </Stack>
-          </WellContent>
-          <WellFooter>
-            <Cluster>
-              <Button
-                disabled={!cryptoPayTokenValue}
-                icon={<RefreshCcw size={16} aria-hidden />}
-                onClick={() => void refetchCurrencies()}
-                variant="secondary"
-              >
-                {isFetchingCurrencies ? t("adminSettings.refreshingCurrencies") : t("adminSettings.refreshCurrencies")}
-              </Button>
-            </Cluster>
-          </WellFooter>
-        </Well>
+              <div>
+                <Button
+                  disabled={!cryptoPayTokenValue}
+                  icon={<RefreshCcw size={16} aria-hidden />}
+                  onClick={() => void refetchCurrencies()}
+                  size="sm"
+                  variant="secondary"
+                >
+                  {isFetchingCurrencies ? t("adminSettings.refreshingCurrencies") : t("adminSettings.refreshCurrencies")}
+                </Button>
+              </div>
+            </>
+          ) : null}
+        </Section>
 
-        <Well>
-          <WellHeader
-            action={
-              <Cluster gap="2">
-                <LinkButton href="/admin/settings/payments/new?template=bank" size="sm" variant="secondary">
+        <Separator />
+
+        <Section
+          action={
+            <LinkButton
+              aria-label={t("adminSettings.add")}
+              href="/admin/settings/payments/new"
+              size="icon"
+              variant="secondary"
+            >
+              <Plus size={16} aria-hidden />
+            </LinkButton>
+          }
+          hint={[
+            tp("adminSettings.methodsTotal", paymentMethods.length),
+            tp("adminSettings.methodsActive", activeCount),
+          ].join(" · ")}
+          title={t("adminSettings.manualSection")}
+        >
+          {paymentMethods.length === 0 ? (
+            <Stack gap="3">
+              <Text as="p" size="sm" tone="muted">
+                {t("adminSettings.noMethodsTitle")} · {t("adminSettings.noMethodsDescription")}
+              </Text>
+              <div>
+                <LinkButton
+                  href="/admin/settings/payments/new?template=bank"
+                  icon={<CreditCard size={16} aria-hidden />}
+                  size="sm"
+                  variant="secondary"
+                >
                   {t("adminSettings.template")}
                 </LinkButton>
-                <LinkButton href="/admin/settings/payments/new" icon={<Plus size={16} aria-hidden />} size="sm">
-                  {t("adminSettings.add")}
-                </LinkButton>
-              </Cluster>
-            }
-            description={[
-              tp("adminSettings.methodsTotal", paymentMethods.length),
-              tp("adminSettings.methodsActive", activeCount),
-            ].join(" · ")}
-            title={t("adminSettings.manualSection")}
-          />
-          <WellContent>
-            {paymentMethods.length === 0 ? (
-              <EmptyState
-                description={t("adminSettings.noMethodsDescription")}
-                icon={<CreditCard />}
-                title={t("adminSettings.noMethodsTitle")}
-              />
-            ) : (
-              <ListGroup>
-                {paymentMethods.map((method) => (
-                  <ListRow
-                    description={method.details || t("adminSettings.noDetails")}
-                    key={method.id}
-                    media={<MethodPreview iconUrl={method.iconUrl} title={method.title} />}
-                    title={method.title}
-                    trailing={
-                      <>
-                        {!method.isActive ? <Pill color="gray">{t("adminSettings.hidden")}</Pill> : null}
-                        <LinkButton
-                          aria-label={t("adminSettings.editMethod")}
-                          href={`/admin/settings/payments/${method.id}`}
-                          size="sm"
-                          variant="secondary"
-                        >
-                          <PencilLine size={16} aria-hidden />
-                        </LinkButton>
-                      </>
-                    }
-                  />
-                ))}
-              </ListGroup>
-            )}
-          </WellContent>
-        </Well>
+              </div>
+            </Stack>
+          ) : (
+            // Tapping a method opens its editor: no pencil button per row.
+            <ListGroup>
+              {paymentMethods.map((method) => (
+                <ListRow
+                  description={method.details || t("adminSettings.noDetails")}
+                  href={`/admin/settings/payments/${method.id}`}
+                  key={method.id}
+                  media={<MethodPreview iconUrl={method.iconUrl} title={method.title} />}
+                  title={method.title}
+                  trailing={
+                    !method.isActive ? <Pill color="gray">{t("adminSettings.hidden")}</Pill> : undefined
+                  }
+                />
+              ))}
+            </ListGroup>
+          )}
+        </Section>
 
         <StickyActions>
-          <Button disabled={mutation.isPending} onClick={() => mutation.mutate()}>
+          <Button disabled={mutation.isPending} onClick={() => mutation.mutate()} size="lg">
             {saveLabel}
           </Button>
         </StickyActions>

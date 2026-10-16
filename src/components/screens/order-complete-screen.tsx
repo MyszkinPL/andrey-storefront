@@ -3,12 +3,19 @@
 import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { CheckCircle2, CircleDashed } from "lucide-react"
-import { Banner, DetailRow, EmptyState, Pill, Separator, Well, WellFooter } from "sealui"
+import { DetailRow, EmptyState, Pill } from "sealui"
 
 import { useI18n } from "@/components/i18n-provider"
 import { LinkButton } from "@/components/link-button"
 import { CopyField } from "@/components/order-detail/copy-field"
-import { Screen, ScreenBody, ScreenHeader, ScreenState } from "@/components/screen"
+import {
+  ActionStack,
+  Screen,
+  ScreenBody,
+  ScreenHeader,
+  ScreenState,
+  Section,
+} from "@/components/screen"
 import { getOrder } from "@/lib/api"
 import { formatDateTime, formatInvoiceAmount, formatPrice } from "@/lib/format"
 import type { TranslationKey } from "@/lib/i18n"
@@ -16,6 +23,7 @@ import { isOrderExpired } from "@/lib/order-timer"
 
 type Order = Awaited<ReturnType<typeof getOrder>>["order"]
 
+/** The delivery screen: the key, big, with a copy button, and a way back. */
 export function OrderCompleteScreen({ orderId }: { orderId: string }) {
   const { t, locale, currency } = useI18n()
   const [copied, setCopied] = useState(false)
@@ -68,32 +76,22 @@ export function OrderCompleteScreen({ orderId }: { orderId: string }) {
       />
 
       <ScreenBody grow>
-        <Well>
-          <EmptyState
-            description={t(descriptionKey(order))}
-            icon={order.isPaid ? <CheckCircle2 /> : <CircleDashed />}
-            title={t(titleKey(order))}
+        <EmptyState
+          description={t(descriptionKey(order))}
+          icon={order.isPaid ? <CheckCircle2 /> : <CircleDashed />}
+          title={t(titleKey(order))}
+        />
+
+        {order.deliveredKey ? (
+          <CopyField
+            copied={copied}
+            onCopy={() => copyKey(order.deliveredKey || "")}
+            title={t("orderComplete.key")}
+            value={order.deliveredKey}
           />
+        ) : null}
 
-          {order.deliveredKey ? (
-            <CopyField
-              copied={copied}
-              onCopy={() => copyKey(order.deliveredKey || "")}
-              title={t("orderComplete.key")}
-              value={order.deliveredKey}
-            />
-          ) : order.status === "CANCELLED" ? null : (
-            <Banner
-              description={
-                order.isPaid ? t("orderComplete.deliveryPending") : t("orderComplete.paymentPending")
-              }
-              title={order.isPaid ? t("orderComplete.delivery") : t("orderComplete.payment")}
-              variant="info"
-            />
-          )}
-
-          <Separator />
-
+        <Section title={t("orderDetail.details")}>
           <div className="shop-lines">
             <DetailRow label={t("orderComplete.product")} value={order.productTitle || order.subject} />
             <DetailRow
@@ -103,16 +101,16 @@ export function OrderCompleteScreen({ orderId }: { orderId: string }) {
             <DetailRow label={t("orderComplete.amount")} value={amountLabel} />
             <DetailRow label={t("orderComplete.createdAt")} value={createdAtLabel} />
           </div>
+        </Section>
 
-          <WellFooter>
-            <LinkButton fullWidth href={`/orders/${order.id}`} variant="secondary">
-              {t("orderComplete.toOrder")}
-            </LinkButton>
-            <LinkButton fullWidth href="/catalog">
-              {t("orderComplete.toCatalog")}
-            </LinkButton>
-          </WellFooter>
-        </Well>
+        <ActionStack>
+          <LinkButton fullWidth href="/catalog">
+            {t("orderComplete.toCatalog")}
+          </LinkButton>
+          <LinkButton fullWidth href={`/orders/${order.id}`} variant="secondary">
+            {t("orderComplete.toOrder")}
+          </LinkButton>
+        </ActionStack>
       </ScreenBody>
     </Screen>
   )

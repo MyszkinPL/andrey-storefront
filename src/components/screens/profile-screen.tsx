@@ -1,21 +1,15 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
-import { CreditCard, Languages, UserRound } from "lucide-react"
-import { Avatar, EmptyState } from "sealui"
+import { Avatar, Text } from "sealui"
 
 import { useTranslate } from "@/components/i18n-provider"
 import { LanguageSwitcher } from "@/components/language-switcher"
 import { ListGroup, ListRow, ListSkeleton } from "@/components/list-row"
-import {
-  Screen,
-  ScreenBody,
-  ScreenError,
-  ScreenHeader,
-  SectionTitle,
-} from "@/components/screen"
+import { Screen, ScreenBody, ScreenError, ScreenHeader, Section } from "@/components/screen"
 import { getMe, getPaymentMethods } from "@/lib/api"
 
+/** Who you are in the header, then the one setting and the ways to pay. */
 export function ProfileScreen() {
   const t = useTranslate()
   const {
@@ -46,7 +40,9 @@ export function ProfileScreen() {
     <Screen narrow>
       <ScreenHeader
         back="/catalog"
-        subtitle={meData?.user.username ? `@${meData.user.username}` : roleLabel}
+        subtitle={[meData?.user.username ? `@${meData.user.username}` : null, roleLabel]
+          .filter(Boolean)
+          .join(" · ")}
         title={meData?.user.firstName || t("profile.title")}
         trailing={
           <Avatar name={meData?.user.firstName || "S"} size="lg" src={meData?.user.photoUrl} />
@@ -67,38 +63,19 @@ export function ProfileScreen() {
           />
         ) : (
           <>
-            <ListGroup>
-              <ListRow
-                description={roleLabel}
-                media={<UserRound />}
-                title={t("profile.account")}
-              />
-            </ListGroup>
+            {/* The control sits beside its caption, the size of its two words. */}
+            <Section
+              action={<LanguageSwitcher />}
+              hint={t("language.description")}
+              title={t("language.label")}
+            />
 
-            {/* The language control sits in the same panel as every other
-                row, so the screen keeps one rhythm instead of alternating
-                between panels and bare form controls. */}
-            <ListGroup>
-              <ListRow
-                description={t("language.description")}
-                media={<Languages />}
-                title={t("language.label")}
-                trailing={<LanguageSwitcher />}
-              />
-            </ListGroup>
-
-            {methods.length === 0 && !hasCryptoPay ? (
-              <EmptyState
-                description={t("profile.noMethodsDescription")}
-                icon={<CreditCard />}
-                title={t("profile.noMethodsTitle")}
-              />
-            ) : (
-              <>
-                <SectionTitle
-                  hint={t("profile.paymentMethodsHint")}
-                  title={t("profile.paymentMethods")}
-                />
+            <Section hint={t("profile.paymentMethodsHint")} title={t("profile.paymentMethods")}>
+              {methods.length === 0 && !hasCryptoPay ? (
+                <Text as="p" size="sm" tone="muted">
+                  {t("profile.noMethodsTitle")} · {t("profile.noMethodsDescription")}
+                </Text>
+              ) : (
                 <ListGroup>
                   {methods.map((method) => (
                     <PaymentMethodRow
@@ -122,8 +99,8 @@ export function ProfileScreen() {
                     />
                   ) : null}
                 </ListGroup>
-              </>
-            )}
+              )}
+            </Section>
           </>
         )}
       </ScreenBody>
